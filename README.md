@@ -186,3 +186,13 @@ Highest-value next steps (see docs/limitations.md and CLAUDE.md "Outstanding
 debts"): capture the region/button DOM discovery report, validate the parser
 against a second independent `.apx` export, get a real login page to verify
 `auth.ts` against, and — the actual M4 milestone — find that second user.
+
+### Beyond M4: a comprehensive APEX testing ecosystem
+
+The longer-term direction is richer component APIs (Interactive Report,
+Cards, Charts, Interactive Grid, Trees), lifecycle-aware waits instead of
+timeouts, snapshot testing, coverage mapping back to `.apx` components, and
+editor integration that regenerates on export change. See
+docs/ecosystem-roadmap.md for what's actually verifiable against the one
+live reference app today versus what's genuinely blocked on new ground
+truth or needs its own design first.
