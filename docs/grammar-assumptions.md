@@ -110,10 +110,26 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       the ground-truth app) -- but NOT reliably right after navigation. A
       single `await fetchCounts()` then read is NOT sufficient: tested in a
       genuinely fresh Playwright browser context (not a reused/warmed tab)
-      and it still returned `null`. Polling resolves it reliably (2 attempts
-      / ~200ms observed) -- see spike/tests/faceted-search-cards-demo.spec.ts
-      for the correct `expect.poll()` pattern. This is the concrete case
-      motivating the lifecycle-wait work in docs/ecosystem-roadmap.md Tier 1.
+      and it still returned `null`. FIXED via a real lifecycle-event wait
+      (see next entry), not polling.
+- [x] APEX lifecycle events `apexbeforerefresh`/`apexafterrefresh` CONFIRMED
+      live -- discovered by monkey-patching `$.fn.trigger` to log every
+      event actually fired during `ApexFacetsRegion.fetchCounts()`, not
+      guessed from docs. Both fire DIRECTLY on the region's own DOM element
+      (element id === region id). CRITICAL: these are jQuery custom events,
+      NOT native DOM CustomEvents -- a plain
+      `element.addEventListener('apexafterrefresh', ...)` was tested and
+      confirmed to NEVER fire; only `apex.jQuery(el).on(...)` sees them.
+      Waiting for `apexafterrefresh` before reading
+      `getTotalResourceCount()` resolved the flakiness deterministically
+      (~400ms observed, 3/3 repeated live runs passed). Shipped as
+      `callRegionMethodAndWaitForEvent()`/`waitForRegionEvent()` in
+      `packages/testkit/src/fixtures/lifecycle.ts` and
+      `ApexFacetsRegion.fetchCountsAndWait()`. Scope note: this event-based
+      pattern is for "did operation X finish" waits; it does NOT apply to
+      the `page.waitForTimeout(1000)` in generated "clean console" specs,
+      which waits for late/unpredictable async errors -- a different
+      problem with no single completion event.
 
 ## Still open
 

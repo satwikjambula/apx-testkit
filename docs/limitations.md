@@ -25,11 +25,18 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   APEX's own client code, not a testkit bug. Left in the typed API so the
   failure is visible rather than silently unavailable; see
   docs/grammar-assumptions.md.
-- **`ApexFacetsRegion.getTotalResourceCount()` needs polling, not a single
-  read.** It can return `null` for a short window after navigation even
-  after `await fetchCounts()`. Use `expect.poll()`, not
-  `page.waitForTimeout()` — see
-  spike/tests/faceted-search-cards-demo.spec.ts.
+- **`ApexFacetsRegion.getTotalResourceCount()` needed a lifecycle-event wait
+  — FIXED.** It could return `null` for a short window after navigation
+  even after `await fetchCounts()`. Use `fetchCountsAndWait()` instead of
+  `fetchCounts()` — it waits for APEX's own `apexafterrefresh` event on the
+  region (verified live, deterministic, ~400ms), not a poll or a fixed
+  timeout. See `fixtures/lifecycle.ts` and
+  spike/tests/faceted-search-cards-demo.spec.ts. This event-based wait
+  pattern (`callRegionMethodAndWaitForEvent`/`waitForRegionEvent`) is
+  reusable for any region operation that fires a lifecycle event — it does
+  NOT replace the one `page.waitForTimeout(1000)` in generated "clean
+  console" specs, which exists to catch late/unpredictable async console
+  errors, a different kind of wait with no single completion event.
 - **Button assertions use accessible-role/label locators, not a verified
   static-id convention.** Works today for ordinary labeled buttons; not
   verified for icon-only buttons or heavily template-customized ones.

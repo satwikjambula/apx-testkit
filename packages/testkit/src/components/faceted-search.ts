@@ -6,26 +6,25 @@
  * wrapper over the same callRegionMethod primitive, not an ApexRegion
  * subclass.
  *
- * IMPORTANT lifecycle finding: `getTotalResourceCount()` can return `null`
- * if called too soon after navigation -- the facet counts are fetched
- * asynchronously. A single `await fetchCounts()` then read is NOT reliable:
- * tested in a genuinely fresh browser context (not a warmed/reused tab) and
- * it still returned `null` even after awaiting `fetchCounts()`. Polling DOES
- * work reliably (stabilized within 2 attempts / ~200ms in testing) -- use
- * Playwright's `expect.poll(() => facets.getTotalResourceCount())` rather
- * than a single read, and never paper over this with a fixed
- * `waitForTimeout`. See spike/tests/faceted-search-cards-demo.spec.ts for
- * the correct pattern. A proper event-based wait (see fixtures once the
- * lifecycle-wait work lands) would be preferable to polling; this is the
- * verified stopgap until then.
+ * IMPORTANT lifecycle finding, NOW FIXED: `getTotalResourceCount()` can
+ * return `null` if called too soon after navigation -- the facet counts are
+ * fetched asynchronously. A single `await fetchCounts()` then read is NOT
+ * reliable (confirmed in a genuinely fresh browser context, not a
+ * warmed/reused tab). Use `fetchCountsAndWait()` below instead of
+ * `fetchCounts()` -- it waits for the real `apexafterrefresh` event APEX
+ * fires on this region's own element when the count fetch completes
+ * (verified live, ~400ms observed), which is deterministic where polling
+ * was a stopgap. See fixtures/lifecycle.ts for how the event wait works and
+ * why it must use apex.jQuery, not a native addEventListener.
  *
  * getFacetCount/getFacetValueCounts/showFacet/hideFacet are typed here as
  * taking a facetId: string by naming convention -- that parameter shape is
  * INFERRED, not directly exercised live. Verify against your own app before
- * trusting the per-facet methods; getTotalResourceCount (polled)/clear/apply
- * are the higher-confidence entry points.
+ * trusting the per-facet methods; getTotalResourceCount (after
+ * fetchCountsAndWait())/clear/apply are the higher-confidence entry points.
  */
 import type { Page } from '@playwright/test';
+import { callRegionMethodAndWaitForEvent } from '../fixtures/lifecycle.js';
 import { callRegionMethod } from './region.js';
 
 export class ApexFacetsRegion {
@@ -62,6 +61,19 @@ export class ApexFacetsRegion {
 
   fetchCounts(): Promise<void> {
     return this.invoke('fetchCounts');
+  }
+
+  /**
+   * Preferred over bare `fetchCounts()` -- waits for the verified
+   * `apexafterrefresh` event on this region before resolving, so
+   * `getTotalResourceCount()`/`getFacetCount()` are safe to call
+   * immediately after this resolves, no polling required.
+   */
+  fetchCountsAndWait(timeoutMs = 10_000): Promise<void> {
+    return callRegionMethodAndWaitForEvent(this.page, this.id, 'fetchCounts', {
+      eventName: 'apexafterrefresh',
+      timeoutMs,
+    });
   }
 
   /** Parameter shape inferred (facetId), not directly exercised live -- see module doc. */

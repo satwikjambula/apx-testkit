@@ -22,18 +22,23 @@ else in this project (see CLAUDE.md Invariant 2).
   confirmed BROKEN in this app (throw a real error from APEX's own client
   code) -- shipped anyway, documented as known-broken, per
   docs/grammar-assumptions.md and docs/limitations.md.
-- **Automatic waits tied to APEX's client lifecycle.** APEX fires documented
-  client-side events (`apexreadyend`, `apexafterrefresh`,
-  `apexbeforepageaction`, etc. via `apex.event`/`$(document).on(...)`).
-  `gotoApexPage` already waits for `apex.item` to exist as a boot signal;
-  this extends the same idea to per-region refresh/ready events instead of
-  `page.waitForTimeout()` calls (one already exists in the generated "clean
-  console" test — a good first target to replace). NOW HAS A CONCRETE
-  MOTIVATING CASE from the component-API work above:
-  `ApexFacetsRegion.getTotalResourceCount()` needs polling (verified: a
-  single `fetchCounts()`-then-read is unreliable even in a fresh browser
-  context) — an event-based wait would replace that poll with something
-  deterministic. This is next.
+- **Automatic waits tied to APEX's client lifecycle — DONE for the
+  region-operation case.** Shipped `packages/testkit/src/fixtures/lifecycle.ts`:
+  `callRegionMethodAndWaitForEvent()` and `waitForRegionEvent()`, built on
+  APEX's real `apexbeforerefresh`/`apexafterrefresh` events (confirmed live
+  via monkey-patching `$.fn.trigger` to observe what actually fires, not
+  guessed from docs). Fixed the concrete motivating case:
+  `ApexFacetsRegion.fetchCountsAndWait()` replaces the old
+  `fetchCounts()`-then-poll workaround with a deterministic event wait
+  (verified reliable across 3 repeated live runs). IMPORTANT scoping
+  finding: these are jQuery custom events, NOT native DOM CustomEvents —
+  confirmed live that a plain `element.addEventListener(...)` never fires;
+  the wait must go through `apex.jQuery`'s own `.on()`. This pattern is
+  reusable for any region method that fires a lifecycle event, but does
+  NOT apply to the one `page.waitForTimeout(1000)` in generated "clean
+  console" specs — that wait exists to catch late, unpredictable async
+  console errors, which isn't a single-completion-event problem the way a
+  region refresh is. That timeout stays.
 - **VS Code/Cursor integration that regenerates on export change.** Pure
   tooling, no new APEX ground truth needed: a file watcher on the export
   directory driving the existing `@apx/testgen` CLI/`@apx/mcp` tools. Could

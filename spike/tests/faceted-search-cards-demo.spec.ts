@@ -17,16 +17,16 @@ const FACETS_REGION_ID = 'R14614638417487636';
 const pageUrl = () => apexPageUrl(APP_BASE, PAGE_ALIAS);
 
 test.describe('faceted-search-cards (Cards + Facets testkit wrappers)', () => {
-  test('facets report a real total resource count (polled, not single-read)', async ({ page }) => {
+  test('facets report a real total resource count (event-based wait, not polling)', async ({ page }) => {
     await gotoApexPage(page, pageUrl());
     const facets = new ApexFacetsRegion(page, FACETS_REGION_ID);
-    // getTotalResourceCount() can return null for a bit after navigation --
-    // a single await fetchCounts() then read is NOT reliable (verified: it
-    // still returned null in a fresh context). Poll instead -- this is the
-    // correct pattern, not an arbitrary waitForTimeout. See
-    // faceted-search.ts module doc.
-    await facets.fetchCounts();
-    await expect.poll(() => facets.getTotalResourceCount(), { timeout: 10_000 }).toBeGreaterThan(0);
+    // fetchCountsAndWait() waits for the real apexafterrefresh event APEX
+    // fires on this region when the count fetch completes -- deterministic,
+    // not a poll or a fixed waitForTimeout. See faceted-search.ts and
+    // fixtures/lifecycle.ts.
+    await facets.fetchCountsAndWait();
+    const total = await facets.getTotalResourceCount();
+    expect(total).toBeGreaterThan(0);
   });
 
   test('cards region reports pagination info matching its page size', async ({ page }) => {
