@@ -159,6 +159,10 @@ node packages/generator/dist/cli.js <export-dir> --out <tests-dir>
 cd spike && npm install && npm test
 ```
 
+New here? docs/tutorial.md walks through this step by step, including
+wiring the output into your own Playwright project — every command in it
+was verified fresh from a clean clone.
+
 `npm install && npm run test --workspaces` runs the unit tests (the parser's
 integration test and the full spike suite both need a real APEX
 export/instance and skip cleanly without one).
