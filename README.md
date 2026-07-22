@@ -44,9 +44,6 @@ Run the current tests: `npm install && npm run test --workspaces`
 (the parser's integration test and the full spike suite both need a real
 APEX export/instance and skip cleanly without one).
 
-See `apexlang-testkit-v0.1-plan.md` (project plan) for milestones and the
-risk register.
-
 ## Multi-page generation (working today)
 
     npm install   # once, at repo root — @apx/testkit is a real runtime

@@ -126,8 +126,8 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
 - docs/grammar-assumptions.md — THE ledger (verified vs open). Treat as the
   contract; update it in the same PR as any behavior change.
 - docs/editor-integration.md — CLI / MCP / agent-rules usage.
-- docs/license-check.md, docs/validation-post.md, CONTRIBUTING.md,
-  apexlang-testkit-v0.1-plan.md (original plan + risk register).
+- docs/license-check.md, docs/validation-post.md, docs/support-matrix.md,
+  docs/limitations.md, CONTRIBUTING.md.
 
 ## Style
 - Boring, conventional TypeScript over clever. Strict mode. ESM (`.js`

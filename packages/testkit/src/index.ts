@@ -2,8 +2,8 @@
  * @apx/testkit -- Playwright fixtures + component helpers for APEX 26.1+
  * apps. Generated code (from @apx/testgen) and hand-written specs both
  * import from here; neither should contain raw selectors or duplicate this
- * logic locally (see the "treadmill rule" in apexlang-testkit-v0.1-plan.md
- * §3). When APEX's DOM changes, fix it once here.
+ * logic locally (the "treadmill rule"). When APEX's DOM changes, fix it
+ * once here.
  */
 import { test as base } from '@playwright/test';
 import { armConsoleGuard } from './fixtures/console-guard.js';

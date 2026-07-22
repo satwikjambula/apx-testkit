@@ -51,9 +51,8 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   may lag the current generator template until someone with real export
   access regenerates it.
 - **No page-object/spec support for Interactive Report search, pagination,
-  or Interactive Grid** — `ir.ts` from the original design was deliberately
-  not built; there's no verified DOM contract for it yet (see
-  apexlang-testkit-v0.1-plan.md M2 status note).
+  or Interactive Grid** — an `ir.ts` component was deliberately not built;
+  there's no verified DOM contract for it yet.
 - **Data-dependent assertions are out of scope, permanently, by design** —
   the generator has no way to know what data your instance holds.
 

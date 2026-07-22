@@ -23,7 +23,7 @@ assumptions (see docs/grammar-assumptions.md "Still open" and CLAUDE.md
 "Outstanding debts"). Treat every "verified" claim in this repo as "verified
 for this one app" until that happens.
 
-## Not supported, by design (see apexlang-testkit-v0.1-plan.md §2)
+## Not supported, by design
 
 - Pre-26.1 APEX applications.
 - Interactive Grid deep interaction (cell editing, etc.) — v0.2 at earliest.
