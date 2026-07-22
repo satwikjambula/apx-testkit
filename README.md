@@ -182,8 +182,9 @@ Full list in docs/limitations.md; the headline ones:
   three consecutive failures with the form correctly filled but not
   submitting); the fix itself hasn't been independently re-verified —
   spike/tests/auth-login-verify.spec.ts is ready for whoever has
-  credentials to run it (`APX_LOGIN_TEST_PASSWORD` env var, never commit
-  the value).
+  credentials to run it (`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD`
+  env vars — neither is hardcoded in the file, so no account info is
+  committed at all).
 - **Drawer/modal pages fail to load** via a plain friendly-URL GET
   (confirmed live on p00420) — a known, documented gap, not yet root-caused.
 - **`spike/tests-generated/`'s 18 committed files are stale** relative to

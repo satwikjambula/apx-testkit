@@ -127,7 +127,8 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
    repeated (see the safety note in this session's history: entering
    passwords into forms is not something Claude does itself, even with
    explicit user authorization). `spike/tests/auth-login-verify.spec.ts`
-   (env-var gated, `APX_LOGIN_TEST_PASSWORD`, never commit a real value) is
+   (env-var gated, `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` --
+   neither hardcoded, so no account info is committed) is
    ready for whoever has credentials to close this out. Until then treat
    `auth.ts` as evidence-informed but not a fully closed verified contract
    like item.ts.

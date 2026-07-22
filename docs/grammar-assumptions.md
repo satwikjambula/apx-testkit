@@ -153,8 +153,9 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       intentionally not repeated (entering a password into a form is not
       an action Claude performs itself, regardless of user authorization --
       see CLAUDE.md). `spike/tests/auth-login-verify.spec.ts` is the
-      env-var-gated (`APX_LOGIN_TEST_PASSWORD`) test ready for whoever has
-      credentials to close this out.
+      env-var-gated (`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` --
+      neither hardcoded) test ready for whoever has credentials to close
+      this out.
 
 ## Still open
 

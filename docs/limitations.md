@@ -62,10 +62,11 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   itself has NOT been independently re-verified — `.apx` pages requiring
   login are still emitted as `test.describe.skip()` in generated suites.
   `spike/tests/auth-login-verify.spec.ts` is ready for whoever has
-  credentials for a real login page to run
-  (`APX_LOGIN_TEST_PASSWORD=<password> npx playwright test
-  tests/auth-login-verify.spec.ts` from `spike/`) — this remains one of the
-  highest-value things you could do for this project right now.
+  credentials for a real login page to run (`APX_LOGIN_TEST_USERNAME=<user>
+  APX_LOGIN_TEST_PASSWORD=<password> npx playwright test
+  tests/auth-login-verify.spec.ts` from `spike/`) — neither credential is
+  hardcoded in the file, this remains one of the highest-value things you
+  could do for this project right now.
 
 ## Generator
 
