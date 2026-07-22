@@ -1,26 +1,52 @@
-# Tutorial: your first generated test suite
+# Tutorial: apx-testkit component by component
 
-A step-by-step walkthrough: clone the repo, generate a page object + smoke
-spec from a real `.apx` page, wire it into your own Playwright project, and
-go a bit further (auto-regeneration, hand-written specs, coverage). Every
-command below was run fresh from a clean clone while writing this doc —
-if something doesn't match what you see, that's a real bug, please file an
-issue.
+A complete walkthrough of every `@apx/testkit` component, the page
+patterns they're built for, authorization, and what isn't covered yet.
+Every code example below is either copied verbatim from the real source or
+was run fresh from a clean clone while writing this doc — if something
+doesn't match what you see, that's a real bug, please file an issue.
 
 Not sure this tool is for you yet? Read docs/support-matrix.md and
 docs/limitations.md first — this is pre-alpha, verified against a small
 number of real apps, and honest about what doesn't work yet.
 
-## 0. Prerequisites
+## Contents
+
+1. [Getting started](#1-getting-started)
+2. [Components](#2-components)
+   - [2.1 Items (forms, data entry)](#21-items-forms-data-entry)
+   - [2.2 Buttons](#22-buttons)
+   - [2.3 Regions (generic)](#23-regions-generic)
+   - [2.4 Cards](#24-cards)
+   - [2.5 Faceted Search](#25-faceted-search)
+   - [2.6 Interactive Report](#26-interactive-report)
+   - [2.7 Navigation & console](#27-navigation--console)
+   - [2.8 Lifecycle waits](#28-lifecycle-waits)
+   - [2.9 Coverage mapping](#29-coverage-mapping)
+3. [Page types & patterns](#3-page-types--patterns)
+   - [3.1 Forms / data entry](#31-forms--data-entry)
+   - [3.2 Reports](#32-reports)
+   - [3.3 Cards & faceted search pages](#33-cards--faceted-search-pages)
+   - [3.4 Master-detail](#34-master-detail)
+   - [3.5 Dashboards](#35-dashboards)
+   - [3.6 Drawer / modal pages](#36-drawer--modal-pages)
+4. [Authorization](#4-authorization)
+5. [What's not covered yet](#5-whats-not-covered-yet)
+
+---
+
+## 1. Getting started
+
+### Prerequisites
 
 - Node 22
 - An APEXlang export of an Oracle APEX 26.1+ app (a folder containing
   `application.apx` and a `pages/` subdirectory — that's what "Export to
-  APEXlang" from App Builder or VS Code produces). Don't have one yet? This
-  tutorial's first few steps use the project's own committed example
-  fixture, so you can follow along without one.
+  APEXlang" from App Builder or VS Code produces). Don't have one yet? The
+  examples below use the project's own committed fixture, so you can follow
+  along without one.
 
-## 1. Clone and build
+### Clone and build
 
 ```bash
 git clone https://github.com/satwikjambula/apx-testkit.git
@@ -36,70 +62,26 @@ CLI from here — `@apx/testkit` is a real runtime dependency of every
 generated file, and it needs to be built once (`dist/` doesn't ship
 pre-built).
 
-## 2. Generate your first page object + spec
+### Generate your first page object + spec
 
 ```bash
 node packages/generator/dist/cli.js packages/generator/test/fixtures/mini-export --out /tmp/my-first-tests
 ```
 
-You should see:
-
 ```
 Generated 1 page object(s) + spec(s) (0 marked skip: auth required) into /tmp/my-first-tests
 ```
 
-Two files appeared: `p00003-employee.page.ts` and
-`p00003-employee.spec.ts`. Open them — this is the whole product in
-miniature. The page object is a typed accessor built entirely on
-`@apx/testkit` primitives, no raw selectors:
+Two files appeared: `p00003-employee.page.ts` (a typed page object) and
+`p00003-employee.spec.ts` (a smoke spec exercising it). Section 2 below
+covers every primitive these two files — and any spec you write by hand —
+are built from.
 
-```ts
-export class EmployeePage {
-  static readonly alias = 'employee';
-  constructor(private readonly page: Page) {}
-  url(): string { return apexPageUrl(APP_BASE, EmployeePage.alias); }
-  async goto(): Promise<string[]> { return gotoApexPage(this.page, this.url()); }
-  get empno(): ApexItem { return new ApexItem(this.page, 'P3_EMPNO'); }
-  get ename(): ApexItem { return new ApexItem(this.page, 'P3_ENAME'); }
-  async clickSave(): Promise<void> { await buttonByLabel(this.page, 'Save').click(); }
-}
-```
-
-And the spec exercises it, never talking to `@apx/testkit` directly for
-navigation or items:
-
-```ts
-test('apex.item round-trip on P3_ENAME', async ({ page }) => {
-  const po = new EmployeePage(page);
-  await po.goto();
-  await po.ename.setValue('apx-testgen');
-  expect(await po.ename.getValue()).toBe('apx-testgen');
-});
-```
-
-Same input always produces byte-identical output — run the command again
-into a different `--out` directory and `diff -r` the two; nothing will
-differ.
-
-## 3. Point it at your own export
-
-```bash
-node packages/generator/dist/cli.js /path/to/your/export --out tests-generated
-```
-
-The CLI checks that `/path/to/your/export` exists and contains a `pages/`
-subdirectory, and tells you plainly if either is missing rather than
-failing with a raw stack trace. Warnings from the parser (unrecognized
-`.apx` constructs) print to stderr but don't stop generation — everything
-unrecognized lands in `raw` bags rather than being silently dropped; see
-`docs/grammar-assumptions.md` if you want to know exactly what's typed vs.
-raw today.
-
-## 4. Wire it into a runnable Playwright project
+### Wire it into a runnable Playwright project
 
 The generated files import `@apx/testkit` and expect an `APP_BASE` export
 from a sibling `../playwright.config.ts` — that's the one convention every
-generated file assumes. A minimal project looks like this:
+generated file assumes.
 
 **`package.json`**
 ```json
@@ -136,85 +118,418 @@ export default defineConfig({
 });
 ```
 
-Then:
 ```bash
 npm install
 npx playwright install chromium   # once, if you haven't already
 npx playwright test
 ```
 
-## 5. Auto-regenerate while you work
-
-Add `--watch` and leave it running in a terminal or VS Code task while you
-edit pages in App Builder / VS Code's APEXlang support and re-export:
+### Auto-regenerate while you work
 
 ```bash
 node packages/generator/dist/cli.js /path/to/your/export --out tests-generated --watch
 ```
 
-It regenerates on every `.apx` change (debounced 250ms, so a multi-file
-export burst triggers one regeneration, not several). Ctrl+C to stop.
+Regenerates on every `.apx` change (debounced 250ms so a multi-file export
+burst triggers one regeneration, not several). Ctrl+C to stop.
 
-## 6. Going further: a hand-written spec
+---
 
-Generated specs cover the runtime-verified floor (page loads, console is
-clean, items exist, one round-trips). For anything else, write your own
-spec against the same primitives — never a raw selector:
+## 2. Components
+
+Every component lives in `packages/testkit/src/`, is exported from
+`@apx/testkit`'s top level, and follows the same rule: **no raw CSS
+selectors, ever.** Everything goes through documented `apex.*` JavaScript
+APIs (`apex.item()`, `apex.region()`) or Playwright's accessibility-tree
+locators. When APEX's DOM changes across a release, the fix happens once
+here — not in every spec that uses it.
+
+Each section below states plainly what's **VERIFIED** (confirmed live,
+trust it), **PARTIAL** (works but with a known gap), or **UNVERIFIED**
+(implemented, not yet confirmed against a real app in every respect).
+
+### 2.1 Items (forms, data entry)
+
+**Status: VERIFIED.** The only component with a fully confirmed DOM
+contract: a `.apx` pageItem identifier maps to its DOM node id VERBATIM,
+for every item type tested (textField, textarea, numberField, selectList,
+datePicker, hidden), and `apex.item(id)` setValue/getValue round-trips
+through it.
 
 ```ts
-import { apexPageUrl, ApexItem, buttonByLabel, expect, gotoApexPage, test } from '@apx/testkit';
-import { APP_BASE } from '../playwright.config.js';
+import { ApexItem, expectItemsPresent, itemRoundTrip } from '@apx/testkit';
 
-test('employee page loads and the name field round-trips', async ({ page }) => {
-  await gotoApexPage(page, apexPageUrl(APP_BASE, 'employee'));
-  const name = new ApexItem(page, 'P3_ENAME');
-  await name.setValue('Ada Lovelace');
-  expect(await name.getValue()).toBe('Ada Lovelace');
-  await expect(buttonByLabel(page, 'Save')).toBeVisible();
-});
+// Ergonomic class, for hand-written specs:
+const name = new ApexItem(page, 'P410_NAME');
+await name.setValue('Ada Lovelace');
+console.log(await name.getValue());     // 'Ada Lovelace'
+console.log(await name.exists());       // true
+
+// Plain functions, what generated code uses:
+await expectItemsPresent(page, ['P410_NAME', 'P410_EMAIL', 'P410_ID']); // throws listing any missing
+const roundTripped = await itemRoundTrip(page, 'P410_NAME', 'apx-testgen');
 ```
 
-If your page has an Interactive Report, Cards, or Faceted Search region,
-`@apx/testkit` has typed wrappers for those too (`ApexRegion`,
-`ApexCardsRegion`, `ApexFacetsRegion`) — see the module comments in
-`packages/testkit/src/components/` for exactly what's verified vs. still
-open on each.
+This is the component to reach for on any data-entry form — it's the one
+piece of the toolkit you can build assertions on with full confidence.
 
-## 7. Coverage mapping (optional)
+### 2.2 Buttons
 
-See which declared items/regions/buttons your suite actually touches:
+**Status: PARTIAL.** There is no verified button-id-to-DOM convention yet
+(the "BUTTON DISCOVERY" report is still open — see
+docs/grammar-assumptions.md). Rather than guess a selector, buttons are
+located by accessible role + name — the `.apx` `label` field, via
+Playwright's accessibility tree:
+
+```ts
+import { buttonByLabel, clickButton } from '@apx/testkit';
+
+await expect(buttonByLabel(page, 'Save')).toBeVisible();
+await clickButton(page, 'Save'); // same as buttonByLabel(page, 'Save').click()
+```
+
+This works for ordinary labeled buttons. It is NOT verified for icon-only
+buttons, or buttons whose accessible name diverges from their visible
+label (heavily template-customized ones).
+
+### 2.3 Regions (generic)
+
+**Status: VERIFIED, generic surface only.** Region *identifiers* (mapping
+a `.apx` region's static id to a DOM/region id) are still an open ledger
+item — do not assume they're the same string. But once you have a
+region's runtime id (read it off the live DOM, or from a discovery pass —
+see `probeRegions` below), `ApexRegion`'s methods are confirmed live on two
+independently-typed regions (an Interactive Report and a Cards region):
+
+```ts
+import { ApexRegion, probeRegions, refreshRegion } from '@apx/testkit';
+
+// Diagnostics: does apex.region() recognize this id? (non-widget regions
+// like staticContent/form are expected to report false -- not a failure)
+const probes = await probeRegions(page, ['R14614638417487636']);
+
+// Fire-and-forget refresh, or the class form for repeated calls:
+await refreshRegion(page, 'R14614638417487636');
+
+const region = new ApexRegion(page, 'R14614638417487636');
+await region.refresh();
+await region.getSessionState();
+await region.getCurrentRecordId();
+await region.setCurrentRecordId('42');
+await region.getRecordValues();
+await region.setRecordValues({ ENAME: 'ADAMS' });
+await region.getSelectedValues();
+await region.setSelectedValues(['1', '2']);
+await region.focus();
+await region.getViewName(); // confirmed on Interactive Report only -- throws on Cards
+```
+
+Calling a method the region's widget type doesn't implement throws a clear
+error (`"...is not a function on this widget type"`) instead of silently
+returning `undefined` — that's deliberate, not a bug to work around.
+
+`apex.region(id).call(action)` — the generic action-dispatch API some APEX
+widgets support — was tested against Interactive Report with a dozen
+plausible action names and rejected every one with `"Call not
+supported."`. Don't reach for `.call()`; use the direct methods above.
+
+### 2.4 Cards
+
+**Status: VERIFIED, with one known-broken method pair.** Extends
+`ApexRegion` with pagination and selection:
+
+```ts
+import { ApexCardsRegion } from '@apx/testkit';
+
+const cards = new ApexCardsRegion(page, 'R14614559648487636');
+const info = await cards.getPageInfo();
+// { rowHeight, recordsPerRow, firstOffset, lastOffset, pageSize, pageOffset, scrollOffset, viewOffset }
+
+await cards.firstPage();
+await cards.lastPage();
+await cards.nextPage();
+await cards.previousPage();
+await cards.gotoPage(3);
+await cards.loadMore();
+
+await cards.getSelectedRecords();
+await cards.setSelectedRecords(['1', '2']);
+await cards.selectAll();
+```
+
+**`getRecords()` and `getModel()` are confirmed BROKEN** — they exist on
+the widget's method list but throw a genuine runtime error (`Cannot read
+properties of undefined (reading 'each')`) from inside APEX's own client
+code, both immediately after navigation and after an awaited `refresh()`.
+They're left in the typed API so the failure stays visible rather than
+silently missing, but treat them as needing their own investigation, not a
+working contract.
+
+### 2.5 Faceted Search
+
+**Status: VERIFIED**, including one real lifecycle bug found and fixed:
+
+```ts
+import { ApexFacetsRegion } from '@apx/testkit';
+
+const facets = new ApexFacetsRegion(page, 'R14614638417487636');
+
+// IMPORTANT: use fetchCountsAndWait(), not fetchCounts() + immediate read --
+// a single fetchCounts()-then-read was confirmed unreliable (returned null)
+// even in a genuinely fresh browser context. fetchCountsAndWait() waits for
+// the real apexafterrefresh event instead.
+await facets.fetchCountsAndWait();
+const total = await facets.getTotalResourceCount(); // a real number, e.g. 24
+
+await facets.clear();
+await facets.clearFacets();
+await facets.apply();
+await facets.enable();
+await facets.disable();
+
+// Per-facet methods: parameter shape (facetId: string) is INFERRED by
+// naming convention, not directly exercised live -- verify against your
+// own app before trusting these:
+await facets.getFacetCount('some-facet-id');
+await facets.getFacetValueCounts('some-facet-id');
+await facets.showFacet('some-facet-id');
+await facets.hideFacet('some-facet-id');
+```
+
+### 2.6 Interactive Report
+
+**Status: generic `ApexRegion` only — no dedicated component.** This is a
+real finding, not an oversight: Interactive Report's search/sort/pagination
+internals are implemented as `_`-prefixed methods on the underlying widget
+instance (`_search`, `_paginate`, `_reset`, `_download`, ...) — private by
+jQuery-UI-widget-factory convention. The only PUBLIC instance methods
+beyond the generic region API are `refresh`, `openDialogChat`,
+`openInlineChat`, `closeChat` (APEX 26.1 ships an AI chat integration on
+IR). There is no safe, documented way to drive IR search/sort/pagination
+via a JS method call — use the generic `ApexRegion` for what it does
+support, and drive search/pagination through the actual UI (fill the
+search field, click pagination links) for anything else:
+
+```ts
+import { ApexRegion } from '@apx/testkit';
+
+const report = new ApexRegion(page, 'R11643575732369775');
+await report.refresh();
+await report.getViewName();      // 'REPORT', 'CHART', etc.
+await report.getSessionState();
+```
+
+### 2.7 Navigation & console
+
+**Status: VERIFIED.** The entry point every spec — generated or
+hand-written — should use to load a page:
+
+```ts
+import { apexPageUrl, armConsoleGuard, gotoApexPage, normalizeTitle } from '@apx/testkit';
+
+const url = apexPageUrl(APP_BASE, 'employee'); // lowercases the alias, joins cleanly
+const errors = await gotoApexPage(page, url);  // arms console guard BEFORE navigating,
+                                                // waits for apex.item to exist as a boot signal
+// ... later ...
+expect(errors).toEqual([]);
+
+// Never compare titles with raw equality -- runtime titles differ from
+// .apx source by invisible dash/space characters:
+expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Employee'));
+
+// Lower-level, if you need to arm the guard without navigating yet:
+const rawErrors = armConsoleGuard(page);
+```
+
+### 2.8 Lifecycle waits
+
+**Status: VERIFIED**, general-purpose. Waits for a real APEX client event
+(`apexbeforerefresh`/`apexafterrefresh`, confirmed live) instead of polling
+or a fixed timeout:
+
+```ts
+import { callRegionMethodAndWaitForEvent, waitForRegionEvent } from '@apx/testkit';
+
+// Call a region method AND wait for the resulting event before resolving:
+await callRegionMethodAndWaitForEvent(page, 'R14614638417487636', 'fetchCounts', {
+  eventName: 'apexafterrefresh', // the default
+  timeoutMs: 10_000,             // the default
+});
+
+// Or: something ELSE triggers the refresh (e.g. a button click), and you
+// just need to wait for it -- call this BEFORE the triggering action:
+const wait = waitForRegionEvent(page, 'R14614638417487636', 'apexafterrefresh');
+await someButtonThatTriggersARefresh.click();
+await wait;
+```
+
+These are jQuery custom events, not native DOM `CustomEvent`s — confirmed
+live that `element.addEventListener('apexafterrefresh', ...)` never fires;
+only `apex.jQuery`'s own event system sees them, which is what these
+functions use internally. This pattern answers "did operation X finish" —
+it is NOT a general replacement for every wait in the toolkit (see the
+caveat in section 3.6).
+
+### 2.9 Coverage mapping
+
+**Status: VERIFIED**, opt-in, zero overhead unless enabled. Every
+item/region/button primitive above already records what it touches — you
+just need to turn recording on and read the report:
 
 ```bash
 APX_COVERAGE_LOG=./coverage.jsonl npx playwright test
 node /path/to/apx-testkit/packages/generator/dist/coverage-cli.js /path/to/your/export ./coverage.jsonl
 ```
 
-Recording only happens when `APX_COVERAGE_LOG` is set — zero overhead
-otherwise. The report shows touched-vs-declared per page, not code-line
-coverage.
+```
+page 410: Data Entry – Simple Form (data-entry-simple-form)
+  items:   6/9 (67%) -- untouched: P410_FIELD_HELP, P410_INLINE_HELP, P410_START_DATE
+  regions: 0/5 (0%) -- untouched: basic-fields-container, buttons-container_1, ...
+  buttons: 1/1 (100%)
+```
 
-## 8. Login-protected pages (optional)
+Buttons are matched by LABEL (there's no verified button-id convention —
+see 2.2), everything else by `.apx` identifier. This is "which declared
+components did my suite touch," not code-line coverage.
 
-Pages without `authentication: public` are generated as
-`test.describe.skip()` — the generator doesn't know your credentials.
-`@apx/testkit` has a `login()` fixture for hand-written specs:
+---
+
+## 3. Page types & patterns
+
+Everything below is built from the section 2 primitives — there's no
+separate "forms API" or "reports API" beyond what's already listed. This
+section is about which primitives fit which page shape, and what's
+genuinely different about each.
+
+### 3.1 Forms / data entry
+
+The bread-and-butter case, and the most-verified one. Items (2.1) for
+every field, `buttonByLabel` (2.2) for Save/Cancel/etc. Generated specs
+already do exactly this — see the example in section 1.
+
+### 3.2 Reports
+
+Interactive Report pages: use the generic `ApexRegion` (2.3/2.6) for
+refresh and view-name checks. There is currently no generated assertion
+for report content (row counts, search results) — that's an open item
+(see docs/ecosystem-roadmap.md); write it by hand with `ApexRegion` plus
+whatever `apex.item()`-backed search field the report exposes.
+
+### 3.3 Cards & faceted search pages
+
+Use `ApexCardsRegion` (2.4) for the cards region and `ApexFacetsRegion`
+(2.5) together — they're typically the same page (see the real example in
+`spike/tests/faceted-search-cards-demo.spec.ts`):
+
+```ts
+const facets = new ApexFacetsRegion(page, facetsRegionId);
+await facets.fetchCountsAndWait();
+expect(await facets.getTotalResourceCount()).toBeGreaterThan(0);
+
+const cards = new ApexCardsRegion(page, cardsRegionId);
+const info = await cards.getPageInfo();
+expect(info.pageSize).toBeGreaterThan(0);
+```
+
+### 3.4 Master-detail
+
+No dedicated component — a master-detail page is just two regions (each
+with its own items/buttons) composed on one page. Use `ApexItem`/
+`ApexRegion`/`buttonByLabel` against each region's own identifiers/items,
+the same as any other page. If the detail region is Cards or Faceted
+Search, use those components for it (3.3); if it's a plain form region,
+plain items (3.1).
+
+### 3.5 Dashboards
+
+**Not yet supported — real ground truth exists, no component built.**
+Dashboards commonly include Oracle JET charts (confirmed present, SVG-
+rendered) — but their container DOM ids are JET-generated hashes
+(`chart1000639411058$cp5`), NOT the `.apx` static id, unlike every other
+component in this toolkit. A chart component would need its own short
+discovery pass into what `apex.region(id).widget()` actually exposes
+before it could ship with the same confidence as the rest of this list.
+See docs/ecosystem-roadmap.md Tier 2.
+
+### 3.6 Drawer / modal pages
+
+**Known broken, not yet root-caused.** Pages with `pageMode: modalDialog`
+don't load via a plain friendly-URL GET — confirmed live (a real page
+returns 400 on direct navigation). These need a parent-page/dialog context
+that neither the generator nor `gotoApexPage` constructs today. If you hit
+this, it's the known gap, not a regression in your setup.
+
+---
+
+## 4. Authorization
+
+Every ground-truth page used to build most of this toolkit is
+`authentication: public` — that's why `.apx` pages requiring login are
+generated as `test.describe.skip()` rather than a real test. For
+login-protected pages, use the `login()` fixture by hand:
 
 ```ts
 import { login } from '@apx/testkit';
 
 await page.goto(`${APP_BASE}/login`);
-await login(page, { username: process.env.APEX_USER!, password: process.env.APEX_PASSWORD! });
+await login(page, {
+  username: process.env.APEX_USER!,
+  password: process.env.APEX_PASSWORD!,
+  // optional overrides, defaults shown:
+  usernameItemId: 'P101_USERNAME',
+  passwordItemId: 'P101_PASSWORD',
+  submitButtonName: /sign.?in|log.?in/i,
+  timeoutMs: 15_000,
+});
 ```
 
-Never hardcode credentials in a committed spec — read them from
-environment variables, and check `docs/limitations.md` for the current
-state of `auth.ts` verification before relying on it in CI.
+**Status: partially verified.** Field ids (`P101_USERNAME`/
+`P101_PASSWORD`) are confirmed live against a real second APEX app with a
+genuine login page — no changes needed there. `login()` also had one real
+race-condition bug found and fixed (it now waits for an actual URL change
+via `page.waitForURL` instead of a single point-in-time check) — see
+docs/grammar-assumptions.md for the full story of how that was found. The
+fix itself hasn't been independently re-verified yet.
 
-## What's next
+**Never hardcode credentials in a committed spec** — read them from
+environment variables, the way `spike/tests/auth-login-verify.spec.ts`
+does (`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD`, both required,
+neither hardcoded, test skips cleanly if either is unset).
 
-- `docs/limitations.md` — the honest gap list (what doesn't work yet).
-- `docs/support-matrix.md` — exactly which claims are verified, against
-  which apps.
-- `docs/ecosystem-roadmap.md` — where this is headed.
-- `examples/employee-page/` — the exact output from step 2, committed, so
-  you can read it without running anything.
+To avoid logging in once per test, save the session and reuse it:
+
+```ts
+import { loginAndSaveState } from '@apx/testkit';
+
+await loginAndSaveState(browser, `${APP_BASE}/login`, credentials, './auth.json');
+// then, in playwright.config.ts:
+// use: { storageState: './auth.json' }
+```
+
+---
+
+## 5. What's not covered yet
+
+Full list in docs/limitations.md and docs/ecosystem-roadmap.md; the
+headline gaps:
+
+- **Interactive Grid** — zero ground truth; not present in any app this
+  toolkit has been built against. Not guessed at on purpose.
+- **Trees as a content/data-display pattern** — the only Tree widget seen
+  is the universal left-nav, reused for one app's login picker; not a
+  distinct page-content region.
+- **Charts** — see 3.5.
+- **Region *assertions*** (as opposed to the `ApexRegion` API, which
+  exists) — the region-identifier-to-DOM convention is still open, so the
+  generator doesn't emit region-presence checks yet.
+- **`required` item behavior** — no required item exists in any
+  ground-truth app used so far, so "required items reject empty submit"
+  isn't asserted anywhere yet.
+- **Snapshot testing** — needs a masking-policy design first (live-data
+  pages will be flaky as naive snapshots) before any code.
+- **Data-dependent assertions** — permanent, by design; the generator has
+  no way to know what data your instance holds.
+
+If you hit one of these, it's a known gap, not a bug — but file an issue
+anyway if the workaround isn't obvious; that's exactly the signal this
+project needs right now.
