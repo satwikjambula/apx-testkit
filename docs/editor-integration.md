@@ -8,6 +8,19 @@ MCP layer doesn't already provide in agentic editors.
 ## 1. CLI (any editor terminal, CI)
     npx apx-testgen ./my-app-export --out ./tests-generated
 
+Add `--watch` to regenerate automatically whenever a `.apx` file under the
+export directory changes (e.g. after "Export to APEXlang" from VS Code/App
+Builder) — run it in an integrated terminal / VS Code task and leave it
+running:
+
+    npx apx-testgen ./my-app-export --out ./tests-generated --watch
+
+This is deliberately a CLI flag, not a VS Code extension feature — see the
+"NO traditional VS Code extension" decision above. Verified live: editing a
+tracked `.apx` file (debounced 250ms to absorb multi-file export bursts)
+triggers a real regeneration with the updated content, using Node's
+`fs.watch(..., { recursive: true })`.
+
 ## 2. MCP server (Cursor, Claude Code, VS Code Copilot agent mode, Windsurf)
 Cursor — .cursor/mcp.json in your project:
     { "mcpServers": { "apx": { "command": "npx", "args": ["-y", "@apx/mcp"] } } }

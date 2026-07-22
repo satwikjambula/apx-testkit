@@ -39,10 +39,15 @@ else in this project (see CLAUDE.md Invariant 2).
   console" specs — that wait exists to catch late, unpredictable async
   console errors, which isn't a single-completion-event problem the way a
   region refresh is. That timeout stays.
-- **VS Code/Cursor integration that regenerates on export change.** Pure
-  tooling, no new APEX ground truth needed: a file watcher on the export
-  directory driving the existing `@apx/testgen` CLI/`@apx/mcp` tools. Could
-  ship as a VS Code extension or a `--watch` flag on the CLI itself.
+- **VS Code/Cursor integration that regenerates on export change — DONE.**
+  Shipped as a `--watch` flag on `@apx/testgen`'s CLI (`fs.watch(...,
+  { recursive: true })`, 250ms debounce to absorb multi-file export
+  bursts), not a VS Code extension — consistent with
+  docs/editor-integration.md's existing "no traditional VS Code extension"
+  decision. Verified live: editing a tracked `.apx` file's `title` while
+  `--watch` was running triggered a real regeneration with the updated
+  content. Run it in an integrated terminal / VS Code task and leave it
+  running while editing in App Builder/VS Code's APEXlang support.
 
 ## Tier 2 — real ground truth exists, but needs care
 
