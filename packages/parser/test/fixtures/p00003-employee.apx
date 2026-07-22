@@ -1,0 +1,42 @@
+page 3 (
+  name: Employee
+  alias: EMPLOYEE
+  title: Employee
+  appearance {
+    pageMode: modalDialog
+    dialogTemplate: @/drawer
+    templateOptions: [ #DEFAULT# js-dialog-class-t-Drawer--pullOutEnd ]
+  }
+  dialog {
+    chained: false
+  }
+  region employee (
+    name: Employee
+    type: form
+    source {
+      location: localDatabase
+      tableName: EMP
+    }
+    appearance {
+      template: @/blank-with-attributes
+    }
+    item P3_EMPNO (
+      type: hidden
+      source {
+        column: EMPNO
+      }
+    )
+    item P3_ENAME (
+      type: textField
+      label: Name
+      required: true
+      source {
+        column: ENAME
+      }
+    )
+    button save (
+      label: Save
+      action: submit
+    )
+  )
+)

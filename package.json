@@ -1,0 +1,6 @@
+{
+  "name": "apexlang-testkit",
+  "private": true,
+  "workspaces": ["packages/*"],
+  "scripts": { "test": "npm run test --workspaces" }
+}

@@ -1,0 +1,15 @@
+{
+  "name": "@apx/spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "setup": "npx playwright install chromium",
+    "test": "playwright test",
+    "test:headed": "playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0",
+    "@types/node": "^26.1.1",
+    "typescript": "^5.5.0"
+  }
+}

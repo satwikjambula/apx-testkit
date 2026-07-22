@@ -1,0 +1,19 @@
+name: ci
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install
+      - name: Parser unit tests (fixtures only; integration skips without APX_EXPORT_DIR)
+        run: cd packages/parser && npx vitest run --exclude '**/integration.test.ts'
+      - name: Build parser + generator
+        run: |
+          (cd packages/parser && npx tsc -p tsconfig.json)
+          (cd packages/generator && npx tsc -p tsconfig.json)
+      - name: Determinism gate (self-fixture)
+        run: |
+          node -e "console.log('TODO: add committed hand-written mini-export fixture, generate twice, diff')"
