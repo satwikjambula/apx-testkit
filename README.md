@@ -177,14 +177,18 @@ Full list in docs/limitations.md; the headline ones:
   workaround, not a verified static-id convention.
 - **`auth.ts` is partially verified, not fully closed out.** Field ids
   (P101_USERNAME/P101_PASSWORD) confirmed live against a second real APEX
-  app with a real login page. Submission was switched from Enter-key to a
-  button click after live evidence of unreliability (one success, then
-  three consecutive failures with the form correctly filled but not
-  submitting); the fix itself hasn't been independently re-verified —
-  spike/tests/auth-login-verify.spec.ts is ready for whoever has
-  credentials to run it (`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD`
-  env vars — neither is hardcoded in the file, so no account info is
-  committed at all).
+  app with a real login page. Found and fixed a real race condition: the
+  original code checked `page.url()` once right after
+  `waitForLoadState('domcontentloaded')`, which can run before an
+  async/AJAX-driven redirect actually lands (confirmed via a failure
+  screenshot showing the login had, in fact, succeeded). An earlier theory
+  — "Enter-key submission is unreliable, switch to a button click" — was
+  likely the wrong diagnosis for the same race. Now waits for an actual URL
+  change (`page.waitForURL`) instead. This fix hasn't been independently
+  re-verified either — spike/tests/auth-login-verify.spec.ts is ready for
+  whoever has credentials to run it (`APX_LOGIN_TEST_USERNAME`/
+  `APX_LOGIN_TEST_PASSWORD` env vars — neither is hardcoded in the file, so
+  no account info is committed at all).
 - **Drawer/modal pages fail to load** via a plain friendly-URL GET
   (confirmed live on p00420) — a known, documented gap, not yet root-caused.
 - **`spike/tests-generated/`'s 18 committed files are stale** relative to

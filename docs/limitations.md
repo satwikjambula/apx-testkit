@@ -52,15 +52,22 @@ workaround isn't obvious; that's exactly the signal M4 needs.
 
 ## Authentication
 
-- **`auth.ts`'s login fixture is partially verified.** Field ids
+- **`auth.ts`'s login fixture is partially verified; one real bug found and
+  fixed, one earlier diagnosis corrected.** Field ids
   (`P101_USERNAME`/`P101_PASSWORD`) are confirmed live against a real
   second APEX 26.1 app with a genuine login page — no changes needed there.
-  Submission was switched from Enter-key to a button click after live
-  evidence of unreliability: one successful login attempt, then three
-  consecutive failures with the form correctly filled but not submitting
-  (no lockout, no error banner — just non-submission). The button-click fix
-  itself has NOT been independently re-verified — `.apx` pages requiring
-  login are still emitted as `test.describe.skip()` in generated suites.
+  The actual bug: `login()` checked `page.url()` once, right after
+  `waitForLoadState('domcontentloaded')` — a race condition, not a
+  submission-method problem. A run that threw "URL unchanged after submit"
+  had its failure screenshot show the user already logged in on the real
+  post-login dashboard — the login had succeeded, the check just ran before
+  an async/AJAX-driven redirect had landed. (An earlier theory — "Enter
+  is unreliable, switch to a button click" — was very likely the wrong fix
+  for the same underlying race; both submission methods can trigger this.)
+  Fixed by waiting for an actual URL change (`page.waitForURL`, up to
+  `timeoutMs`) instead of a single fixed-point check. This fix has NOT been
+  independently re-verified either — `.apx` pages requiring login are still
+  emitted as `test.describe.skip()` in generated suites.
   `spike/tests/auth-login-verify.spec.ts` is ready for whoever has
   credentials for a real login page to run (`APX_LOGIN_TEST_USERNAME=<user>
   APX_LOGIN_TEST_PASSWORD=<password> npx playwright test

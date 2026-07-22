@@ -142,20 +142,27 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       as content pattern" gap in docs/ecosystem-roadmap.md Tier 3).
       On the file-upload-download app: `P101_USERNAME`/`P101_PASSWORD`
       CONFIRMED as the real login field ids -- exact match, first
-      independent confirmation of this assumption. Login submission
-      reliability: one live attempt succeeded using Enter-to-submit, then
-      three consecutive attempts failed (form filled correctly per
-      screenshot, no error/lockout banner, submission simply didn't
-      happen). `auth.ts`'s `login()` was changed to click the accessible-
-      role submit button instead (falling back to Enter only if no button
-      matches) based on this evidence -- the fix itself has NOT been
-      independently re-verified live; credential-based testing was
-      intentionally not repeated (entering a password into a form is not
-      an action Claude performs itself, regardless of user authorization --
-      see CLAUDE.md). `spike/tests/auth-login-verify.spec.ts` is the
-      env-var-gated (`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` --
-      neither hardcoded) test ready for whoever has credentials to close
-      this out.
+      independent confirmation of this assumption.
+      Login submission -- root cause found and corrected once already:
+      first diagnosis (one live attempt succeeded using Enter-to-submit,
+      then three consecutive attempts failed with the form filled
+      correctly, no error/lockout) was "Enter is unreliable" -- so
+      `login()` was changed to click the accessible-role submit button
+      instead. That change was then run by the user (not Claude --
+      credential-based testing is intentionally not repeated by Claude
+      itself, see CLAUDE.md) and FAILED THE SAME WAY. Its failure
+      screenshot revealed the true cause: the user was already logged in
+      on the real post-login dashboard when the check ran -- `login()`'s
+      `page.url() === loginUrl` check, sampled once right after
+      `waitForLoadState('domcontentloaded')`, is a race condition against
+      this app's async/AJAX-driven redirect, independent of submission
+      method. Fixed by waiting for an actual URL change
+      (`page.waitForURL`, bounded by `timeoutMs`) instead of a single
+      point-in-time check. This second fix has NOT been independently
+      re-verified live either. `spike/tests/auth-login-verify.spec.ts` is
+      the env-var-gated (`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD`
+      -- neither hardcoded) test ready for whoever has credentials to
+      close this out.
 
 ## Still open
 

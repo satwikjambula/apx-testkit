@@ -4,23 +4,27 @@
  * long-standing Universal Theme login page item ids, matched exactly with
  * no changes needed.
  *
- * Submission method: switched from Enter-key to clicking the submit button
- * (located by accessible role/name, falling back to Enter only if no
- * matching button is found) after live evidence against that same app: an
- * initial attempt succeeded with Enter, then three consecutive attempts
- * failed -- the form was filled correctly (both fields, confirmed via
- * screenshot, no lockout/error banner), but the Enter keypress simply
- * didn't trigger submission. A visible button click is expected to be more
- * robust across different login page templates than relying on Enter
- * reaching whatever JS handler a given template wires up. This specific
- * fix has NOT been independently re-verified live (see CLAUDE.md/README --
- * credential-based verification is intentionally not repeated here); the
- * button-click path is the recommended default based on the evidence
- * above, not a fully closed-out verification.
+ * Real bug found and fixed against that same app, corrected once by
+ * evidence: the ORIGINAL "check page.url() right after
+ * waitForLoadState('domcontentloaded')" design is a race condition, not a
+ * submission-method problem. A run that threw "URL unchanged after submit"
+ * had its failure screenshot show the user already logged in on the real
+ * post-login dashboard -- meaning the login itself succeeded, but the
+ * synchronous check ran before an async/AJAX-driven redirect had actually
+ * updated the page URL. (This also means the earlier "Enter is unreliable,
+ * switch to a button click" theory was very likely the WRONG diagnosis for
+ * the same underlying race -- both submission methods can trigger an
+ * async-redirect login that a synchronous check catches too early.)
+ *
+ * Fixed by waiting for an actual URL change (`page.waitForURL`) instead of
+ * a fixed-point check -- this waits up to `timeoutMs` for the redirect to
+ * actually happen, however long the app's own login processing takes,
+ * rather than sampling the URL once right after a load-state event that
+ * doesn't guarantee the redirect has landed yet.
  *
  * Fails loudly, not silently: if the expected login items aren't found, or
- * the page is still on the login URL after submit, this throws -- it never
- * returns as if login succeeded when it didn't.
+ * the URL never changes away from the login page within the timeout, this
+ * throws -- it never returns as if login succeeded when it didn't.
  */
 import type { Browser, Page } from '@playwright/test';
 
@@ -34,7 +38,7 @@ export interface LoginOptions {
   passwordItemId?: string;
   /** Accessible name (or pattern) of the submit button. Falls back to Enter if no match is found. */
   submitButtonName?: string | RegExp;
-  /** Extra wait after submit for the post-login redirect to settle. */
+  /** How long to wait for the URL to change away from the login page after submit. */
   timeoutMs?: number;
 }
 
@@ -47,8 +51,9 @@ const DEFAULTS = {
 
 /**
  * Log in against a running page already navigated to the login URL.
- * Throws if the login items are missing or if the URL hasn't changed away
- * from the login page after submit (the generic "still logged out" signal).
+ * Throws if the login items are missing, or if the URL hasn't changed away
+ * from the login page within `timeoutMs` (the generic "still logged out"
+ * signal) -- waits for the actual redirect rather than sampling once.
  */
 export async function login(page: Page, credentials: ApexCredentials, options: LoginOptions = {}): Promise<void> {
   const opts = { ...DEFAULTS, ...options };
@@ -75,14 +80,17 @@ export async function login(page: Page, credentials: ApexCredentials, options: L
   } else {
     await passwordField.press('Enter');
   }
-  await page.waitForLoadState('domcontentloaded', { timeout: opts.timeoutMs });
 
-  if (page.url() === loginUrl) {
+  try {
+    await page.waitForURL((url) => url.toString() !== loginUrl, { timeout: opts.timeoutMs });
+  } catch {
     throw new Error(
-      `login(): URL unchanged after submit (${loginUrl}) -- treating as a failed login rather than ` +
-        'assuming success. Check credentials, that the submit button was found, or pass submitButtonName explicitly.',
+      `login(): URL still ${loginUrl} after ${opts.timeoutMs}ms -- treating as a failed login rather than ` +
+        'assuming success. Check credentials, that the submit button was found, or increase timeoutMs if this ' +
+        'app has a slow async login redirect.',
     );
   }
+  await page.waitForLoadState('domcontentloaded').catch(() => {});
 }
 
 /**

@@ -115,23 +115,30 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
    (naming: keep neutral `apx-*` until cleared; see docs/license-check.md),
    publish docs/validation-post.md, replace LICENSE stub with full
    Apache-2.0 text, state maintenance cadence honestly in README.
-5. M2 login fixture: PARTIALLY VERIFIED. Field ids
+5. M2 login fixture: PARTIALLY VERIFIED, one real bug found+fixed, one
+   earlier diagnosis corrected. Field ids
    (`P101_USERNAME`/`P101_PASSWORD`) confirmed live against a real second
    APEX app's login page ("Sample File Upload and Download") -- exact
-   match, no changes needed. Submission was Enter-to-submit; live evidence
-   showed one success then three consecutive silent failures (form
-   correctly filled, no error/lockout, just no submission), so `login()`
-   now clicks the accessible-role submit button instead, falling back to
-   Enter only if no button matches. That fix has NOT been independently
-   re-verified live -- credential-based testing was intentionally not
-   repeated (see the safety note in this session's history: entering
-   passwords into forms is not something Claude does itself, even with
-   explicit user authorization). `spike/tests/auth-login-verify.spec.ts`
-   (env-var gated, `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` --
-   neither hardcoded, so no account info is committed) is
-   ready for whoever has credentials to close this out. Until then treat
-   `auth.ts` as evidence-informed but not a fully closed verified contract
-   like item.ts.
+   match, no changes needed. The real bug: `login()` checked `page.url()`
+   once right after `waitForLoadState('domcontentloaded')` -- a race
+   condition. A run that threw "URL unchanged after submit" had its
+   failure screenshot show the user ALREADY logged in on the real
+   post-login dashboard -- the login had succeeded, the check just ran
+   before an async/AJAX-driven redirect landed. The prior theory in this
+   file ("Enter unreliable, switch to button click") was very likely the
+   wrong diagnosis for the same race -- both submission methods can hit
+   it. Fixed by waiting for an actual URL change (`page.waitForURL`, up to
+   `timeoutMs`) instead of a single fixed-point check. This fix has NOT
+   been independently re-verified live -- credential-based testing was
+   intentionally not repeated by Claude (entering passwords into forms is
+   not something Claude does itself, even with explicit user
+   authorization) -- the user ran it themselves and shared the failing
+   output, which is how this bug was actually found.
+   `spike/tests/auth-login-verify.spec.ts` (env-var gated,
+   `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` -- neither
+   hardcoded, so no account info is committed) is ready for whoever has
+   credentials to close this out. Until then treat `auth.ts` as
+   evidence-informed but not a fully closed verified contract like item.ts.
 6. Typed projection backlog = `unmodeled` list the generator prints
    (facet, dynamicAction, process, column, savedReport, series, ...).
 7. MCP SDK pinned ^1.0.0; re-verify API surface against latest SDK docs
