@@ -70,6 +70,50 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       exercised (list, dashboard, browse/search, item-detail, master-detail,
       simple data-entry). Root cause of the p420 400 is still unexplored —
       candidate for a future ledger entry, not urgent for M2.
+- [x] GENERIC apex.region(id) method surface confirmed live on TWO
+      independently-typed regions (an Interactive Report and a Cards
+      region, both on the ground-truth app): `refresh`, `getSessionState`,
+      `getCurrentRecordId`/`setCurrentRecordId`, `getRecordValues`/
+      `setRecordValues`, `getSelectedValues`/`setSelectedValues`, `focus`.
+      `getViewName` is Interactive-Report-only (absent on Cards; calling it
+      on Cards throws, confirmed). Shipped as `ApexRegion` in
+      `packages/testkit/src/components/region.ts`.
+      `apex.region(id).call(action)` (the generic action-dispatch API) was
+      tested against Interactive Report with a dozen plausible action names
+      (refresh, search, getViews, getCurrentView, reset, collapse, ...) and
+      REJECTED ALL of them with "Call not supported." — that dispatch path
+      is not how this widget type is driven; the direct methods on the
+      region object are.
+      Interactive Report's search/sort/pagination internals ARE exposed on
+      the underlying jQuery-UI-style widget instance, but every one of
+      those methods is `_`-prefixed (`_search`, `_paginate`, `_reset`,
+      `_download`, ...) — private by jQuery UI widget-factory convention.
+      The only PUBLIC (non-underscore) instance methods beyond the generic
+      region API are `refresh`, `openDialogChat`, `openInlineChat`,
+      `closeChat` (APEX 26.1 ships an AI chat integration on IR). Do not
+      call the private methods from the testkit — same "no raw
+      internals" principle as the DOM-selector ban.
+- [x] Cards region (`packages/testkit/src/components/cards.ts`) confirmed
+      live, additional to the generic API: `getPageInfo()` (shape: {
+      rowHeight, recordsPerRow, firstOffset, lastOffset, pageSize,
+      pageOffset, scrollOffset, viewOffset }), `firstPage`/`lastPage`/
+      `nextPage`/`previousPage`/`gotoPage`/`loadMore`, `getSelectedRecords`/
+      `setSelectedRecords`/`selectAll`.
+      KNOWN BROKEN, confirmed (not a timing fluke — tested immediately
+      after navigation AND after an awaited `refresh()`, both threw the
+      same error): `getRecords()` and `getModel()` throw `TypeError: Cannot
+      read properties of undefined (reading 'each')` from inside APEX's own
+      `modelViewBase.min.js`. Left in the typed API (so the failure is
+      visible, not silently absent) but do not treat as working.
+- [x] Faceted Search region (`packages/testkit/src/components/faceted-search.ts`)
+      confirmed live: `getTotalResourceCount()` returns a real number (24 in
+      the ground-truth app) -- but NOT reliably right after navigation. A
+      single `await fetchCounts()` then read is NOT sufficient: tested in a
+      genuinely fresh Playwright browser context (not a reused/warmed tab)
+      and it still returned `null`. Polling resolves it reliably (2 attempts
+      / ~200ms observed) -- see spike/tests/faceted-search-cards-demo.spec.ts
+      for the correct `expect.poll()` pattern. This is the concrete case
+      motivating the lifecycle-wait work in docs/ecosystem-roadmap.md Tier 1.
 
 ## Still open
 

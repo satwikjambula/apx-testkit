@@ -9,19 +9,31 @@ else in this project (see CLAUDE.md Invariant 2).
 
 ## Tier 1 — buildable now, real ground truth exists
 
-- **Richer component APIs: Interactive Report, Cards, Faceted Search.**
-  Confirmed live: `browse-interactive-report` has a full `a-IRR-*` toolbar
-  (search, sort widget, pagination, actions, views); `faceted-search-cards`
-  has `a-CardView-*` cards and `a-FS-*` facets. These can be built the same
-  way `item.ts` was: wrap the documented `apex.region(id)` widget API
-  (`interactiveReport`, etc.), never a raw selector.
+- **Richer component APIs: Interactive Report, Cards, Faceted Search — DONE.**
+  Shipped in `packages/testkit/src/components/{region,cards,faceted-search}.ts`:
+  a generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId,
+  getRecordValues, getSelectedValues, focus -- confirmed on two independent
+  widget types), `ApexCardsRegion` (pagination, selection), `ApexFacetsRegion`
+  (facet counts, apply/clear). Two real findings from live verification,
+  not assumption: Interactive Report's search/sort/pagination internals are
+  ALL private (`_`-prefixed) on the widget instance -- only `refresh` is
+  public, so IR doesn't get its own rich component file, just the generic
+  `ApexRegion` methods. And `ApexCardsRegion.getRecords()`/`.getModel()` are
+  confirmed BROKEN in this app (throw a real error from APEX's own client
+  code) -- shipped anyway, documented as known-broken, per
+  docs/grammar-assumptions.md and docs/limitations.md.
 - **Automatic waits tied to APEX's client lifecycle.** APEX fires documented
   client-side events (`apexreadyend`, `apexafterrefresh`,
   `apexbeforepageaction`, etc. via `apex.event`/`$(document).on(...)`).
   `gotoApexPage` already waits for `apex.item` to exist as a boot signal;
   this extends the same idea to per-region refresh/ready events instead of
   `page.waitForTimeout()` calls (one already exists in the generated "clean
-  console" test — a good first target to replace).
+  console" test — a good first target to replace). NOW HAS A CONCRETE
+  MOTIVATING CASE from the component-API work above:
+  `ApexFacetsRegion.getTotalResourceCount()` needs polling (verified: a
+  single `fetchCounts()`-then-read is unreliable even in a fresh browser
+  context) — an event-based wait would replace that poll with something
+  deterministic. This is next.
 - **VS Code/Cursor integration that regenerates on export change.** Pure
   tooling, no new APEX ground truth needed: a file watcher on the export
   directory driving the existing `@apx/testgen` CLI/`@apx/mcp` tools. Could

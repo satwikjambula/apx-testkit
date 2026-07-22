@@ -1,17 +1,32 @@
 /**
- * Region wrapper -- PARTIAL / OPEN contract. Per docs/grammar-assumptions.md
- * "Still open": region identifiers matched NO probed DOM convention (verbatim
- * #id, R_ prefix, data-region-id, data-static-id) in the spike run, and
- * apex.region() itself is expected to miss for staticContent/form (non-widget)
- * regions even once that convention is known.
+ * Region wrapper. Two tiers, deliberately kept separate:
  *
- * Until the REGION DISCOVERY report lands, this wrapper does exactly one
- * thing: ask apex.region()'s own documented widget API whether it recognizes
- * the id, and say so honestly. It does NOT fall back to a guessed selector
- * (getElementById, [data-region-id], etc.) -- a guess here would violate the
- * "no raw selectors, no unverified assertions" rule this project is built on.
- * Do not add selector fallbacks to this file without first recording the
- * verified convention in docs/grammar-assumptions.md.
+ * 1. `probeRegions`/`refreshRegion` -- PARTIAL / OPEN. Per
+ *    docs/grammar-assumptions.md "Still open", region IDENTIFIERS (the
+ *    .apx static id -> DOM/region id mapping) matched no probed convention
+ *    for at least one region type in the ground-truth app. Do not assume a
+ *    region's DOM id equals its .apx identifier.
+ *
+ * 2. `ApexRegion` -- VERIFIED generic apex.region() method surface. Once you
+ *    HAVE a region's runtime id (however you obtained it -- e.g. read off
+ *    the live DOM, not assumed from the .apx identifier), these methods are
+ *    confirmed live, working, on TWO independently-typed regions in the
+ *    ground-truth app (an Interactive Report and a Cards region):
+ *    refresh, getSessionState, getCurrentRecordId/setCurrentRecordId,
+ *    getRecordValues/setRecordValues, getSelectedValues/setSelectedValues,
+ *    focus. `getViewName` is confirmed on Interactive Report only (absent
+ *    on Cards) -- calling it against a region that doesn't implement it
+ *    throws a clear error rather than silently returning undefined.
+ *
+ * All calls go through apex.region(id)'s own documented method dispatch --
+ * never a raw selector, never a guessed DOM structure. `apex.region(id).call(action)`
+ * (the generic action-dispatch API) was tested against an Interactive Report
+ * region with several plausible action names (refresh, search, getViews,
+ * getCurrentView, reset, ...) and rejected ALL of them with "Call not
+ * supported." -- that action-dispatch path is NOT how this widget type is
+ * driven; use the direct methods on the region object instead (see
+ * cards.ts and faceted-search.ts, which extend this same pattern for the
+ * additional methods those specific widget types expose).
  */
 import type { Page } from '@playwright/test';
 
@@ -58,5 +73,85 @@ export async function refreshRegion(page: Page, id: string): Promise<void> {
         'or the DOM convention for this region type is not yet verified -- see ' +
         'docs/grammar-assumptions.md "Still open" before assuming this is a bug.',
     );
+  }
+}
+
+/**
+ * Low-level dispatcher shared by ApexRegion and its subclasses (cards.ts,
+ * faceted-search.ts). Fails loudly with a specific reason -- region not
+ * found vs. method not supported on this widget type -- never silently
+ * returns undefined for a typo'd or unsupported method name.
+ */
+export async function callRegionMethod<T>(page: Page, id: string, method: string, args: unknown[] = []): Promise<T> {
+  return page.evaluate(
+    ([id, method, args]: [string, string, unknown[]]) => {
+      const region = (window as any).apex?.region?.(id);
+      if (!region) {
+        throw new Error(`apex.region('${id}') did not resolve -- not a recognized widget region.`);
+      }
+      if (typeof region[method] !== 'function') {
+        throw new Error(`apex.region('${id}').${method} is not a function on this widget type.`);
+      }
+      return region[method](...args);
+    },
+    [id, method, args] as [string, string, unknown[]],
+  );
+}
+
+/**
+ * Generic region wrapper for the VERIFIED apex.region() method surface
+ * (see module doc). Use this directly for Interactive Report and other
+ * generic regions; cards.ts/faceted-search.ts extend the same
+ * callRegionMethod primitive with their widget-specific additions.
+ */
+export class ApexRegion {
+  constructor(
+    protected readonly page: Page,
+    public readonly id: string,
+  ) {}
+
+  protected invoke<T>(method: string, ...args: unknown[]): Promise<T> {
+    return callRegionMethod<T>(this.page, this.id, method, args);
+  }
+
+  refresh(): Promise<void> {
+    return this.invoke('refresh');
+  }
+
+  /** Confirmed on Interactive Report; NOT present on Cards -- throws if unsupported. */
+  getViewName(): Promise<string> {
+    return this.invoke('getViewName');
+  }
+
+  getSessionState(): Promise<unknown> {
+    return this.invoke('getSessionState');
+  }
+
+  getCurrentRecordId(): Promise<string | null> {
+    return this.invoke('getCurrentRecordId');
+  }
+
+  setCurrentRecordId(recordId: string): Promise<void> {
+    return this.invoke('setCurrentRecordId', recordId);
+  }
+
+  getRecordValues(): Promise<Record<string, unknown>> {
+    return this.invoke('getRecordValues');
+  }
+
+  setRecordValues(values: Record<string, unknown>): Promise<void> {
+    return this.invoke('setRecordValues', values);
+  }
+
+  getSelectedValues(): Promise<unknown[]> {
+    return this.invoke('getSelectedValues');
+  }
+
+  setSelectedValues(values: unknown[]): Promise<void> {
+    return this.invoke('setSelectedValues', values);
+  }
+
+  focus(): Promise<void> {
+    return this.invoke('focus');
   }
 }

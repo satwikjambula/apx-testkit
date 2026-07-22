@@ -11,15 +11,25 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   returns 400 on direct navigation. These pages need a parent-page/dialog
   context this generator doesn't construct. Generated tests for such pages
   will fail until this is addressed — that's expected, not a regression.
-- **Faceted search / Interactive Grid pages are untested.** The plan
-  deliberately excludes Interactive Grid deep interaction (cell editing) for
-  v0.2+; faceted search regions haven't been exercised at all.
+- **Interactive Grid is untested and has zero ground truth.** Not present
+  anywhere in the one live app available to this project — see
+  docs/ecosystem-roadmap.md Tier 3.
 - **Region assertions don't exist.** The region identifier -> DOM convention
   is still an open ledger item (see docs/grammar-assumptions.md "Still
   open") — no selector guess has been committed. `@apx/testkit`'s
   `probeRegions()`/`refreshRegion()` only report what apex.region()'s own
   widget API resolves, which is known to miss non-widget regions
   (staticContent, form).
+- **`ApexCardsRegion.getRecords()`/`.getModel()` are confirmed broken** in
+  the one app tested — they throw a genuine runtime error from inside
+  APEX's own client code, not a testkit bug. Left in the typed API so the
+  failure is visible rather than silently unavailable; see
+  docs/grammar-assumptions.md.
+- **`ApexFacetsRegion.getTotalResourceCount()` needs polling, not a single
+  read.** It can return `null` for a short window after navigation even
+  after `await fetchCounts()`. Use `expect.poll()`, not
+  `page.waitForTimeout()` — see
+  spike/tests/faceted-search-cards-demo.spec.ts.
 - **Button assertions use accessible-role/label locators, not a verified
   static-id convention.** Works today for ordinary labeled buttons; not
   verified for icon-only buttons or heavily template-customized ones.

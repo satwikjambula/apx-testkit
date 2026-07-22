@@ -116,10 +116,16 @@ regenerated-test diff — side by side in the same PR.
                  deterministic: same AST in -> byte-identical files out
     ▼
 @apx/testkit   — the primitives BOTH generated and hand-written specs
-                 import: item.ts (apex.item, VERIFIED), region.ts /
-                 button.ts (apex.region + accessible-role locators,
-                 partial — DOM convention still open), auth.ts (login
-                 fixture, unverified), console-guard.ts, session.ts
+                 import: item.ts (apex.item, VERIFIED), region.ts
+                 (generic ApexRegion: refresh/getSessionState/
+                 getCurrentRecordId/etc., verified on two widget types),
+                 cards.ts + faceted-search.ts (pagination, selection,
+                 facet counts -- verified live, incl. two confirmed
+                 gotchas: getRecords() is broken on Cards in this app,
+                 getTotalResourceCount() needs polling), button.ts
+                 (accessible-role locators, partial -- DOM id convention
+                 still open), auth.ts (login fixture, unverified),
+                 console-guard.ts, session.ts
 
 @apx/mcp       — MCP stdio server wrapping @apx/testgen for agentic editors
                  (inspect_apex_export, generate_apex_tests tools)

@@ -21,8 +21,16 @@ export {
   itemRoundTrip,
   type ItemPresence,
 } from './components/item.js';
-export { probeRegions, refreshRegion, type RegionProbe } from './components/region.js';
+export {
+  ApexRegion,
+  probeRegions,
+  refreshRegion,
+  callRegionMethod,
+  type RegionProbe,
+} from './components/region.js';
 export { buttonByLabel, clickButton } from './components/button.js';
+export { ApexCardsRegion, type CardsPageInfo } from './components/cards.js';
+export { ApexFacetsRegion } from './components/faceted-search.js';
 
 export interface ApxFixtures {
   /** Auto-armed for every test; empty array means no console/page errors so far. */
