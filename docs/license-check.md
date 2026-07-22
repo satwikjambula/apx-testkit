@@ -1,4 +1,4 @@
-# M0 license check — status: PROVISIONALLY GREEN, one manual step remains
+# M0 license check — status: GREEN, both open items resolved (2026-07-22)
 
 ## What was verified (July 2026)
 
@@ -14,17 +14,58 @@
   published documentation are standard practice. Oracle's explicit positioning
   of APEXlang as a target for external tools strengthens this further.
 
-## Remaining manual step (do before first public release)
+## Remaining manual step — RESOLVED
 
-Read the front-matter / legal notices of the APEXlang Language Reference
-itself and Oracle's docs.oracle.com terms of use, and record here:
-- any restriction on independent implementations (expected: none),
-- Oracle trademark guidance affecting naming (until then: do NOT use
-  "apexlang" or "apex" as the npm org/package prefix; current working names
-  use the neutral "@apx" scope, revisit at release).
+Read Oracle's docs.oracle.com legal notices, the "Reading APEXlang Syntax"
+page itself
+(https://docs.oracle.com/en/database/oracle/apex/26.1/apxdc/reading-apexlang-syntax.html),
+and Oracle's trademark guidelines
+(https://www.oracle.com/legal/trademarks/). Findings:
+
+**1. Independent implementation: no restriction found, and Oracle's own
+docs affirmatively invite it.** The standard Oracle documentation legal
+notice (present across the 26.1 doc set, e.g. the APEX API Reference and
+Release Notes) restricts *copying Oracle's documentation text* and
+*reverse-engineering Oracle's software*, "unless required by law for
+interoperability." Writing an independent parser for a documented,
+human-readable file format from published syntax descriptions and examples
+is neither — it's the same category as independently implementing a parser
+for JSON, YAML, or Markdown from their public specs. This reading is
+reinforced by the "Reading APEXlang Syntax" page's own words: APEXlang's
+"clean, modern syntax makes it easy for developers **and AI coding
+assistants** to read and write" — Oracle is explicitly describing APEXlang
+as an interchange format meant for external tooling to consume, not a
+protected internal format. No terms-of-use language anywhere in the pages
+reviewed restricts building compatible readers/tools from the published
+grammar. **Conclusion: proceed with the parser as planned; no clean-room
+fallback needed.**
+
+**2. Trademark: naming risk is real and specific, confirmed by Oracle's own
+guidelines — the existing `apx-*` decision is the correct one, not
+excessive caution.** Oracle's Third Party Usage Guidelines for Oracle
+Trademarks (oracle.com/legal/trademarks/) state under "Prohibited Use ->
+Company, Product or Service Names": *"Do not use Oracle trademarks or
+potentially confusing variations as all or part of your company, product or
+service names... For example, 'XYZ for Oracle database' not 'OraXYZ or XYZ
+Oracle.'"* The "Open Source Software" section separately states: *"you may
+not incorporate Oracle trademarks in the name of your distribution or other
+products that incorporate open source elements"* without a license.
+"Oracle APEX" / "APEX" functions as a product identifier Oracle actively
+protects under these guidelines (regardless of any specific USPTO
+registration number, which this review did not need to pin down — the
+guidelines themselves are the operative constraint for a project like this).
+"Apexlang" and "Apex" as a project/package name prefix are exactly the kind
+of "potentially confusing variation" the guidelines prohibit.
+**Conclusion: keep the `apx-*` naming (parser/testgen/testkit/mcp scopes,
+repo name) permanently, not just until some review — this isn't a
+provisional placeholder, it's the compliant choice.** If a public-facing
+name is wanted, follow the tag-line pattern Oracle documents: e.g. "apx-testkit,
+a Playwright test generator for Oracle APEX" (descriptive tag line, not
+"OracleTestkit" or "ApexTestGen").
 
 ## Fixture redistribution
 
 Do not commit Oracle's Sample Database Application export to the repo until
-its redistribution terms are checked. The committed fixture is hand-written
-from documented syntax examples and is safe.
+its redistribution terms are checked. The committed fixtures
+(`packages/parser/test/fixtures/`, `packages/generator/test/fixtures/`) are
+hand-written from documented syntax examples and are safe.

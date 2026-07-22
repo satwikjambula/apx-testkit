@@ -199,6 +199,19 @@ Determinism requirement: same `.apx` input ⇒ identical output bytes (stable or
 
 **M3 — Generator (weeks 6–8).** CLI: export folder in, page objects + smoke specs out, deterministic. Exit: generated suite for the Sample DB App passes green against a clean 26.1 container in GitHub Actions, and the run is reproducible by a stranger from the README in under 15 minutes. That 15-minute number is the real acceptance test for the whole project.
 
+> **Status: engineering-complete, live-CI exit criterion open.** The CLI now
+> emits page objects (`page-object.ts`) AND smoke specs, deterministically —
+> verified via a committed synthetic fixture and CI's determinism gate. The
+> PageObject pattern is proven live against the real UX Pattern Catalog app
+> (`spike/tests/p410-page-object-demo.spec.ts`). NOT done: the literal exit
+> criterion (a clean 26.1 container running in GitHub Actions) — that needs
+> Oracle APEX/ORDS infrastructure this project doesn't have access to build
+> here; `spike/tests-generated/` also needs real regeneration once someone
+> with the actual export runs the CLI against it (the committed 18 files
+> predate the page-object split). "Sample DB App" in this exit criterion was
+> also never obtained per §1.2 — UX Pattern Catalog has been the actual
+> ground-truth app throughout.
+
 **M4 — Release + second user (weeks 8–10).** Tag v0.1, `examples/` committed, support-matrix doc stating "verified against 26.1 only," limitations doc, and — the actual milestone — at least one person who is not you running it against an app that is not the sample app, with their breakage reports filed as issues. No v0.2 planning until this exists.
 
 ---

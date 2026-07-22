@@ -15,10 +15,18 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
   instance (no ground-truth app has a login page yet). Generated code AND
   hand-written specs both import from here — never duplicate this logic
   locally (see Invariant 3).
-- `packages/generator` (@apx/testgen): `lib.ts` (generate/inspect) + thin
-  `cli.ts`. Emits per-page Playwright smoke specs that import their
-  assertions from `@apx/testkit` — the generated file itself contains no
-  helper functions, only per-page glue (pageUrl, item ids, title string).
+- `packages/generator` (@apx/testgen): `lib.ts` (generate/inspect) + `page-object.ts`
+  (AST page -> typed PageObject class: `ApexItem` accessors, `clickXxx()`
+  button methods, `goto()`/`url()`) + thin `cli.ts`. Emits TWO files per
+  page: `.page.ts` (the page object) and `.spec.ts` (a smoke spec that
+  exercises it — never calls `@apx/testkit` directly for navigation/items,
+  only through the page object, so the two can't drift apart). Neither file
+  contains helper functions of its own, only per-page glue.
+  `spike/tests-generated/` is STALE (pre-page-object template) — the real
+  export needed to regenerate it isn't available in this environment; the
+  new shape is verified via `packages/generator/test/fixtures/mini-export`
+  instead (see CI's determinism gate) and proven live in
+  `spike/tests/p410-page-object-demo.spec.ts`.
 - `packages/mcp` (@apx/mcp): MCP stdio server exposing `inspect_apex_export`
   and `generate_apex_tests` for agentic editors.
 - `spike/`: runnable Playwright suite against a live public instance
