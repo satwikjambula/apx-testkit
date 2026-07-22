@@ -52,11 +52,20 @@ workaround isn't obvious; that's exactly the signal M4 needs.
 
 ## Authentication
 
-- **`auth.ts`'s login fixture is implemented but unverified.** Every
-  ground-truth page used so far is `authentication: public`. Pages requiring
-  login are emitted as `test.describe.skip()`. If you have an app with a
-  real login page, running against it (and reporting what breaks) is one of
-  the highest-value things you could do for this project right now.
+- **`auth.ts`'s login fixture is partially verified.** Field ids
+  (`P101_USERNAME`/`P101_PASSWORD`) are confirmed live against a real
+  second APEX 26.1 app with a genuine login page — no changes needed there.
+  Submission was switched from Enter-key to a button click after live
+  evidence of unreliability: one successful login attempt, then three
+  consecutive failures with the form correctly filled but not submitting
+  (no lockout, no error banner — just non-submission). The button-click fix
+  itself has NOT been independently re-verified — `.apx` pages requiring
+  login are still emitted as `test.describe.skip()` in generated suites.
+  `spike/tests/auth-login-verify.spec.ts` is ready for whoever has
+  credentials for a real login page to run
+  (`APX_LOGIN_TEST_PASSWORD=<password> npx playwright test
+  tests/auth-login-verify.spec.ts` from `spike/`) — this remains one of the
+  highest-value things you could do for this project right now.
 
 ## Generator
 

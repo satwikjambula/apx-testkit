@@ -131,6 +131,31 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       which waits for late/unpredictable async errors -- a different
       problem with no single completion event.
 
+- [x] SECOND real APEX 26.1 app confirmed available and partially explored:
+      "Sample File Upload and Download" (standard username/password login)
+      and "Sample Workflow, Approvals, and Tasks" (custom auth scheme --
+      login as any employee, no password, using a tree-based user picker
+      that turned out to be the standard `t_TreeNav` navigation-menu widget
+      reused for this page, NOT a distinct page-content Tree region --
+      verified via `apex.region('t_TreeNav')` parent-chain inspection
+      before it got documented as a new finding; does not close the "Trees
+      as content pattern" gap in docs/ecosystem-roadmap.md Tier 3).
+      On the file-upload-download app: `P101_USERNAME`/`P101_PASSWORD`
+      CONFIRMED as the real login field ids -- exact match, first
+      independent confirmation of this assumption. Login submission
+      reliability: one live attempt succeeded using Enter-to-submit, then
+      three consecutive attempts failed (form filled correctly per
+      screenshot, no error/lockout banner, submission simply didn't
+      happen). `auth.ts`'s `login()` was changed to click the accessible-
+      role submit button instead (falling back to Enter only if no button
+      matches) based on this evidence -- the fix itself has NOT been
+      independently re-verified live; credential-based testing was
+      intentionally not repeated (entering a password into a form is not
+      an action Claude performs itself, regardless of user authorization --
+      see CLAUDE.md). `spike/tests/auth-login-verify.spec.ts` is the
+      env-var-gated (`APX_LOGIN_TEST_PASSWORD`) test ready for whoever has
+      credentials to close this out.
+
 ## Still open
 
 - [ ] Comment syntax: none observed anywhere. Assume none until spec says so.

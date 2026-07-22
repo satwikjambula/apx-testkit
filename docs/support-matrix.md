@@ -10,7 +10,7 @@ compatibility.
 | `@apx/testkit` item.ts | Live APEX 26.1 instance (same app) | apex.item() round-trip verified for textField, textarea, numberField, selectList, datePicker, hidden |
 | `@apx/testkit` session.ts | Live APEX 26.1 instance (same app) | Friendly-URL alias resolution, title normalization rule |
 | `@apx/testkit` region.ts / button.ts | Partially — see docs/grammar-assumptions.md "Still open" | region.ts only claims what apex.region()'s own API reports; button.ts uses accessible-role/label locators, not a verified static-id convention |
-| `@apx/testkit` auth.ts | NOT verified against any real instance | No ground-truth export used here has a non-public page; assumptions are P101_USERNAME/P101_PASSWORD (Universal Theme default), unconfirmed for this project |
+| `@apx/testkit` auth.ts | Partially verified: live, against a SECOND real APEX 26.1 app (Sample File Upload and Download) | Field ids (P101_USERNAME/P101_PASSWORD) confirmed exact match, no changes needed. Submission switched from Enter to a button click after live evidence of Enter unreliability; that specific fix is NOT yet independently re-verified — see docs/limitations.md |
 | `@apx/testgen` generator output | Live APEX 26.1 instance, one app (UX Pattern Catalog) | 39/43 generated smoke tests passed live; determinism verified against a committed synthetic fixture, not the real export (not available in every environment) |
 
 ## What "verified against one app" means

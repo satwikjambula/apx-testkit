@@ -127,7 +127,11 @@ regenerated-test diff — side by side in the same PR.
                  lifecycle.ts (event-based waits on APEX's real
                  apexafterrefresh, not polling/timeouts), button.ts
                  (accessible-role locators, partial -- DOM id convention
-                 still open), auth.ts (login fixture, unverified),
+                 still open), auth.ts (login fixture -- field ids
+                 P101_USERNAME/P101_PASSWORD confirmed live against a
+                 second real APEX app; submission switched to a
+                 button-click after Enter proved unreliable there, fix
+                 not yet independently re-verified),
                  coverage.ts (opt-in touch recorder, zero overhead unless
                  APX_COVERAGE_LOG is set), console-guard.ts, session.ts
 
@@ -171,8 +175,15 @@ Full list in docs/limitations.md; the headline ones:
   docs/grammar-assumptions.md "Still open"); button *click methods* work
   today via accessible-role/label locators as a deliberate interim
   workaround, not a verified static-id convention.
-- **`auth.ts` is implemented but unverified** — no ground-truth app used so
-  far has a login page.
+- **`auth.ts` is partially verified, not fully closed out.** Field ids
+  (P101_USERNAME/P101_PASSWORD) confirmed live against a second real APEX
+  app with a real login page. Submission was switched from Enter-key to a
+  button click after live evidence of unreliability (one success, then
+  three consecutive failures with the form correctly filled but not
+  submitting); the fix itself hasn't been independently re-verified —
+  spike/tests/auth-login-verify.spec.ts is ready for whoever has
+  credentials to run it (`APX_LOGIN_TEST_PASSWORD` env var, never commit
+  the value).
 - **Drawer/modal pages fail to load** via a plain friendly-URL GET
   (confirmed live on p00420) — a known, documented gap, not yet root-caused.
 - **`spike/tests-generated/`'s 18 committed files are stale** relative to
@@ -193,9 +204,11 @@ Full list in docs/limitations.md; the headline ones:
 | M4 — release + second user | Launch-prep done: LICENSE (full Apache-2.0), trademark/license review, support matrix, limitations doc, examples/. The actual milestone — a real second user filing real breakage reports — is still open and isn't something engineering work alone can produce |
 
 Highest-value next steps (see docs/limitations.md and CLAUDE.md "Outstanding
-debts"): capture the region/button DOM discovery report, validate the parser
-against a second independent `.apx` export, get a real login page to verify
-`auth.ts` against, and — the actual M4 milestone — find that second user.
+debts"): capture the region/button DOM discovery report, validate the
+parser against a second independent `.apx` export, independently re-verify
+the button-click login fix (spike/tests/auth-login-verify.spec.ts, needs
+real credentials someone else supplies), and — the actual M4 milestone —
+find that second user.
 
 ### Beyond M4: a comprehensive APEX testing ecosystem
 

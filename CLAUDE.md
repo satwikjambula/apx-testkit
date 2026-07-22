@@ -11,8 +11,12 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
   `item.ts` is the only fully VERIFIED component (apex.item round-trip);
   `region.ts`/`button.ts` are deliberately partial (open DOM convention —
   button routes around it via accessible-role/label locator instead);
-  `auth.ts` is a login fixture, implemented but UNVERIFIED against a real
-  instance (no ground-truth app has a login page yet). Generated code AND
+  `auth.ts` is a login fixture: field ids (P101_USERNAME/P101_PASSWORD)
+  CONFIRMED live against a real second APEX app's login page; submission
+  switched to a button click after Enter proved unreliable there (1
+  success then 3 consecutive silent non-submissions, live) — that fix is
+  NOT yet independently re-verified (spike/tests/auth-login-verify.spec.ts
+  is ready for whoever has credentials to run it). Generated code AND
   hand-written specs both import from here — never duplicate this logic
   locally (see Invariant 3).
 - `packages/generator` (@apx/testgen): `lib.ts` (generate/inspect) + `page-object.ts`
@@ -111,12 +115,22 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
    (naming: keep neutral `apx-*` until cleared; see docs/license-check.md),
    publish docs/validation-post.md, replace LICENSE stub with full
    Apache-2.0 text, state maintenance cadence honestly in README.
-5. M2 login fixture: IMPLEMENTED (`packages/testkit/src/fixtures/auth.ts`)
-   but still UNVERIFIED — all ground-truth pages are public, so `login()`'s
-   assumptions (P101_USERNAME/P101_PASSWORD, Enter-to-submit) have never run
-   against a real APEX login page. Needs an export with a non-public page to
-   validate against; until then treat `auth.ts` as best-effort, not a
-   verified contract like item.ts.
+5. M2 login fixture: PARTIALLY VERIFIED. Field ids
+   (`P101_USERNAME`/`P101_PASSWORD`) confirmed live against a real second
+   APEX app's login page ("Sample File Upload and Download") -- exact
+   match, no changes needed. Submission was Enter-to-submit; live evidence
+   showed one success then three consecutive silent failures (form
+   correctly filled, no error/lockout, just no submission), so `login()`
+   now clicks the accessible-role submit button instead, falling back to
+   Enter only if no button matches. That fix has NOT been independently
+   re-verified live -- credential-based testing was intentionally not
+   repeated (see the safety note in this session's history: entering
+   passwords into forms is not something Claude does itself, even with
+   explicit user authorization). `spike/tests/auth-login-verify.spec.ts`
+   (env-var gated, `APX_LOGIN_TEST_PASSWORD`, never commit a real value) is
+   ready for whoever has credentials to close this out. Until then treat
+   `auth.ts` as evidence-informed but not a fully closed verified contract
+   like item.ts.
 6. Typed projection backlog = `unmodeled` list the generator prints
    (facet, dynamicAction, process, column, savedReport, series, ...).
 7. MCP SDK pinned ^1.0.0; re-verify API surface against latest SDK docs

@@ -1,18 +1,22 @@
 /**
- * Login fixture -- UNVERIFIED against a real 26.1 instance. Every page in the
- * ground-truth export (UX Pattern Catalog) is `authentication: public`, so
- * the auth path has zero runtime validation (tracked as a debt in CLAUDE.md
- * "Outstanding debts" #5). This exists so the login-required pages that the
- * generator currently `test.describe.skip()`s have a fixture to switch to --
- * but treat it as a starting point, not a verified contract.
+ * Login fixture. Field ids: VERIFIED against a real second APEX 26.1 app
+ * (Sample File Upload and Download) -- P101_USERNAME/P101_PASSWORD, the
+ * long-standing Universal Theme login page item ids, matched exactly with
+ * no changes needed.
  *
- * What it assumes, and why: `P101_USERNAME` / `P101_PASSWORD` are Oracle's
- * long-standing Universal Theme login page item ids, unchanged across many
- * APEX releases and predating APEXlang -- not a 26.1-specific guess. They
- * are still overridable per-call because a customized login page can rename
- * them. Sign-in is submitted with Enter (matches the standard login page's
- * default button behavior) rather than a button-label locator, so this does
- * not depend on the still-open BUTTON DISCOVERY convention (see button.ts).
+ * Submission method: switched from Enter-key to clicking the submit button
+ * (located by accessible role/name, falling back to Enter only if no
+ * matching button is found) after live evidence against that same app: an
+ * initial attempt succeeded with Enter, then three consecutive attempts
+ * failed -- the form was filled correctly (both fields, confirmed via
+ * screenshot, no lockout/error banner), but the Enter keypress simply
+ * didn't trigger submission. A visible button click is expected to be more
+ * robust across different login page templates than relying on Enter
+ * reaching whatever JS handler a given template wires up. This specific
+ * fix has NOT been independently re-verified live (see CLAUDE.md/README --
+ * credential-based verification is intentionally not repeated here); the
+ * button-click path is the recommended default based on the evidence
+ * above, not a fully closed-out verification.
  *
  * Fails loudly, not silently: if the expected login items aren't found, or
  * the page is still on the login URL after submit, this throws -- it never
@@ -28,15 +32,18 @@ export interface ApexCredentials {
 export interface LoginOptions {
   usernameItemId?: string;
   passwordItemId?: string;
+  /** Accessible name (or pattern) of the submit button. Falls back to Enter if no match is found. */
+  submitButtonName?: string | RegExp;
   /** Extra wait after submit for the post-login redirect to settle. */
   timeoutMs?: number;
 }
 
-const DEFAULTS: Required<LoginOptions> = {
+const DEFAULTS = {
   usernameItemId: 'P101_USERNAME',
   passwordItemId: 'P101_PASSWORD',
+  submitButtonName: /sign.?in|log.?in/i,
   timeoutMs: 15_000,
-};
+} satisfies Required<LoginOptions>;
 
 /**
  * Log in against a running page already navigated to the login URL.
@@ -61,13 +68,19 @@ export async function login(page: Page, credentials: ApexCredentials, options: L
 
   await usernameField.fill(credentials.username);
   await passwordField.fill(credentials.password);
-  await passwordField.press('Enter');
+
+  const submitButton = page.getByRole('button', { name: opts.submitButtonName });
+  if ((await submitButton.count()) > 0) {
+    await submitButton.first().click();
+  } else {
+    await passwordField.press('Enter');
+  }
   await page.waitForLoadState('domcontentloaded', { timeout: opts.timeoutMs });
 
   if (page.url() === loginUrl) {
     throw new Error(
       `login(): URL unchanged after submit (${loginUrl}) -- treating as a failed login rather than ` +
-        'assuming success. Check credentials, or that Enter submits this login page.',
+        'assuming success. Check credentials, that the submit button was found, or pass submitButtonName explicitly.',
     );
   }
 }
