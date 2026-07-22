@@ -114,18 +114,22 @@ regenerated-test diff — side by side in the same PR.
 @apx/testgen   — AST -> per page: <alias>.page.ts (PageObject) +
                  <alias>.spec.ts (smoke spec exercising it)
                  deterministic: same AST in -> byte-identical files out
+                 also: --watch (auto-regen on .apx change) and the
+                 apx-coverage CLI (touch log -> coverage report)
     ▼
 @apx/testkit   — the primitives BOTH generated and hand-written specs
                  import: item.ts (apex.item, VERIFIED), region.ts
                  (generic ApexRegion: refresh/getSessionState/
                  getCurrentRecordId/etc., verified on two widget types),
                  cards.ts + faceted-search.ts (pagination, selection,
-                 facet counts -- verified live, incl. two confirmed
-                 gotchas: getRecords() is broken on Cards in this app,
-                 getTotalResourceCount() needs polling), button.ts
+                 facet counts -- verified live; getRecords() confirmed
+                 broken on Cards in this app, documented not hidden),
+                 lifecycle.ts (event-based waits on APEX's real
+                 apexafterrefresh, not polling/timeouts), button.ts
                  (accessible-role locators, partial -- DOM id convention
                  still open), auth.ts (login fixture, unverified),
-                 console-guard.ts, session.ts
+                 coverage.ts (opt-in touch recorder, zero overhead unless
+                 APX_COVERAGE_LOG is set), console-guard.ts, session.ts
 
 @apx/mcp       — MCP stdio server wrapping @apx/testgen for agentic editors
                  (inspect_apex_export, generate_apex_tests tools)
@@ -195,10 +199,15 @@ against a second independent `.apx` export, get a real login page to verify
 
 ### Beyond M4: a comprehensive APEX testing ecosystem
 
-The longer-term direction is richer component APIs (Interactive Report,
-Cards, Charts, Interactive Grid, Trees), lifecycle-aware waits instead of
-timeouts, snapshot testing, coverage mapping back to `.apx` components, and
-editor integration that regenerates on export change. See
-docs/ecosystem-roadmap.md for what's actually verifiable against the one
-live reference app today versus what's genuinely blocked on new ground
-truth or needs its own design first.
+The longer-term direction is richer component APIs, lifecycle-aware waits,
+snapshot testing, coverage mapping, and editor integration. Done so far
+(all verified live, not just designed): Interactive Report/Cards/Faceted
+Search component APIs, event-based lifecycle waits
+(`callRegionMethodAndWaitForEvent`), a `--watch` CLI flag for editor
+auto-regeneration, and coverage mapping — set `APX_COVERAGE_LOG=<path>`
+before running your suite, then run `apx-coverage <export-dir>
+<touch-log-path>` to see which declared items/regions/buttons a run
+actually touched vs. missed. Still open: Charts (needs its own short
+discovery pass), snapshot testing (needs a masking-policy design), and
+Interactive Grid/Trees (zero ground truth in the one live app available —
+see docs/ecosystem-roadmap.md).

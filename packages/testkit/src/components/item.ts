@@ -9,6 +9,7 @@
  * reports land (see docs/grammar-assumptions.md "Still open").
  */
 import { expect, type Page } from '@playwright/test';
+import { recordCoverageTouch } from '../fixtures/coverage.js';
 
 export interface ItemPresence {
   id: string;
@@ -17,6 +18,7 @@ export interface ItemPresence {
 
 /** Check that every declared pageItem id resolves in the DOM / apex.item registry. */
 export async function itemsPresent(page: Page, ids: readonly string[]): Promise<ItemPresence[]> {
+  for (const id of ids) recordCoverageTouch('item', id);
   return page.evaluate(
     (ids: readonly string[]) =>
       ids.map((id) => ({
@@ -35,10 +37,12 @@ export async function expectItemsPresent(page: Page, ids: readonly string[]): Pr
 }
 
 export async function getItemValue(page: Page, id: string): Promise<string> {
+  recordCoverageTouch('item', id);
   return page.evaluate((id: string) => (window as any).apex.item(id).getValue(), id);
 }
 
 export async function setItemValue(page: Page, id: string, value: string): Promise<void> {
+  recordCoverageTouch('item', id);
   await page.evaluate(
     (args: [string, string]) => (window as any).apex.item(args[0]).setValue(args[1]),
     [id, value] as [string, string],
@@ -47,6 +51,7 @@ export async function setItemValue(page: Page, id: string, value: string): Promi
 
 /** Round-trip a value through apex.item(id) and return what getValue() reports back. */
 export async function itemRoundTrip(page: Page, id: string, value: string): Promise<string> {
+  recordCoverageTouch('item', id);
   return page.evaluate(
     (args: [string, string]) => {
       const it = (window as any).apex.item(args[0]);
@@ -69,6 +74,7 @@ export class ApexItem {
   ) {}
 
   exists(): Promise<boolean> {
+    recordCoverageTouch('item', this.id);
     return this.page
       .evaluate((id: string) => !!document.getElementById(id) || !!(window as any).apex.item(id)?.node, this.id)
       .then(Boolean);

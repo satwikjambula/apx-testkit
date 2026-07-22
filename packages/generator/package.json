@@ -3,7 +3,8 @@
   "version": "0.1.0",
   "type": "module",
   "bin": {
-    "apx-testgen": "dist/cli.js"
+    "apx-testgen": "dist/cli.js",
+    "apx-coverage": "dist/coverage-cli.js"
   },
   "main": "dist/cli.js",
   "scripts": {
@@ -18,6 +19,7 @@
   },
   "exports": {
     ".": "./dist/cli.js",
-    "./lib": "./dist/lib.js"
+    "./lib": "./dist/lib.js",
+    "./coverage": "./dist/coverage.js"
   }
 }

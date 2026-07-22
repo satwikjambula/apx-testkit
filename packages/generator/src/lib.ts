@@ -33,7 +33,7 @@ import { join, resolve } from 'node:path';
 import { parseApp, type ApexPage } from '@apx/parser';
 import { computeItemPropNames, pageObjectBaseName, pageObjectClassName, pageObjectFor } from './page-object.js';
 
-function loadExport(dir: string): Record<string, string> {
+export function loadExport(dir: string): Record<string, string> {
   const files: Record<string, string> = {};
   const addIf = (rel: string) => {
     try { files[rel] = readFileSync(join(dir, rel), 'utf8'); } catch { /* optional */ }

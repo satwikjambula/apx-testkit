@@ -65,6 +65,24 @@ else in this project (see CLAUDE.md Invariant 2).
   gets masked/excluded (timestamps, generated ids, chart data) before it's
   useful rather than noisy.
 
+- **Code coverage mapping from generated tests back to APEX components —
+  DONE.** Design resolved: "coverage" here means which declared
+  items/regions/buttons (by `.apx` identifier, or label for buttons -- no
+  verified button-id convention exists) a test run actually touched,
+  cross-referenced against the AST -- not traditional code-line coverage.
+  Shipped as an opt-in recorder in `@apx/testkit`
+  (`fixtures/coverage.ts`: `recordCoverageTouch()`, wired into
+  item.ts/region.ts/button.ts, active only when `APX_COVERAGE_LOG` is set --
+  zero overhead otherwise, and file-append rather than in-memory so it
+  survives Playwright's multi-worker-process model) plus a report generator
+  and CLI in `@apx/testgen` (`coverage.ts` + `apx-coverage` bin). Verified
+  two ways: the report's cross-referencing logic against a synthetic touch
+  log with known expected output, and the recorder itself live -- ran the
+  real p410 + faceted-search-cards specs with `APX_COVERAGE_LOG` set and
+  confirmed every recorded touch matched exactly what those specs did (the
+  6 items checked by `expectItemsPresent`, both real region ids, the
+  "Primary Action" button label).
+
 ## Tier 3 — blocked without new ground truth, or genuinely novel
 
 - **Interactive Grid.** NOT present anywhere in the one live app available
@@ -80,12 +98,6 @@ else in this project (see CLAUDE.md Invariant 2).
   one available app is the universal left-nav (`a-TreeView` inside the nav
   chrome) — not a page-content region. No ground truth exists here for
   "Tree region" as the plan envisions it (e.g. a hierarchical data browser).
-- **Code coverage mapping from generated tests back to APEX components.**
-  No prior art anywhere in this project. Needs its own design spike first:
-  what does "coverage" mean here — which regions/items/buttons a test suite
-  touches, mapped back to the `.apx` AST? That's more tractable (the AST
-  already has identifiers) than traditional code-line coverage, but it's a
-  new artifact type, not an extension of anything that exists today.
 
 ## Sequencing note
 

@@ -13,9 +13,16 @@
  * confirmed, prefer a static-id locator here and keep this as the fallback.
  */
 import type { Locator, Page } from '@playwright/test';
+import { recordCoverageTouch } from '../fixtures/coverage.js';
 
-/** Locate a button by its .apx `label` via the accessibility tree. */
+/**
+ * Locate a button by its .apx `label` via the accessibility tree. Records
+ * a coverage touch keyed by LABEL, not a static id (there is no verified
+ * button-id convention yet -- see module doc); the coverage report cross-
+ * references by label against the AST's button.label field.
+ */
 export function buttonByLabel(page: Page, label: string): Locator {
+  recordCoverageTouch('button', label);
   return page.getByRole('button', { name: label, exact: true });
 }
 

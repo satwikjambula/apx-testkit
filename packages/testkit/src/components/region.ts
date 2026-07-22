@@ -29,6 +29,7 @@
  * additional methods those specific widget types expose).
  */
 import type { Page } from '@playwright/test';
+import { recordCoverageTouch } from '../fixtures/coverage.js';
 
 export interface RegionProbe {
   id: string;
@@ -43,6 +44,7 @@ export interface RegionProbe {
  * pass/fail assertions, until the DOM convention is verified.
  */
 export async function probeRegions(page: Page, ids: readonly string[]): Promise<RegionProbe[]> {
+  for (const id of ids) recordCoverageTouch('region', id);
   return page.evaluate(
     (ids: readonly string[]) =>
       ids.map((id) => ({
@@ -60,6 +62,7 @@ export async function probeRegions(page: Page, ids: readonly string[]): Promise<
  * back to a guessed selector.
  */
 export async function refreshRegion(page: Page, id: string): Promise<void> {
+  recordCoverageTouch('region', id);
   const ok = await page.evaluate((id: string) => {
     const region = (window as any).apex?.region?.(id);
     if (!region) return false;
@@ -83,6 +86,7 @@ export async function refreshRegion(page: Page, id: string): Promise<void> {
  * returns undefined for a typo'd or unsupported method name.
  */
 export async function callRegionMethod<T>(page: Page, id: string, method: string, args: unknown[] = []): Promise<T> {
+  recordCoverageTouch('region', id);
   return page.evaluate(
     ([id, method, args]: [string, string, unknown[]]) => {
       const region = (window as any).apex?.region?.(id);

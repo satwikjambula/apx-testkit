@@ -12,6 +12,7 @@ export { armConsoleGuard } from './fixtures/console-guard.js';
 export { apexPageUrl, gotoApexPage, normalizeTitle } from './fixtures/session.js';
 export { login, loginAndSaveState, type ApexCredentials, type LoginOptions } from './fixtures/auth.js';
 export { callRegionMethodAndWaitForEvent, waitForRegionEvent } from './fixtures/lifecycle.js';
+export { coverageEnabled, recordCoverageTouch, type CoverageKind, type CoverageTouch } from './fixtures/coverage.js';
 
 export {
   ApexItem,
