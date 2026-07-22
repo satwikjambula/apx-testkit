@@ -2,5 +2,5 @@
   "name": "apexlang-testkit",
   "private": true,
   "workspaces": ["packages/*"],
-  "scripts": { "test": "npm run test --workspaces" }
+  "scripts": { "test": "npm run test --workspaces --if-present" }
 }

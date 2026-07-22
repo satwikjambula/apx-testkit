@@ -57,6 +57,19 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       dumps ground truth: HTML occurrence + attribute location per region id,
       full page id inventory, and reverse-mapped button attributes by label.
       Do not design region/button selectors until that report lands.
+      Interim workaround shipped in `packages/testkit/src/components/button.ts`:
+      locate buttons by accessible role + label (`.apx` `label` field) via
+      Playwright's accessibility tree, not a static-id guess. Does not close
+      this item — a verified id-based convention should still be preferred
+      once known.
+- [x] Full generated-suite run (M2), live UX Pattern Catalog instance:
+      39/43 tests passed. All 4 failures are p00420-data-entry-drawer-form
+      (GET returns 400) — a drawer/modal page does not resolve via a plain
+      friendly-URL GET, consistent with it needing a parent-page/dialog
+      context. Confirms the V1-V5 contracts hold for every other page type
+      exercised (list, dashboard, browse/search, item-detail, master-detail,
+      simple data-entry). Root cause of the p420 400 is still unexplored —
+      candidate for a future ledger entry, not urgent for M2.
 
 ## Still open
 

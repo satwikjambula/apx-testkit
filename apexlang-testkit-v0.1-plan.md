@@ -184,6 +184,19 @@ Determinism requirement: same `.apx` input ⇒ identical output bytes (stable or
 
 **M2 — Testkit fixtures (weeks 4–6, overlaps M1).** Auth fixture (credential login + storageState reuse so suites don't log in per test), console-error guard, `item`/`region`/`button` wrappers built on `apex.item()` / `apex.region()` / documented DOM ids — not raw CSS paths — per the treadmill rule in §3. Exit: a hand-written Playwright spec against the Sample DB App passes in CI using only testkit primitives.
 
+> **Status: exit criterion met.** `packages/testkit` implements console-guard,
+> session/navigation, `item.ts` (fully verified), `region.ts`/`button.ts`
+> (partial — see docs/grammar-assumptions.md open items; button routes around
+> the gap via accessible-role locator rather than a guessed selector), and
+> `auth.ts` (implemented, unverified — no ground-truth login page exists).
+> The generator was rewired to import from `@apx/testkit` instead of
+> duplicating helpers per file (the actual treadmill-rule payoff), and
+> `spike/tests/p410-testkit-primitives.spec.ts` is the hand-written spec
+> that passes live against the UX Pattern Catalog app using only testkit
+> primitives. Not yet done: `ir.ts` (Interactive Report helpers) was
+> deliberately skipped — no verified DOM contract exists for it yet, and
+> building one would violate Invariant 2 (evidence over assumption).
+
 **M3 — Generator (weeks 6–8).** CLI: export folder in, page objects + smoke specs out, deterministic. Exit: generated suite for the Sample DB App passes green against a clean 26.1 container in GitHub Actions, and the run is reproducible by a stranger from the README in under 15 minutes. That 15-minute number is the real acceptance test for the whole project.
 
 **M4 — Release + second user (weeks 8–10).** Tag v0.1, `examples/` committed, support-matrix doc stating "verified against 26.1 only," limitations doc, and — the actual milestone — at least one person who is not you running it against an app that is not the sample app, with their breakage reports filed as issues. No v0.2 planning until this exists.

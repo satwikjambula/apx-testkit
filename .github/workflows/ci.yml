@@ -10,10 +10,18 @@ jobs:
       - run: npm install
       - name: Parser unit tests (fixtures only; integration skips without APX_EXPORT_DIR)
         run: cd packages/parser && npx vitest run --exclude '**/integration.test.ts'
-      - name: Build parser + generator
+      - name: Testkit unit tests (pure helpers only; DOM-facing code needs a live instance)
+        run: cd packages/testkit && npx vitest run
+      - name: Build parser + testkit + generator + mcp
         run: |
           (cd packages/parser && npx tsc -p tsconfig.json)
+          (cd packages/testkit && npx tsc -p tsconfig.json)
           (cd packages/generator && npx tsc -p tsconfig.json)
-      - name: Determinism gate (self-fixture)
+          (cd packages/mcp && npx tsc -p tsconfig.json)
+      - name: Determinism gate (hand-written mini-export fixture, generate twice, diff)
         run: |
-          node -e "console.log('TODO: add committed hand-written mini-export fixture, generate twice, diff')"
+          node packages/generator/dist/cli.js packages/generator/test/fixtures/mini-export --out /tmp/gen1
+          node packages/generator/dist/cli.js packages/generator/test/fixtures/mini-export --out /tmp/gen2
+          diff -r /tmp/gen1 /tmp/gen2
+      - name: Typecheck spike (generated + hand-written specs against @apx/testkit)
+        run: cd spike && npm install && npx tsc --noEmit -p tsconfig.json

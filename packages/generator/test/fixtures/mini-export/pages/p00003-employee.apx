@@ -1,0 +1,34 @@
+page 3 (
+  name: Employee
+  alias: EMPLOYEE
+  title: Employee
+  security {
+    authentication: public
+  }
+  region employee (
+    name: Employee
+    type: form
+    source {
+      location: localDatabase
+      tableName: EMP
+    }
+    item P3_EMPNO (
+      type: hidden
+      source {
+        column: EMPNO
+      }
+    )
+    item P3_ENAME (
+      type: textField
+      label: Name
+      required: true
+      source {
+        column: ENAME
+      }
+    )
+    button save (
+      label: Save
+      action: submit
+    )
+  )
+)

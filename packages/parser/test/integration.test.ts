@@ -1,11 +1,10 @@
-import { describe, expect, it } from 'vitest';
-import { readFileSync, readdirSync } from 'node:fs';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { readFileSync, readdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
-import { parseApp } from '../src/index.js';
+import { parseApp, type ParseResult } from '../src/index.js';
 
 // Real 26.1 APEXlang export: UX Pattern Catalog (local ground truth; not committed).
 const ROOT = process.env.APX_EXPORT_DIR ?? '/home/claude/upload-inspect';
-import { existsSync } from 'node:fs';
 const HAVE_EXPORT = existsSync(ROOT);
 
 function loadAll(): Record<string, string> {
@@ -21,8 +20,15 @@ function loadAll(): Record<string, string> {
   return files;
 }
 
+// `describe.skipIf` only skips the `it()`s inside — loadAll()/parseApp() must
+// run in `beforeAll`, not the describe body, so they never execute (and can
+// never throw ENOENT) when HAVE_EXPORT is false.
 describe.skipIf(!HAVE_EXPORT)('integration: real UX Pattern Catalog export', () => {
-  const result = parseApp(loadAll());
+  let result: ParseResult;
+
+  beforeAll(() => {
+    result = parseApp(loadAll());
+  });
 
   it('parses every .apx file with zero warnings', () => {
     const sample = result.warnings.slice(0, 15).map((w) => `${w.loc.file}:${w.loc.line} ${w.message}`);

@@ -7,8 +7,10 @@
     "test": "playwright test",
     "test:headed": "playwright test --headed"
   },
+  "dependencies": {
+    "@apx/testkit": "file:../packages/testkit"
+  },
   "devDependencies": {
-    "@playwright/test": "^1.48.0",
     "@types/node": "^26.1.1",
     "typescript": "^5.5.0"
   }
