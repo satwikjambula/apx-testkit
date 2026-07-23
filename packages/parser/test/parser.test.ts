@@ -201,3 +201,137 @@ describe('typed Dynamic Action support', () => {
     expect(da.clientSideCondition).toBeNull();
   });
 });
+
+describe('typed Calendar region settings', () => {
+  // Reproduces the real structure found in Oracle's "Sample Calendar"
+  // gallery app (page 32, "sessions" region, WEEKLY-CALENDAR-DRAG-DROP
+  // variant, dragAndDrop: true).
+  const apxWithCalendar = `page 32 (
+  name: Week Calendar
+  alias: WEEK-CALENDAR
+
+  region sessions (
+    name: Sessions
+    type: calendar
+    source {
+      location: localDatabase
+      type: sqlQuery
+      sqlQuery:
+        \`\`\`sql
+        select id, title, start_date, end_date from eba_demo_cal_sessions
+        \`\`\`
+    }
+    settings {
+      displayColumn: TITLE
+      startDateColumn: START_DATE
+      endDateColumn: END_DATE
+      pkColumn: ID
+      showTime: true
+      calendarViewsAndNavigation: [
+        week
+        day
+        list
+        navigation
+      ]
+      dragAndDrop: true
+    }
+  )
+)`;
+
+  it('parses with no warnings and projects calendarSettings for a calendar region', () => {
+    const result = parseApp({ 'p00032-week-calendar.apx': apxWithCalendar });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.type).toBe('calendar');
+    expect(region.calendarSettings).toEqual({
+      displayColumn: 'TITLE',
+      startDateColumn: 'START_DATE',
+      endDateColumn: 'END_DATE',
+      pkColumn: 'ID',
+      showTime: true,
+      views: ['week', 'day', 'list', 'navigation'],
+      dragAndDrop: true,
+    });
+  });
+
+  it('does not populate calendarSettings for a non-calendar region, even with a settings group', () => {
+    const apxWithOtherSettings = apxWithCalendar.replace('type: calendar', 'type: interactiveGrid');
+    const result = parseApp({ 'p00032-week-calendar.apx': apxWithOtherSettings });
+    const [region] = result.ast.pages[0].regions;
+    expect(region.type).toBe('interactiveGrid');
+    expect(region.calendarSettings).toBeNull();
+  });
+});
+
+describe('multi-line array parsing (bug: first element dropped)', () => {
+  // Reproduces a real, wide-reaching bug found via a calendar region's
+  // `calendarViewsAndNavigation` array: when '[' is the LAST character on
+  // the property line (nothing inline -- the array's own items and
+  // closing ']' are each on their own line), the array's FIRST element
+  // was silently dropped. Root cause: parseBody's PROPERTY branch already
+  // advances the line index past the property line before calling
+  // parseValue()/parseArray(), so the index already points at the array's
+  // first content line -- but parseArray's loop did an unconditional
+  // extra advance on its first (empty-inlineRest) iteration, skipping
+  // that line. This exact shape (`templateOptions: [` with items on
+  // following lines) appears 1500+ times across every real export this
+  // project has parsed -- `#DEFAULT#`, almost always the first
+  // templateOption, was silently missing from `raw` bags project-wide
+  // until this fix.
+  const apxWithMultilineArray = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: static
+    appearance {
+      templateOptions: [
+        #DEFAULT#
+        t-Region--noPadding
+      ]
+    }
+  )
+)`;
+
+  it('keeps the first array element when the opening bracket has nothing after it on its line', () => {
+    const result = parseApp({ 'p1.apx': apxWithMultilineArray });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.raw['appearance.templateOptions']).toEqual(['#DEFAULT#', 't-Region--noPadding']);
+  });
+
+  it('still parses correctly when the first element IS inline with the bracket', () => {
+    const apxInline = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: static
+    appearance {
+      templateOptions: [#DEFAULT#
+        t-Region--noPadding
+      ]
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apxInline });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.raw['appearance.templateOptions']).toEqual(['#DEFAULT#', 't-Region--noPadding']);
+  });
+
+  it('still parses correctly when the whole array is on one line', () => {
+    const apxOneLine = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: static
+    appearance {
+      templateOptions: [#DEFAULT# t-Region--noPadding]
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apxOneLine });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.raw['appearance.templateOptions']).toEqual(['#DEFAULT#', 't-Region--noPadding']);
+  });
+});

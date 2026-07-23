@@ -65,10 +65,37 @@ export interface ApexRegion {
   /** Open string; see KNOWN_REGION_TYPES for the recognized subset. */
   type: string | null;
   source: { location: string | null; tableName: string | null; sql: string | null } | null;
+  /** Only populated when `type === 'calendar'`. `settings.*` is reused by
+   * other region types for unrelated config, so this is gated on type,
+   * not just key presence, unlike `source` above. */
+  calendarSettings: ApexCalendarSettings | null;
   items: ApexItem[];
   buttons: ApexButton[];
   loc: Loc;
   raw: RawBag;
+}
+
+/**
+ * `settings { ... }` group on a calendar region, flattened and
+ * re-projected here. `views` is the ordered list of enabled calendar
+ * views (observed: day, week, month, list, navigation, year, plus custom
+ * named views) -- the export key is `calendarViewsAndNavigation`. Many
+ * other `settings.*` keys exist (e.g. `additionalCalendarViews`,
+ * `dragAndDropPlsqlCode`, `initJavaScriptFunction`, `firstHour`,
+ * `maxEventsDay`, `multipleLineEvents`, `showWeekend`, `escapeSpecialChars`)
+ * and stay in the region's `raw` bag rather than getting a dedicated
+ * typed field each -- these six are the ones with clear, direct testing
+ * value (which column drives what, whether editing is enabled, which
+ * views exist).
+ */
+export interface ApexCalendarSettings {
+  displayColumn: string | null;
+  startDateColumn: string | null;
+  endDateColumn: string | null;
+  pkColumn: string | null;
+  showTime: boolean | null;
+  views: string[] | null;
+  dragAndDrop: boolean | null;
 }
 
 export interface ApexItem {

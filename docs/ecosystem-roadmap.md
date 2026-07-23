@@ -215,6 +215,47 @@ apps) dwarfs everything else still sitting in Tier 2/3.
   unchanged by this work. Typed metadata makes DAs diffable and
   inspectable; it does not make them controllable from `@apx/testkit`.
 
+- **Calendar region settings — typed AST support, DONE.** Same batch as
+  the Dynamic Actions work above: `ApexRegion.calendarSettings` is now
+  typed (displayColumn/startDateColumn/endDateColumn/pkColumn/showTime/
+  views/dragAndDrop), confirmed across 21 real calendar regions in
+  Oracle's own "Sample Calendar" gallery app. Gated on `type ===
+  'calendar'` since `settings.*` is reused by other region types for
+  unrelated config. Parser-only, no live app needed. The `Calendar`
+  runtime stub in `unsupported.ts` is UNCHANGED and still correct — typed
+  metadata about a calendar's configuration is not the same as verified
+  runtime behavior; there's still zero live ground truth for what
+  `apex.region(id).widget()` even returns for a calendar region, let
+  alone what methods it exposes.
+
+- **A real, wide-reaching parser bug was found and fixed while building
+  the above.** `parseArray()` silently dropped a real content element in
+  two shapes: (1) `foo: [` with nothing inline (each array item, and the
+  closing `]`, each on its own line) — confirmed `templateOptions: [` in
+  exactly this shape appears **1550+ times** across every real export
+  this project has parsed, meaning `#DEFAULT#` (almost always the FIRST
+  templateOption) was silently missing from parsed `raw` bags
+  project-wide, this whole time, until this fix; and (2) `foo: [bar`
+  (first element inline with the bracket) continued across further lines
+  — dropped the first full continuation line instead (zero occurrences
+  in real data so far, but a real latent bug, caught by a hostile test
+  fixture, not a real app). Root cause was the same in both cases: a
+  double-counted line-advance between the caller (`parseBody`'s PROPERTY
+  branch, which already advances past the property line before calling
+  `parseValue()`/`parseArray()`) and `parseArray()`'s own unconditional
+  advance on its first iteration. Fixed by using the exact same
+  `consumedLine` guard the closing-bracket branch already used, applied
+  symmetrically. Regression-guarded with 3 new tests (one per array
+  shape) — confirmed the two multi-line tests fail without the fix.
+  Verified zero regressions across all 13 real exports (still zero
+  warnings, deterministic output) and the committed `examples/
+  employee-page` output (byte-identical — that fixture has no
+  array-valued properties, so neither bug shape ever touched it). This
+  is the kind of silent, wide-reaching correctness bug this project's
+  entire evidence-over-assumption discipline exists to catch — found not
+  by looking for it, but by building something real (calendar settings)
+  against a genuinely new export and noticing the output looked wrong.
+
 ## Tier 2 — real ground truth exists, but needs care
 
 - **Snapshot testing for regions and pages.** Feasible (Playwright has

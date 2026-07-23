@@ -43,9 +43,12 @@ export const TreeRegion = unsupportedComponent(
 export const Calendar = unsupportedComponent(
   'Calendar',
   'confirmed present in real exports (Oracle\'s "Sample Calendar" gallery app alone has 21 calendar regions; ' +
-    'also seen in sample-master-detail and brookstrut), but zero LIVE ground truth -- none of those apps was ' +
-    'available with a running instance to check apex.region(id).widget().calendar(...) against. No basis to ' +
-    'design an API from documentation alone -- see docs/ecosystem-roadmap.md Tier 2/3.',
+    'also seen in sample-master-detail and brookstrut) -- the .apx region\'s own config (displayColumn/' +
+    'startDateColumn/endDateColumn/pkColumn/showTime/views/dragAndDrop) is now typed at the PARSER level ' +
+    '(ApexRegion.calendarSettings), but this runtime component remains unbuilt: zero LIVE ground truth -- none ' +
+    'of those apps was available with a running instance to check apex.region(id).widget().calendar(...) ' +
+    'against. Typed metadata does not substitute for verified runtime behavior. See ' +
+    'docs/ecosystem-roadmap.md Tier 2/3.',
 );
 
 export const MapRegion = unsupportedComponent(

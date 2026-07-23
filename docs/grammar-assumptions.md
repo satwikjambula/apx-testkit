@@ -331,6 +331,56 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       projection, nested action projection including
       fireWhenEventResultIs, and the unconditional-DA case).
 
+- [x] Calendar region `settings {}` promoted to a typed field
+      (`ApexRegion.calendarSettings`, gated on `type === 'calendar'` since
+      `settings.*` is reused by other region types for unrelated config).
+      Real, consistent shape confirmed across 21 calendar regions in
+      Oracle's own "Sample Calendar" gallery app: `displayColumn`,
+      `startDateColumn`, `endDateColumn`, `pkColumn`, `showTime`,
+      `calendarViewsAndNavigation` (normalized to `views: string[]`,
+      real values observed: day, week, month, list, navigation), and
+      `dragAndDrop` (confirmed `true` on the two drag-and-drop demo pages,
+      `null` elsewhere). Other `settings.*` keys observed but NOT typed
+      (stay in `raw`): `additionalCalendarViews`, `dragAndDropPlsqlCode`,
+      `initJavaScriptFunction`, `firstHour`, `maxEventsDay`,
+      `multipleLineEvents`, `showWeekend`, `escapeSpecialChars`, `cssClass`.
+      Parser-only work, no live app needed. Regression-guarded with 2 new
+      tests (calendar region gets the typed field; a non-calendar region
+      with its own unrelated `settings` group does NOT).
+
+- [x] **REAL, WIDE-REACHING PARSER BUG FOUND AND FIXED** while building the
+      above: `parseArray()`'s line-advancement logic double-counted the
+      property line's own `i++` (already done by the caller,
+      `parseBody`'s PROPERTY branch, before `parseValue()`/`parseArray()`
+      ever runs) against its own unconditional `i++` on the first loop
+      iteration. This silently dropped a real content element in TWO
+      shapes: (1) `foo: [` with NOTHING inline (array's first element,
+      each item and the closing `]` each on their own line) -- confirmed
+      `templateOptions: [` in exactly this shape appears **1550+ times**
+      across every real export this project has parsed, meaning
+      `#DEFAULT#` -- almost always the FIRST templateOption -- was
+      silently missing from parsed `raw` bags project-wide, the entire
+      time, until this fix; and (2) `foo: [bar` (first element inline
+      with the bracket) continued across further lines -- dropped the
+      first FULL continuation line instead (confirmed live has ZERO
+      occurrences across every real export parsed so far -- a real bug,
+      but purely latent until a hostile fixture exercised it). Root cause
+      for both: `i` already points at the correct next line the moment
+      `parseArray` starts, regardless of whether inline content followed
+      `[`; only advance `i` when a chunk was actually read via `lines[i]`
+      -- exactly what `consumedLine` already tracks, and exactly the
+      guard the `end >= 0` branch already used for the closing-bracket
+      case. Fixed by using that identical guard symmetrically for the
+      `end < 0` branch. Regression-guarded with 3 new tests covering all
+      three array shapes (bracket-alone, first-token-inline, single-line)
+      -- confirmed the two multi-line tests fail without the fix.
+      Verified zero regressions: all 13 real exports still parse/generate
+      with zero warnings, deterministic output, and the committed
+      `examples/employee-page` output is byte-identical (that fixture has
+      no array-valued properties, so it was never exposed to either bug
+      shape, consistent with the fix only changing previously-wrong
+      behavior).
+
 ## Still open
 
 - [ ] Comment syntax: none observed anywhere. Assume none until spec says so.

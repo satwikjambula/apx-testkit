@@ -64,7 +64,31 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
     return trimmed;
   }
 
-  /** '[' consumed; read whitespace-separated atoms across lines until ']'. */
+  /**
+   * '[' consumed; read whitespace-separated atoms across lines until ']'.
+   *
+   * BUG FIXED: the caller (parseBody's PROPERTY branch) always advances
+   * `i` past the property line BEFORE calling parseValue()/parseArray() --
+   * regardless of whether anything followed '[' inline on that line. So
+   * by the time this function starts, `i` already points at the correct
+   * next line to read; the FIRST loop iteration's `chunk` (the inline
+   * remainder, possibly empty) has already been fully captured and must
+   * NOT trigger its own advance. The old code unconditionally did `i++`
+   * whenever no ']' was found yet, on every iteration including the
+   * first -- silently skipping one real content line in TWO shapes:
+   * (1) `foo: [` with nothing inline, items each on their own line
+   * (dropped the array's first element -- confirmed live impact:
+   * `templateOptions: [` alone on its line appears ~1550+ times across
+   * real exports this project has parsed, meaning `#DEFAULT#`, almost
+   * always the first templateOption, was silently missing from `raw`
+   * bags project-wide until this fix); and (2) `foo: [bar` (first
+   * element inline) continued on following lines (dropped the SECOND
+   * element, the first full continuation line). Both are the same root
+   * confusion: advance `i` only when a chunk was actually read via
+   * `lines[i]` -- exactly what `consumedLine` already tracks, and exactly
+   * the guard the `end >= 0` branch already used below. Making the
+   * `end < 0` branch use the identical guard fixes both shapes at once.
+   */
   function parseArray(inlineRest: string): RawValue[] {
     const out: RawValue[] = [];
     let chunk = inlineRest;
@@ -77,7 +101,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
         if (consumedLine) i++; // step past the line holding ']'
         return out;
       }
-      i++;
+      if (consumedLine) i++;
       if (i >= lines.length) {
         warnings.push({ message: 'Unterminated array', loc: loc() });
         return out;
@@ -279,10 +303,11 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
     const regionNodes = n.children.filter((c) => c.type === 'region');
     const regions: ApexRegion[] = regionNodes.map((r) => {
       const hasSource = Object.keys(r.props).some((k) => k.startsWith('source.'));
+      const type = str(r.props['type']);
       return {
         identifier: r.identifier ?? '(anonymous)',
         name: str(r.props['name']),
-        type: str(r.props['type']),
+        type,
         source: hasSource
           ? {
               location: str(r.props['source.location']),
@@ -290,6 +315,18 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
               sql: str(r.props['source.sql']),
             }
           : null,
+        calendarSettings:
+          type === 'calendar'
+            ? {
+                displayColumn: str(r.props['settings.displayColumn']),
+                startDateColumn: str(r.props['settings.startDateColumn']),
+                endDateColumn: str(r.props['settings.endDateColumn']),
+                pkColumn: str(r.props['settings.pkColumn']),
+                showTime: bool(r.props['settings.showTime']),
+                views: stringArray(r.props['settings.calendarViewsAndNavigation']),
+                dragAndDrop: bool(r.props['settings.dragAndDrop']),
+              }
+            : null,
         items: [],
         buttons: [],
         loc: r.loc,

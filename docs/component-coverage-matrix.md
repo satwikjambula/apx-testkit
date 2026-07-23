@@ -45,7 +45,7 @@ your own exports to reproduce or extend it.)
 | `cards` | 5/13 | 40 | **Verified** — `ApexCardsRegion` (pagination, selection); `getRecords`/`getModel` confirmed broken |
 | `form` | 5/13 | 27 | N/A — items within forms verified individually via `item.ts` |
 | `chart` | 4/13 | 107 | **Partially verified** — generic `ApexRegion.refresh()` only; `apex.region(id).widget()` confirmed to return `null` for charts (real structural difference from IG/Cards/IR) |
-| `calendar` | 3/13 | 25 | Not verified — `Calendar` stub, zero live ground truth |
+| `calendar` | 3/13 | 25 | Typed-but-unverified — `ApexRegion.calendarSettings` is now typed (parser-only), but the `Calendar` runtime stub remains unbuilt: zero live ground truth |
 | `facetedSearch` | 3/13 | 7 | **Verified** — `ApexFacetsRegion` (facet counts, apply/clear) |
 | `search` | 2/13 | 27 | Not verified — new region type (AI-powered search results, gated on `CURRENT_AI_PROVIDER`), no dedicated component |
 | `map` | 2/13 | 3 | Not verified — `MapRegion` stub, zero live ground truth |
@@ -124,10 +124,10 @@ typed metadata doesn't change that (see docs/ecosystem-roadmap.md
 - **Verified-but-partial** (`chart`, `password`): the honest middle
   ground — real capability confirmed, but not the full story. Treat
   these as "safe for what's documented," not "fully covered."
-- **Typed-but-unverified** (Dynamic Actions): a new category this round
-  introduced — real, structured metadata with zero runtime capability
-  behind it yet. Don't conflate "the parser understands this" with "the
-  testkit can act on this."
+- **Typed-but-unverified** (Dynamic Actions, Calendar's `calendarSettings`):
+  real, structured metadata with zero runtime capability behind it yet.
+  Don't conflate "the parser understands this" with "the testkit can act
+  on this."
 
 This table is a snapshot from a specific set of 13 exports, not a live
 report — re-run the script above after adding new exports, or after any
