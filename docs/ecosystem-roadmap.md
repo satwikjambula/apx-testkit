@@ -706,13 +706,13 @@ buildable now, and what's still genuinely blocked.
 ### Buildable now, low-risk — not yet done
 
 - **A synthetic multi-region-type parser fixture, extending
-  `mini-export`.** The proposal's "APX TestKit Showcase" (a 30-page app
+  `reference-fixtures`.** The proposal's "APX TestKit Showcase" (a 30-page app
   covering every item/region type) is NOT buildable as a real, running
   APEX application — this project has no App Builder or workspace access
   to author one (the same constraint disclosed in round 3's showcase-app
   discussion; nothing has changed). But a hand-written, synthetic `.apx`
   fixture covering more region/item type variety than the current
-  one-region `mini-export` IS buildable today, the same way `mini-export`
+  one-region `reference-fixtures` IS buildable today, the same way `reference-fixtures`
   itself was written — pure parser/generator regression material, not a
   live-verifiable app. This would strengthen parser test coverage but
   would NOT let any new component graduate from stub to verified,
@@ -791,3 +791,54 @@ known-broken methods left visible rather than hidden, and every
 docs/quirks/26.1.json). Nothing to change here; worth noting only because
 it's confirmation the project's existing restraint is being recognized
 as a strength, not a gap to fix.
+
+## Sixth round: refinements, converged on the AST question
+
+Following the fifth round's response, the maintainer refined several
+positions after seeing the evidence above. Recorded here because the
+refinements changed what actually got built this round, not just the
+assessment:
+
+- **Stable IDs withdrawn as a recommendation** — agreed it's already
+  solved; the real remaining gap was correctly reframed as button
+  *runtime discovery* (a locator problem: no verified static-id-to-DOM
+  convention for buttons), not an identifier-stability problem. No code
+  change needed — already tracked as CLAUDE.md Outstanding debt #1.
+- **Oracle sample coverage** — agreed 14 apps is enough breadth; proposed
+  a sharper metric instead (component-diversity per app, not raw app
+  count). Built: `docs/component-coverage-matrix.md`, generated from all
+  12 real static exports this project has, cross-referenced against live
+  verification status per component. This is now the up-to-date answer
+  to "where are the verification gaps" — regenerate it after adding new
+  exports rather than re-deriving the question from scratch.
+- **Application Model, reframed as a single question**: "is the AST
+  intended to be the canonical semantic model?" Answered directly and
+  documented: yes — see the new "Architecture: the AST is the canonical
+  semantic model" section in CLAUDE.md, with the actual three-consumer
+  data-flow diagram (generator, coverage, diff) and the package-boundary
+  consequences that follow from that answer, without introducing a new
+  `@apx/model` package.
+- **Showcase app substitute renamed** — `packages/generator/test/fixtures/
+  mini-export` is now `reference-fixtures`, communicating intentional
+  compatibility-corpus fixture material rather than a toy example.
+  Verified the rename didn't change generated output (byte-identical to
+  the committed `examples/employee-page` output) before committing it.
+- **Package boundaries softened to documentation-only** — agreed;
+  addressed by the same CLAUDE.md architecture section above, no package
+  split performed.
+
+### Still not built, unchanged reasoning
+
+`@apx/verifier` (runtime verification automation), generated (not
+hand-written) capability matrices and per-component verification reports,
+`@apx/recipes`, and structured verification-provenance metadata (the
+`{component, method, verifiedAgainst, apexVersions, confidence,
+publicApi}` shape proposed) are all still legitimate, still not urgent by
+this project's own bar. The provenance idea specifically is worth flagging
+as the cheapest of the four to eventually do — much of what it asks for
+already exists as prose in docs/quirks/26.1.json's `reproducedAgainst`/
+`status`/`rootCauseDiagnosed` fields; formalizing it would be closer to a
+schema migration of that existing file than new infrastructure. Not done
+this round because it wasn't asked for outright, and reshaping a file this
+project depends on for accurate history deserves its own deliberate pass,
+not a rushed addition alongside four other changes.

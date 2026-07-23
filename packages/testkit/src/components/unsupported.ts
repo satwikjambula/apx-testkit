@@ -103,7 +103,9 @@ export const PopupLov = unsupportedComponent(
 
 export const RichText = unsupportedComponent(
   'RichText',
-  'not tested live. Zero ground truth on the editor widget\'s API surface.',
+  'confirmed present in a real export (image-support-rte, item type richTextEditor), but zero LIVE ground ' +
+    'truth -- that app was only ever seen as a static export, not a running instance. Still no basis to design ' +
+    'an editor widget API from documentation alone.',
 );
 
 export const FileBrowse = unsupportedComponent(

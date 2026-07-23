@@ -98,7 +98,7 @@ workaround isn't obvious; that's exactly the signal M4 needs.
 ## Generator
 
 - **Determinism is proven against a hand-written synthetic fixture**
-  (`packages/generator/test/fixtures/mini-export`), not the actual
+  (`packages/generator/test/fixtures/reference-fixtures`), not the actual
   multi-page UX Pattern Catalog export — that export isn't committed
   (redistribution rights unchecked) and wasn't available in every
   environment this project has been developed in. `spike/tests-generated/`

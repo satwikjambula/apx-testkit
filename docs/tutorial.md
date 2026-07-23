@@ -67,7 +67,7 @@ pre-built).
 ### Generate your first page object + spec
 
 ```bash
-node packages/generator/dist/cli.js packages/generator/test/fixtures/mini-export --out /tmp/my-first-tests
+node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/my-first-tests
 ```
 
 ```

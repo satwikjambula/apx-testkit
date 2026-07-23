@@ -9,7 +9,7 @@
  * be regenerated end-to-end here. What IS verified:
  *   - the generator's determinism and its exact PageObject/spec shape,
  *     against the committed synthetic fixture
- *     (packages/generator/test/fixtures/mini-export) -- see the CI
+ *     (packages/generator/test/fixtures/reference-fixtures) -- see the CI
  *     "Determinism gate" step and packages/generator/test/fixtures/;
  *   - that the SAME shape (typed ApexItem accessors, buttonByLabel click
  *     methods, goto()/url()) works correctly live, right here, using only

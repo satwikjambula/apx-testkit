@@ -28,7 +28,7 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
   contains helper functions of its own, only per-page glue.
   `spike/tests-generated/` is STALE (pre-page-object template) — the real
   export needed to regenerate it isn't available in this environment; the
-  new shape is verified via `packages/generator/test/fixtures/mini-export`
+  new shape is verified via `packages/generator/test/fixtures/reference-fixtures`
   instead (see CI's determinism gate) and proven live in
   `spike/tests/p410-page-object-demo.spec.ts`.
 - `packages/mcp` (@apx/mcp): MCP stdio server exposing `inspect_apex_export`
@@ -39,6 +39,44 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
   (hand-written, testkit primitives only). `spike/tests/p410-simple-form.spec.ts`
   is the original DOM-discovery spike — keep it as-is until the region/button
   discovery report lands.
+
+## Architecture: the AST is the canonical semantic model
+
+`packages/parser/src/ast.ts`'s `ApexAppAst`/`ApexPage`/`ApexRegion`/
+`ApexItem`/`ApexButton` types ARE this project's canonical semantic
+representation — not a placeholder waiting for a formal "Application
+Model" layer. Every real consumer already builds directly on it, with no
+duplication between them:
+
+```
+Oracle Export (.apx)
+        |
+        v
+   @apx/parser  --  parseApp() -> ApexAppAst (astVersion-tagged)
+        |
+        +--> @apx/testgen: page-object.ts / lib.ts (Playwright generation)
+        +--> @apx/testgen: coverage.ts       (touched-vs-declared reporting)
+        +--> @apx/testgen: diff.ts           (export-to-export regression)
+        +--> (future consumers attach here, reading the same AST)
+```
+
+Package boundaries this implies, already true today without a formal
+split: `@apx/parser` owns the AST and nothing downstream of it (no
+generation, no coverage, no diff logic). `@apx/testgen` consumes the AST
+directly via `parseApp()`/`loadExport()` — it does not re-parse or
+duplicate parser logic. `@apx/testkit` is runtime-only and has zero
+dependency on `@apx/parser` — it never sees a `.apx` file or the AST,
+only a live `page` object.
+
+Why not extract a separate `@apx/model` package: the three real consumers
+above already share the AST with zero duplication between them. An
+extraction today would mostly rename and relocate types that already
+serve their purpose — it earns its cost when a genuinely different KIND
+of consumer shows up (e.g. one needing a different shape than the
+parser's line-oriented projection gives, not just another reader of the
+same fields). Until then, treat `ast.ts` as the contract: changes to it
+are changes to the public semantic model, not an internal implementation
+detail, even though it lives inside `@apx/parser`.
 
 ## Commands
 - Install: `npm install` (workspace root — hoists everything, REQUIRED before
