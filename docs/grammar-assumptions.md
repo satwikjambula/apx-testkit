@@ -33,6 +33,22 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
 - [x] Validation group holds `maxLength` etc.; NO required flag observed in
       this app — requiredness may be template-driven (@/required-floating) or
       a property not exercised here. OPEN until seen in another export.
+- [x] Component identifiers MAY be a quoted, space-containing display string,
+      not just a bare token: Oracle's "Sample Interactive Grids" gallery app
+      has `column "Row Header" (` for the IG row-selector pseudo-column (11
+      occurrences across that export). The original grammar only matched a
+      single `\S+` token for the identifier, which silently desynced the
+      block parser on this line: the column's own `type`/`layout` props
+      leaked onto and OVERWROTE the enclosing region's `type` (corrupting
+      `interactiveGrid` into `rowSelector`), and the column's closing `)` was
+      consumed as the region's own closer, orphaning everything declared
+      after it in that region (a real `next` button, in the reproducing
+      case). Fixed: `COMPONENT_OPEN` now accepts `"[^"]*"` as an identifier
+      alternative, unquoted before being stored as `ComponentNode.identifier`.
+      Regression-guarded in `packages/parser/test/parser.test.ts` (asserts
+      zero warnings, the correct unquoted identifier, the region's type
+      surviving uncorrupted, and the trailing button not being orphaned) —
+      confirmed the test fails all four ways on the pre-fix regex.
 - [x] Global page 0 exists with no alias; page files p00000-... zero-padded 5.
 - [x] Package layout: application.apx, page-groups.apx, pages/, shared-
       components/ (with themes/ + static-files/ native assets), .apex/
@@ -194,9 +210,11 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
 ## Still open
 
 - [ ] Comment syntax: none observed anywhere. Assume none until spec says so.
-- [ ] Quoting/escaping: no quoted strings observed. What happens when a value
-      must contain a leading `[`/`@` or a literal ```? Unknown — needs a
-      hostile fixture app.
+- [ ] Quoting/escaping in PROPERTY VALUES specifically: no quoted values
+      observed. What happens when a value must contain a leading `[`/`@` or a
+      literal ```? Unknown — needs a hostile fixture app. (Quoted, space-
+      containing component IDENTIFIERS are now handled — see "Verified"
+      above; this item is narrower than it used to be.)
 - [ ] Whether components may legally appear inside `{ }` groups (parser
       tolerates; not observed).
 - [ ] `required` property canonical name — build a form with a required item

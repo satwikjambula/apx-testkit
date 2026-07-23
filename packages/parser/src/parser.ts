@@ -31,7 +31,7 @@ export interface ParseResult {
   warnings: ParseIssue[];
 }
 
-const COMPONENT_OPEN = /^([A-Za-z][\w-]*)(?:\s+(\S+))?\s*\($/;
+const COMPONENT_OPEN = /^([A-Za-z][\w-]*)(?:\s+("[^"]*"|\S+))?\s*\($/;
 const GROUP_OPEN = /^([A-Za-z][\w-]*)\s*\{$/;
 const OBJ_PROP_OPEN = /^([A-Za-z][\w-]*)\s*:\s*\{$/;
 const PROPERTY = /^([A-Za-z0-9_][\w-]*)\s*:\s*(.*)$/;
@@ -46,6 +46,14 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
   function refValue(tok: string): RefValue {
     const body = tok.slice(1);
     return { ref: body, standard: body.startsWith('/') };
+  }
+
+  /** Component identifiers may be a quoted, multi-word display name (e.g. an
+   * Interactive Grid row-selector pseudo-column: `column "Row Header" (`) --
+   * strip the surrounding quotes so the AST identifier is the plain string. */
+  function unquoteIdentifier(tok: string | undefined): string | null {
+    if (tok === undefined) return null;
+    return tok.length >= 2 && tok.startsWith('"') && tok.endsWith('"') ? tok.slice(1, -1) : tok;
   }
 
   function scalar(trimmed: string): RawValue {
@@ -118,7 +126,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
       let m = COMPONENT_OPEN.exec(line);
       if (m && !line.includes(':')) {
         const child: ComponentNode = {
-          type: m[1], identifier: m[2] ?? null, props: {}, children: [], loc: loc(),
+          type: m[1], identifier: unquoteIdentifier(m[2]), props: {}, children: [], loc: loc(),
         };
         i++;
         parseBody(child, ')', '');
@@ -170,7 +178,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
     const m = COMPONENT_OPEN.exec(line);
     if (m) {
       const root: ComponentNode = {
-        type: m[1], identifier: m[2] ?? null, props: {}, children: [], loc: loc(),
+        type: m[1], identifier: unquoteIdentifier(m[2]), props: {}, children: [], loc: loc(),
       };
       i++;
       parseBody(root, ')', '');
