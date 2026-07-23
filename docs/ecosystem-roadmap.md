@@ -66,11 +66,16 @@ else in this project (see CLAUDE.md Invariant 2).
   6 items checked by `expectItemsPresent`, both real region ids, the
   "Primary Action" button label).
   Follow-up refinement: regions whose type has no `@apx/testkit` component
-  at all (currently `interactiveGrid`) are now reported in a separate
-  "untrackable" bucket rather than counted as "untouched" — conflating the
-  two would misrepresent "nobody tested this" as indistinguishable from
-  "this can't be tracked yet." Verified against a synthetic fixture with a
-  mixed form + interactiveGrid page.
+  at all (`interactiveGrid`, `tree`, `calendar`, `chart`, `map` — kept in
+  sync with the region-shaped stubs in
+  `packages/testkit/src/components/unsupported.ts`) are now reported in a
+  separate "untrackable" bucket rather than counted as "untouched" —
+  conflating the two would misrepresent "nobody tested this" as
+  indistinguishable from "this can't be tracked yet." Verified against a
+  synthetic fixture with a mixed form + interactiveGrid page, and against
+  two real exports (see "Second and third real exports" below) whose
+  `tree`/`chart`/`calendar` regions correctly fell into the untrackable
+  bucket instead of misreporting as untouched-but-trackable.
 - **Message/notification assertions — DONE.** `apex.message` confirmed
   live as a universal, documented top-level API;
   `#APEX_SUCCESS_MESSAGE`/`#APEX_ERROR_MESSAGE` confirmed present on every

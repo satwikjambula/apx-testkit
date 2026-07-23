@@ -13,14 +13,15 @@
  * design.
  *
  * Regions get one extra distinction: a region whose TYPE has no
- * @apx/testkit component at all (currently: interactiveGrid -- see
- * docs/ecosystem-roadmap.md Tier 3, zero ground truth, no wrapper exists)
- * can never show a real touch, no matter how thoroughly it's actually
- * tested by hand through some other means. Counting it as "untouched"
- * alongside a region that genuinely has no test written for it would be
- * dishonest -- it conflates "nobody tested this" with "this can't be
- * tracked yet." Untrackable regions are reported in their own bucket and
- * excluded from the touched/total percentage entirely.
+ * @apx/testkit component at all (interactiveGrid, tree, calendar, chart,
+ * map -- see packages/testkit/src/components/unsupported.ts, the same
+ * list of region-shaped UnsupportedComponentError stubs, kept in sync with
+ * this set so the two don't drift) can never show a real touch, no matter
+ * how thoroughly it's actually tested by hand through some other means.
+ * Counting it as "untouched" alongside a region that genuinely has no test
+ * written for it would be dishonest -- it conflates "nobody tested this"
+ * with "this can't be tracked yet." Untrackable regions are reported in
+ * their own bucket and excluded from the touched/total percentage entirely.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -34,13 +35,15 @@ interface RawTouch {
 
 /**
  * Region types with no @apx/testkit component at all -- not "partial
- * support," genuinely zero. Extend this list only when a type is
- * confirmed to have no wrapper, backed by docs/ecosystem-roadmap.md, not
- * by assumption. Interactive Report/Cards/Faceted Search/form/static are
- * all trackable (via ApexRegion, ApexCardsRegion, or ApexFacetsRegion),
+ * support," genuinely zero. This must match the region-shaped stubs in
+ * packages/testkit/src/components/unsupported.ts (InteractiveGrid,
+ * TreeRegion, Calendar, Chart, MapRegion) exactly -- extend this list only
+ * when a type gets a matching UnsupportedComponentError stub there, not by
+ * assumption here alone. Interactive Report/Cards/Faceted Search/form/static
+ * are all trackable (via ApexRegion, ApexCardsRegion, or ApexFacetsRegion),
  * even where their coverage is partial in other respects.
  */
-const UNTRACKABLE_REGION_TYPES = new Set(['interactiveGrid']);
+const UNTRACKABLE_REGION_TYPES = new Set(['interactiveGrid', 'tree', 'calendar', 'chart', 'map']);
 
 export interface CategoryCoverage {
   total: number;
