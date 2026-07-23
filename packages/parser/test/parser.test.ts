@@ -112,3 +112,92 @@ describe('quoted multi-word component identifiers (Interactive Grid row-selector
     expect(page.buttons.map((b) => b.identifier)).toEqual(['next']);
   });
 });
+
+describe('typed Dynamic Action support', () => {
+  // Reproduces the real structure found in Oracle's "Sample Dynamic
+  // Actions" gallery app (page 3, "commission-for-salesman-only"): a
+  // conditional DA with two true-actions and two false-actions.
+  const apxWithDynamicAction = `page 3 (
+  name: Edit
+  alias: EDIT
+
+  dynamicAction commission-for-salesman-only (
+    name: Commission for Salesman Only
+    execution {
+      sequence: 10
+    }
+    when {
+      selectionType: items
+      items: P3_JOB
+    }
+    clientSideCondition {
+      type: item=value
+      item: P3_JOB
+      value: SALESMAN
+    }
+
+    action native-disable (
+      action: disable
+      affectedElements {
+        selectionType: items
+        items: P3_COMM
+      }
+      execution {
+        sequence: 10
+        fireWhenEventResultIs: false
+      }
+    )
+
+    action native-enable (
+      action: enable
+      affectedElements {
+        selectionType: items
+        items: P3_COMM
+      }
+      execution {
+        sequence: 10
+      }
+    )
+  )
+)`;
+
+  it('parses with no warnings and removes dynamicAction from unmodeled', () => {
+    const result = parseApp({ 'p00003-edit.apx': apxWithDynamicAction });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.unmodeled).not.toContain('dynamicAction');
+    expect(result.ast.unmodeled).not.toContain('action');
+  });
+
+  it('projects the trigger (when block) and clientSideCondition', () => {
+    const result = parseApp({ 'p00003-edit.apx': apxWithDynamicAction });
+    const [da] = result.ast.pages[0].dynamicActions;
+    expect(da.identifier).toBe('commission-for-salesman-only');
+    expect(da.name).toBe('Commission for Salesman Only');
+    expect(da.when).toEqual({
+      selectionType: 'items',
+      items: ['P3_JOB'],
+      button: null,
+      region: null,
+      event: null,
+    });
+    expect(da.clientSideCondition).toEqual({ type: 'item=value', item: 'P3_JOB', value: 'SALESMAN' });
+  });
+
+  it('projects nested actions, including fireWhenEventResultIs', () => {
+    const result = parseApp({ 'p00003-edit.apx': apxWithDynamicAction });
+    const [da] = result.ast.pages[0].dynamicActions;
+    expect(da.actions.map((a) => ({ id: a.identifier, action: a.action, fire: a.fireWhenEventResultIs }))).toEqual([
+      { id: 'native-disable', action: 'disable', fire: false },
+      { id: 'native-enable', action: 'enable', fire: null },
+    ]);
+  });
+
+  it('reports null clientSideCondition when the DA is unconditional', () => {
+    const unconditional = apxWithDynamicAction
+      .replace(/clientSideCondition \{[^}]*\}\n\s*/, '')
+      .replace('EDIT', 'EDIT2');
+    const result = parseApp({ 'p00003-edit.apx': unconditional });
+    const [da] = result.ast.pages[0].dynamicActions;
+    expect(da.clientSideCondition).toBeNull();
+  });
+});

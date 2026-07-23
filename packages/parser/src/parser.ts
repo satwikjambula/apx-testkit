@@ -20,7 +20,7 @@
  */
 
 import type {
-  ApexAppAst, ApexButton, ApexItem, ApexPage, ApexRegion,
+  ApexAppAst, ApexButton, ApexDAAction, ApexDynamicAction, ApexItem, ApexPage, ApexRegion,
   ComponentNode, Loc, RawValue, RefValue,
 } from './ast.js';
 
@@ -199,6 +199,16 @@ function str(v: RawValue | undefined): string | null {
 function refName(v: RawValue | undefined): string | null {
   return v && typeof v === 'object' && 'ref' in v ? String((v as RefValue).ref) : null;
 }
+function bool(v: RawValue | undefined): boolean | null {
+  return typeof v === 'boolean' ? v : null;
+}
+/** `when.items`/`affectedElements.items`-style values: a single identifier or an array of them. */
+function stringArray(v: RawValue | undefined): string[] | null {
+  if (v === undefined) return null;
+  if (Array.isArray(v)) return v.filter((x): x is string => typeof x === 'string');
+  if (typeof v === 'string') return [v];
+  return null;
+}
 
 const ITEM_TYPES = new Set(['pageItem', 'item']);
 
@@ -219,6 +229,41 @@ function projectButton(n: ComponentNode): ApexButton {
     identifier: n.identifier ?? '(anonymous)',
     label: str(n.props['label']),
     action: str(n.props['behavior.action']) ?? str(n.props['action']),
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
+function projectDAAction(n: ComponentNode): ApexDAAction {
+  return {
+    identifier: n.identifier ?? '(anonymous)',
+    action: str(n.props['action']),
+    fireWhenEventResultIs: bool(n.props['execution.fireWhenEventResultIs']),
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
+function projectDynamicAction(n: ComponentNode): ApexDynamicAction {
+  const hasClientSideCondition = Object.keys(n.props).some((k) => k.startsWith('clientSideCondition.'));
+  return {
+    identifier: n.identifier ?? '(anonymous)',
+    name: str(n.props['name']),
+    when: {
+      selectionType: str(n.props['when.selectionType']),
+      items: stringArray(n.props['when.items']),
+      button: refName(n.props['when.button']),
+      region: refName(n.props['when.region']),
+      event: str(n.props['when.event']),
+    },
+    clientSideCondition: hasClientSideCondition
+      ? {
+          type: str(n.props['clientSideCondition.type']),
+          item: str(n.props['clientSideCondition.item']),
+          value: str(n.props['clientSideCondition.value']),
+        }
+      : null,
+    actions: n.children.filter((c) => c.type === 'action').map(projectDAAction),
     loc: n.loc,
     raw: n.props,
   };
@@ -255,6 +300,7 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
 
     const items: ApexItem[] = [];
     const buttons: ApexButton[] = [];
+    const dynamicActions: ApexDynamicAction[] = [];
     for (const c of n.children) {
       if (ITEM_TYPES.has(c.type)) {
         const item = projectItem(c);
@@ -266,6 +312,8 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
         buttons.push(button);
         const owner = refName(c.props['layout.region']);
         if (owner) byId.get(owner)?.buttons.push(button);
+      } else if (c.type === 'dynamicAction') {
+        dynamicActions.push(projectDynamicAction(c));
       } else if (c.type !== 'region') {
         unmodeled.add(c.type);
       }
@@ -290,7 +338,7 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
       alias: str(n.props['alias']),
       name: str(n.props['name']),
       title: str(n.props['title']),
-      regions, items, buttons,
+      regions, items, buttons, dynamicActions,
       loc: n.loc,
       raw: n.props,
     });

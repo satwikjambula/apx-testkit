@@ -25,6 +25,7 @@ number of real apps, and honest about what doesn't work yet.
    - [2.9 Coverage mapping](#29-coverage-mapping)
    - [2.10 Regression detection](#210-regression-detection)
    - [2.11 Interactive Grid](#211-interactive-grid)
+   - [2.12 Dynamic Actions (metadata only)](#212-dynamic-actions-metadata-only)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -445,13 +446,14 @@ Summary: 1 added, 1 removed, 1 changed, 0 unchanged
 
 Field-by-field diffs (with old->new values) are shown for everything the
 AST actually types: page alias/name/title/`authentication`, item type/
-label/required/sourceColumn, region type/name/source, button label/action.
-For anything NOT typed yet (LOVs, server-side validations, Dynamic
-Actions, processes — see the parser-coverage correction in
-docs/ecosystem-roadmap.md), every component also gets an order-independent
-comparison of its full `raw` bag; if that differs, you'll see `other
-metadata changed (raw properties differ -- ...)` without a claim about
-*what* changed. That's the honest signal for untyped constructs: "go look
+label/required/sourceColumn, region type/name/source, button label/action,
+and dynamic action trigger/condition/nested-actions (2.12). For anything
+NOT typed yet (LOVs, server-side validations, processes — see the
+parser-coverage correction in docs/ecosystem-roadmap.md), every component
+also gets an order-independent comparison of its full `raw` bag; if that
+differs, you'll see `other metadata changed (raw properties differ --
+...)` without a claim about *what* changed. That's the honest signal for
+untyped constructs: "go look
 here," not a specific claim this project can't back up.
 
 Every added/removed/changed page also lists the generated `.page.ts`/
@@ -525,6 +527,53 @@ await page.waitForLoadState('domcontentloaded');
 See `spike/tests/interactive-grid-demo.spec.ts` for the full working
 example, and docs/quirks/26.1.json for both findings with complete
 evidence.
+
+---
+
+### 2.12 Dynamic Actions (metadata only)
+
+**Status: TYPED, parser-only — no runtime component.** `@apx/parser`
+projects `dynamicAction` blocks into `ApexPage.dynamicActions`, evidenced
+by Oracle's own "Sample Dynamic Actions" gallery app (329 real
+`dynamicAction`s parsed across every real export this project has, zero
+warnings):
+
+```ts
+import { parseApp } from '@apx/parser';
+
+const result = parseApp(loadExport('/path/to/export'));
+const page = result.ast.pages.find((p) => p.alias === 'EDIT');
+for (const da of page.dynamicActions) {
+  console.log(da.identifier, da.when, da.clientSideCondition);
+  for (const action of da.actions) {
+    console.log('  ', action.action, action.fireWhenEventResultIs);
+  }
+}
+```
+
+`da.when` is the trigger (`selectionType`, `items`/`button`/`region`,
+`event` — `null` event means APEX's implicit default for that selector
+type, not "no event"). `da.clientSideCondition` is `null` for
+unconditional DAs (confirmed common, not a gap). `da.actions` is the
+ordered list of nested steps, each with `fireWhenEventResultIs` marking
+true- vs. false-action lists.
+
+`apx-diff` (2.10) already diffs this field-by-field, including a nested
+diff of the actions list — see that section for what a changed DA looks
+like in a real diff report.
+
+**What this does NOT give you**: a way to *trigger* a named Dynamic
+Action from a live browser. That's a completely separate, still-unsolved
+problem — no known generic, documented JS API exists to fire a DA by name
+(see docs/ecosystem-roadmap.md "Dynamic Action triggering"). Typed
+metadata makes DAs diffable and inspectable, not controllable.
+
+**Scoping note**: the component name `action` is overloaded in the
+grammar. A `dynamicAction`'s nested `action` children (what `da.actions`
+projects) are a different construct from a stand-alone, page-level
+`action` nested directly inside a `region` (a row-level action alongside
+`column` nodes — seen in `apextogo`). Only the former is typed; the
+latter still falls into `unmodeled`.
 
 ---
 

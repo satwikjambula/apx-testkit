@@ -289,6 +289,48 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       verified-for-its-own-sake). Verified via
       `spike/tests/chart-demo.spec.ts`.
 
+- [x] Dynamic Actions promoted to a TYPED AST field (`ApexPage.
+      dynamicActions: ApexDynamicAction[]`) -- parser-only work, no live
+      app needed, evidenced by Oracle's own "Sample Dynamic Actions"
+      gallery app (27 pages, 329 real dynamicActions parsed across all 13
+      real exports this project has). Real, consistent grammar: `when {
+      selectionType: items|button|region|..., items/button/region: ...,
+      event: <name> }` (trigger), an optional `clientSideCondition {
+      type: item=value|item!=value|item>value|itemIsNull|itemIsNotNull|
+      jsExpression, item, value }` (confirmed many DAs have NO condition
+      block at all -- unconditional, not a gap), and one or more nested
+      `action <id> ( action: <name>, execution.fireWhenEventResultIs:
+      bool )` children forming true/false-action lists. Real, enumerable
+      action vocabulary observed: disable, enable, show, hide, setValue,
+      addClass, removeClass, setStyle, setFocus, alert, confirm, refresh,
+      executeJsCode, executeServerSideCode, redirectThisApp,
+      definedByDynamicAction, plus namespaced plugin actions
+      (`plugin/timer`, `plugin/stripeReport`, ...). Real, specific event
+      names observed beyond generic ones: component-namespaced custom
+      events like `region/interactiveGrid/interactivegridselectionchange`,
+      `region/calendar/apexcalendardateselect`,
+      `region/map/spatialmapobjectclick`,
+      `region/tree/treeviewselectionchange`,
+      `item/plugin-slider/slidechange`,
+      `dynamicAction/plugin-timer/timer_expired` -- real ground truth for
+      future lifecycle-wait work (see `lifecycle.ts`), not yet acted on.
+      IMPORTANT scoping note: the component type name `action` is
+      OVERLOADED in the grammar -- a `dynamicAction`'s nested `action`
+      children (DA steps) are a different construct from a stand-alone
+      page-level `action` nested directly inside a `region` (a row-level
+      action alongside `column` nodes, e.g. `position: fullRowLink` on a
+      Cards/List region) -- confirmed both exist, only the former is
+      typed now; the latter is untouched and still correctly reported in
+      `unmodeled`. Wired into `apx-diff` (`diffDynamicActionFields`,
+      including a nested by-identifier diff of the actions list) --
+      verified with a real before/after mutation (clientSideCondition
+      value change + an affected item change) correctly detected both the
+      typed field change and the untyped raw-bag change on the affected
+      sub-action. Regression-guarded in `packages/parser/test/
+      parser.test.ts` (4 new tests: no warnings, trigger + condition
+      projection, nested action projection including
+      fireWhenEventResultIs, and the unconditional-DA case).
+
 ## Still open
 
 - [ ] Comment syntax: none observed anywhere. Assume none until spec says so.

@@ -7,16 +7,17 @@
  *
  * Scope is deliberately honest about what the AST actually tracks today
  * (see docs/ecosystem-roadmap.md "needs parser extension first"): items,
- * regions, buttons, and a handful of page-level fields are typed and
- * diffed field-by-field with old/new values shown. LOVs, validations,
- * Dynamic Actions, processes, and branches are NOT typed AST fields --
- * they live in `raw` bags. Rather than silently missing changes to them,
- * every item/region/button/page also gets an order-independent structural
- * comparison of its full `raw` bag; if anything in there differs, that's
- * reported as "other metadata changed" WITHOUT claiming to know what
- * specifically changed. That's the honest signal this can give for
- * untyped constructs: "something changed here, go look," not "the LOV
- * changed" (which would be a claim this project cannot back up yet).
+ * regions, buttons, dynamic actions, and a handful of page-level fields
+ * are typed and diffed field-by-field with old/new values shown. LOVs,
+ * validations, processes, and branches are NOT typed AST fields -- they
+ * live in `raw` bags. Rather than silently missing changes to them, every
+ * item/region/button/dynamicAction/page also gets an order-independent
+ * structural comparison of its full `raw` bag; if anything in there
+ * differs, that's reported as "other metadata changed" WITHOUT claiming
+ * to know what specifically changed. That's the honest signal this can
+ * give for untyped constructs: "something changed here, go look," not
+ * "the LOV changed" (which would be a claim this project cannot back up
+ * yet).
  *
  * Each added/removed/changed page also lists the generated `.page.ts`/
  * `.spec.ts` filenames a regeneration would touch -- computed from the
@@ -26,7 +27,16 @@
  * to "which generated files need re-review" without any new
  * infrastructure.
  */
-import { parseApp, type ApexButton, type ApexItem, type ApexPage, type ApexRegion, type RawBag } from '@apx/parser';
+import {
+  parseApp,
+  type ApexButton,
+  type ApexDAAction,
+  type ApexDynamicAction,
+  type ApexItem,
+  type ApexPage,
+  type ApexRegion,
+  type RawBag,
+} from '@apx/parser';
 import { resolve } from 'node:path';
 import { loadExport } from './lib.js';
 import { pageObjectFileName, specFileName } from './page-object.js';
@@ -58,6 +68,7 @@ export interface PageDiff {
   items: ComponentDiff[];
   regions: ComponentDiff[];
   buttons: ComponentDiff[];
+  dynamicActions: ComponentDiff[];
 }
 
 export interface DiffSummary {
@@ -121,6 +132,49 @@ function diffButtonFields(a: ApexButton, b: ApexButton): string[] {
   const changes: string[] = [];
   if (a.label !== b.label) changes.push(`label: ${JSON.stringify(a.label)} -> ${JSON.stringify(b.label)}`);
   if (a.action !== b.action) changes.push(`action: ${JSON.stringify(a.action)} -> ${JSON.stringify(b.action)}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
+function diffDAActionFields(a: ApexDAAction, b: ApexDAAction): string[] {
+  const changes: string[] = [];
+  if (a.action !== b.action) changes.push(`action: ${JSON.stringify(a.action)} -> ${JSON.stringify(b.action)}`);
+  if (a.fireWhenEventResultIs !== b.fireWhenEventResultIs) {
+    changes.push(`fireWhenEventResultIs: ${a.fireWhenEventResultIs} -> ${b.fireWhenEventResultIs}`);
+  }
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
+function diffDynamicActionFields(a: ApexDynamicAction, b: ApexDynamicAction): string[] {
+  const changes: string[] = [];
+  if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
+  if (a.when.selectionType !== b.when.selectionType) {
+    changes.push(`when.selectionType: ${JSON.stringify(a.when.selectionType)} -> ${JSON.stringify(b.when.selectionType)}`);
+  }
+  if (a.when.event !== b.when.event) {
+    changes.push(`when.event: ${JSON.stringify(a.when.event)} -> ${JSON.stringify(b.when.event)}`);
+  }
+  const itemsA = JSON.stringify(a.when.items);
+  const itemsB = JSON.stringify(b.when.items);
+  if (itemsA !== itemsB) changes.push(`when.items: ${itemsA} -> ${itemsB}`);
+  if (a.when.button !== b.when.button) {
+    changes.push(`when.button: ${JSON.stringify(a.when.button)} -> ${JSON.stringify(b.when.button)}`);
+  }
+  if (a.when.region !== b.when.region) {
+    changes.push(`when.region: ${JSON.stringify(a.when.region)} -> ${JSON.stringify(b.when.region)}`);
+  }
+  const condA = JSON.stringify(a.clientSideCondition);
+  const condB = JSON.stringify(b.clientSideCondition);
+  if (condA !== condB) changes.push(`clientSideCondition: ${condA} -> ${condB}`);
+
+  const actionDiffs = diffByIdentifier(a.actions, b.actions, diffDAActionFields);
+  for (const d of actionDiffs) {
+    if (d.kind === 'added') changes.push(`action ${d.identifier} added`);
+    else if (d.kind === 'removed') changes.push(`action ${d.identifier} removed`);
+    else changes.push(`action ${d.identifier}: ${d.changes.join('; ')}`);
+  }
+
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }
@@ -193,6 +247,7 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
         items: [],
         regions: [],
         buttons: [],
+        dynamicActions: [],
       });
       continue;
     }
@@ -208,6 +263,7 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
         items: [],
         regions: [],
         buttons: [],
+        dynamicActions: [],
       });
       continue;
     }
@@ -216,7 +272,13 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
       const items = diffByIdentifier(oldPage.items, newPage.items, diffItemFields);
       const regions = diffByIdentifier(oldPage.regions, newPage.regions, diffRegionFields);
       const buttons = diffByIdentifier(oldPage.buttons, newPage.buttons, diffButtonFields);
-      const hasChanges = pageChanges.length > 0 || items.length > 0 || regions.length > 0 || buttons.length > 0;
+      const dynamicActions = diffByIdentifier(oldPage.dynamicActions, newPage.dynamicActions, diffDynamicActionFields);
+      const hasChanges =
+        pageChanges.length > 0 ||
+        items.length > 0 ||
+        regions.length > 0 ||
+        buttons.length > 0 ||
+        dynamicActions.length > 0;
       if (hasChanges) {
         summary.pagesChanged++;
         pages.push({
@@ -229,6 +291,7 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
           items,
           regions,
           buttons,
+          dynamicActions,
         });
       } else {
         summary.pagesUnchanged++;

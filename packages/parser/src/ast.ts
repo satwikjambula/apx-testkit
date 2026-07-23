@@ -54,6 +54,7 @@ export interface ApexPage {
   regions: ApexRegion[];
   items: ApexItem[];       // page-level items (not owned by a region)
   buttons: ApexButton[];
+  dynamicActions: ApexDynamicAction[];
   loc: Loc;
   raw: RawBag;
 }
@@ -84,6 +85,65 @@ export interface ApexButton {
   identifier: string;
   label: string | null;
   action: string | null;
+  loc: Loc;
+  raw: RawBag;
+}
+
+/**
+ * `when { ... }` group, flattened onto the dynamicAction node and
+ * re-projected here. `selectionType` is an open string (observed:
+ * items, button, region, columns, domObject, eventSource, jquerySelector/
+ * jQuerySelector, jsExpression) -- only the three most common carry a
+ * dedicated typed field; everything else stays in the dynamicAction's
+ * `raw` bag under the `when.*` prefix. `event` is the explicit trigger
+ * event name (e.g. `click`, `focusout`, `apexafterrefresh`, or a
+ * component-namespaced custom event like
+ * `region/interactiveGrid/interactivegridselectionchange`) -- `null`
+ * means APEX's implicit default event for this selector type, not "no
+ * event."
+ */
+export interface ApexDATrigger {
+  selectionType: string | null;
+  items: string[] | null;
+  button: string | null;
+  region: string | null;
+  event: string | null;
+}
+
+/**
+ * `clientSideCondition { ... }` group. `type` is an open string (observed:
+ * item=value, item!=value, item>value, itemColumn=value, itemIsNull,
+ * itemIsNotNull, jsExpression) -- `item`/`value` are populated when
+ * present, `null` for condition types that don't use them (e.g.
+ * itemIsNull, jsExpression).
+ */
+export interface ApexDAClientSideCondition {
+  type: string | null;
+  item: string | null;
+  value: string | null;
+}
+
+export interface ApexDAAction {
+  identifier: string;
+  /** Open string: disable, enable, show, hide, setValue, addClass,
+   * removeClass, executeJsCode, executeServerSideCode, redirectThisApp,
+   * refresh, alert, confirm, definedByDynamicAction, or a namespaced
+   * plugin action (plugin/timer, plugin/stripeReport, ...). */
+  action: string | null;
+  /** True-action list (default/unspecified) vs. false-action list. */
+  fireWhenEventResultIs: boolean | null;
+  loc: Loc;
+  raw: RawBag;
+}
+
+export interface ApexDynamicAction {
+  identifier: string;
+  name: string | null;
+  when: ApexDATrigger;
+  /** `null` when the dynamicAction has no clientSideCondition block at all
+   * (unconditional -- confirmed common, e.g. a plain refresh-on-event DA). */
+  clientSideCondition: ApexDAClientSideCondition | null;
+  actions: ApexDAAction[];
   loc: Loc;
   raw: RawBag;
 }

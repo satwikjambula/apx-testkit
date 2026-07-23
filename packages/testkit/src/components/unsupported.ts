@@ -96,7 +96,8 @@ export const RadioGroup = unsupportedComponent(
 
 export const PopupLov = unsupportedComponent(
   'PopupLov',
-  'not tested live. Oracle documents a fairly standard open/search/select flow, making this the most ' +
+  'confirmed present in a real export (sample-dynamic-actions, item type popupLov, 7 occurrences), but zero ' +
+    'LIVE ground truth. Oracle documents a fairly standard open/search/select flow, making this the most ' +
     'plausible near-term win among the untested item types, but it still needs a live app with one to verify ' +
     'against, not just documentation -- see docs/ecosystem-roadmap.md.',
 );

@@ -184,6 +184,37 @@ targets in this project by a wide margin — the ground truth volume alone
 (21 and 97 regions respectively, across dedicated single-purpose gallery
 apps) dwarfs everything else still sitting in Tier 2/3.
 
+- **Dynamic Actions — typed AST support, DONE.** Thirteenth real export,
+  Oracle's own "Sample Dynamic Actions" gallery app, closed out a gap
+  flagged repeatedly across every prior round ("no typed AST field," "no
+  known way to trigger one by name"). `dynamicAction` is entirely
+  parser-only work — unlike Interactive Grid/Chart, no live app was
+  needed. `ApexPage.dynamicActions: ApexDynamicAction[]` now exists
+  (`packages/parser/src/ast.ts`), covering the trigger (`when` block:
+  selectionType/items/button/region/event), an optional
+  `clientSideCondition`, and nested `action` children
+  (action name + `fireWhenEventResultIs` for true/false-action lists).
+  329 real `dynamicAction`s parsed across all 13 real exports this
+  project now has, zero warnings, zero crashes. Wired into `apx-diff`
+  (`diffDynamicActionFields`, including a nested by-identifier diff of
+  the actions list) — verified with a real before/after mutation
+  (changed a `clientSideCondition` value + an affected item on two
+  actions) correctly detecting both the typed field change and the
+  untyped raw-bag change on the affected sub-actions. Regression-guarded
+  with 4 new tests in `packages/parser/test/parser.test.ts`.
+  Scoping note found along the way: the component type name `action` is
+  OVERLOADED in the grammar — a `dynamicAction`'s nested `action`
+  children (DA steps, now typed) are a different construct from a
+  stand-alone page-level `action` nested directly inside a `region` (a
+  row-level action alongside `column` nodes — confirmed present in
+  several real exports, e.g. `apextogo`); only the former is typed now,
+  the latter is untouched and correctly still reported in `unmodeled`.
+  What this does NOT solve: **runtime DA triggering** (calling a named
+  Dynamic Action from a live browser) is a completely separate problem —
+  see "Dynamic Action triggering" in the needs-discovery section below,
+  unchanged by this work. Typed metadata makes DAs diffable and
+  inspectable; it does not make them controllable from `@apx/testkit`.
+
 ## Tier 2 — real ground truth exists, but needs care
 
 - **Snapshot testing for regions and pages.** Feasible (Playwright has
@@ -494,8 +525,9 @@ developing against a single app.
   reordering) — if anything there differs, it's reported as "other
   metadata changed" WITHOUT claiming to know what specifically changed.
   That's the honest signal for untyped constructs (LOV/validations/
-  Dynamic Actions/processes): "something changed here, go look," not "the
-  LOV changed," which this project cannot back up yet (see the parser-
+  processes — Dynamic Actions are now typed and diffed field-by-field,
+  see Tier 1 above): "something changed here, go look," not "the LOV
+  changed," which this project cannot back up yet (see the parser-
   coverage correction above). Verified with synthetic before/after
   fixtures covering every category (page added, page removed, page
   changed with title/item-added/item-changed/item-removed/button-changed)
@@ -525,11 +557,15 @@ developing against a single app.
   `parser.ts`. The claim that "the parser already knows branches, menus,
   navigation lists, breadcrumbs" does not hold today — same category of
   correction as the LOV/validations finding from the prior round.
-- **Category-level coverage (Processes, Dynamic Actions).** The existing
-  coverage report (items/regions/buttons) can't extend to processes or
-  Dynamic Actions until those are typed AST fields — currently `process`
-  and `dynamicAction` both sit in the generator's own `unmodeled` backlog
-  (see CLAUDE.md).
+- **Category-level coverage (Processes).** The existing coverage report
+  (items/regions/buttons) can't extend to processes until `process` is a
+  typed AST field — still sits in the generator's own `unmodeled` backlog
+  (see CLAUDE.md). Dynamic Actions are RESOLVED as of this round —
+  `ApexPage.dynamicActions` is now typed (see Tier 1 above) — so
+  DA-specific coverage tracking is now buildable in principle, just not
+  built yet: there's still no verified runtime way to trigger a DA by
+  name (see "Dynamic Action triggering" below), so a coverage recorder
+  for DAs would have nothing real to record against today.
 - **Automatic CRUD test generation.** Partially real: `region.source.tableName`
   IS a typed field already, so "this region is a form over a table" is
   detectable today. Primary-key detection and reliable save/delete-button

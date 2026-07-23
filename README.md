@@ -197,7 +197,7 @@ not existing).
 | Chart | 🚧 (falls to `raw`) | 🚧 no dedicated component, but the generic `ApexRegion.refresh()` confirmed live against a real chart region | ❌ — `apex.region(id).widget()` returns `null` for charts (real structural difference from IG/Cards/IR), and the runtime static id can differ from the `.apx` identifier (confirmed) |
 | Calendar, Map | 🚧 (falls to `raw`) | ❌ explicit stub — confirmed present in real exports (`sample-calendar`: 21 regions; `apextogo`/`sample-application-search`: map), but zero LIVE ground truth | ❌ |
 | Tree (as a content/data-display pattern) | 🚧 (falls to `raw`) | ❌ explicit stub — the only Tree seen live is the universal left-nav reused as a login picker, not a distinct content region | ❌ |
-| Dynamic Actions | ❌ (no typed AST field) | ❌ explicit stub — no known way to trigger one by name | ❌ |
+| Dynamic Actions | ✅ `ApexPage.dynamicActions` — trigger, condition, and nested true/false actions all typed | ❌ — no known way to trigger one by name at runtime (typed metadata does not solve this) | ❌ |
 | LOVs, server-side validations, navigation/branches | ❌ (no typed AST field — fall into `raw`) | — | ❌ |
 | Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
