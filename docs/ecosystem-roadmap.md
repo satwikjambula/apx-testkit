@@ -325,3 +325,90 @@ hold uniformly across this whole proposal.
   `assertions/`, `fixtures/`, `recipes/`, `plugins/` now — before most of
   those exist — would be restructuring for a future that isn't built yet.
   Let the directory shape follow what's actually there.
+
+## Third round: "reference implementation" vision
+
+A further proposal aimed at making this the reference Oracle APEX testing
+framework: an Application Model above page objects, a Navigation Graph,
+automatic CRUD test generation, metadata assertions, export-to-export
+regression detection, version-to-version APEX upgrade analysis, metadata
+snapshotting, a fuller wait engine, accessibility/security/performance
+smoke suites, category-level coverage reporting, an APEX linter, schema-
+aware data builders, a best-practices report, and a recommendation to stop
+developing against a single app.
+
+### Scope conflict worth resolving explicitly, not drifting into
+
+- **Oracle APEX Linter** and **Best Practices Report** directly reverse a
+  stated project commitment: README.md and docs/support-matrix.md both say
+  "No linter — APEX Advisor and SQLcl own that role," specifically to avoid
+  competing with Oracle's own tooling. This isn't a ground-truth gap like
+  everything else in this doc — it's a scope decision that would need to
+  be made deliberately, not accreted feature-by-feature.
+
+### Buildable now, high confidence, and genuinely novel (no new ground truth)
+
+- **Regression detection between two exports.** The standout idea in this
+  round. Pure AST-to-AST diffing — no live app, no browser, no DOM
+  involved at all, so it carries none of the risk profile of anything else
+  proposed across all three rounds. Compare `parseApp()` output for the
+  same page across two export directories; report added/removed/changed
+  items, regions, buttons. Directly buildable on top of the existing
+  parser with zero new verification burden.
+- **Metadata assertions** (`expectRegion`, `expectButton`, `expectRequiredItems`
+  at the page level). This is `expectItemsPresent` generalized to the
+  other AST categories — same verified pattern, not a new risk.
+- **Snapshot Oracle metadata (not HTML).** A natural companion to
+  regression detection — snapshot the AST subset for a page (items/
+  regions/buttons) rather than pixels or DOM. More stable than visual
+  snapshots for exactly the reason given: metadata changes less than
+  rendering does. Same zero-ground-truth-risk profile as the diff feature.
+
+### Needs parser extension first (not just runtime/generator work)
+
+- **Navigation Graph.** Checked directly: no `branch`/`menu`/`breadcrumb`/
+  `navigation` field exists anywhere in `packages/parser/src/ast.ts` or
+  `parser.ts`. The claim that "the parser already knows branches, menus,
+  navigation lists, breadcrumbs" does not hold today — same category of
+  correction as the LOV/validations finding from the prior round.
+- **Category-level coverage (Processes, Dynamic Actions).** The existing
+  coverage report (items/regions/buttons) can't extend to processes or
+  Dynamic Actions until those are typed AST fields — currently `process`
+  and `dynamicAction` both sit in the generator's own `unmodeled` backlog
+  (see CLAUDE.md).
+- **Automatic CRUD test generation.** Partially real: `region.source.tableName`
+  IS a typed field already, so "this region is a form over a table" is
+  detectable today. Primary-key detection and reliable save/delete-button
+  identification (beyond guessing from `button.action`/`label` text) need
+  more verification before a full CRUD suite could be generated with
+  confidence.
+
+### Different product surface entirely, not a testing-framework feature
+
+- **Version-to-version APEX upgrade analysis.** Would need real exports
+  from multiple APEX versions to compare — this project has only ever
+  touched 26.1. Not buildable without that raw material regardless of
+  design effort.
+- **Security/performance/accessibility smoke suites.** Each is its own
+  domain with its own correctness bar (a11y in particular has real
+  standards/tooling already, e.g. axe-core) — treating these as
+  metadata-generated "smoke tests" risks the same false-confidence problem
+  the whole project has been careful to avoid elsewhere. Worth scoping as
+  a deliberate, separate initiative if pursued, not folded in casually.
+- **Schema-aware data builders.** Reasonable, but depends on knowing
+  column types/constraints beyond what's currently typed (`sourceColumn`
+  exists; full column metadata does not).
+
+### On developing against more than one app
+
+Strongly agreed, and already this project's own stated bottleneck (see
+docs/support-matrix.md: "verified for this one app until [a second app]
+happens"). The suggested showcase app — one app built specifically to
+exercise every supported component — would unblock most of the current
+Tier 3 "zero ground truth" backlog at once (Interactive Grid, Popup LOV,
+Switch, RadioGroup, Rich Text, File Browse, Shuttle, Calendar, Map,
+Timeline, Smart Filters, Tree-as-content, Dynamic Actions). One real
+constraint: authoring an Oracle APEX application requires App Builder and
+a workspace — outside what this project can do by itself. Testing,
+parsing, and analyzing such an app once it exists (or hand-writing its
+`.apx` source for someone to import) is squarely in scope.
