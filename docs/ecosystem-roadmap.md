@@ -120,6 +120,49 @@ else in this project (see CLAUDE.md Invariant 2).
   (`expectSuccess`/`expectError`/`expectNoErrors`/
   `expectNoSuccessMessage`), verified live across 3 repeated runs.
 
+**Fifth through thirteenth real exports (parser/generator only, no live
+app; zips, no URLs).** A batch of nine more official Oracle sample apps:
+`apextogo`, `image-support-rte`, `sample-application-search`,
+`sample-calendar`, `sample-cards`, `sample-charts`, `sample-collections`,
+`sample-master-detail`, `sample-vector-search`. All nine parsed and
+generated with **zero warnings, zero crashes**, and deterministic output
+(each regenerated twice, byte-identical) — the parser's grammar (including
+the quoted-identifier fix from the "Sample Interactive Grids" batch) holds
+up against a genuinely wide variety of real APEX applications. `apx-diff`
+self-diff correctly reports zero changes on all nine.
+
+This batch is the richest static ground truth this project has for two
+previously near-empty region types: **`calendar`** (21 regions in
+`sample-calendar` alone, plus 1 more in `sample-master-detail`) and
+**`chart`** (97 regions in `sample-charts` — by far the largest count of
+any region type in any single export this project has seen). Both remain
+`UnsupportedComponentError` stubs — this is static confirmation the types
+are real and common, not live method-level verification, which needs a
+running instance neither Chart nor Calendar has had (unlike Interactive
+Grid, which got exactly this kind of live access — see the Tier 1 entry
+above — and graduated to a real component as a direct result). `map` also
+showed up for the first time (`apextogo`, `sample-application-search`),
+updating its stub reason from "never encountered" to "confirmed present,
+still no live ground truth."
+
+Two genuinely new region types appeared that this project had never
+parsed before, neither in `unsupported.ts` nor `KNOWN_REGION_TYPES`:
+**`search`** (`sample-application-search`, `sample-vector-search` — an
+AI-powered search-results region, gated by a `serverSideCondition` on
+`CURRENT_AI_PROVIDER` = OCI/OpenAI — evidence APEX 26.1's AI features
+extend beyond the chat integration already noted on Interactive Report)
+and **`listView`** (`sample-application-search` — a distinct report format
+alongside classicReport/interactiveReport/cards). Both parsed safely into
+`raw` bags without any special-casing needed, since `KNOWN_REGION_TYPES`
+is documentation-only and never gates parsing — but neither has a
+dedicated component or any live verification.
+
+If live URLs become available for `sample-calendar` or `sample-charts`
+specifically, those are now the highest-leverage next live-verification
+targets in this project by a wide margin — the ground truth volume alone
+(21 and 97 regions respectively, across dedicated single-purpose gallery
+apps) dwarfs everything else still sitting in Tier 2/3.
+
 ## Tier 2 — real ground truth exists, but needs care
 
 - **Charts.** Present and confirmed live (Oracle JET, SVG-rendered) — but

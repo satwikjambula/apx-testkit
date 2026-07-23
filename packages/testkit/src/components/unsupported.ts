@@ -42,19 +42,27 @@ export const TreeRegion = unsupportedComponent(
 
 export const Calendar = unsupportedComponent(
   'Calendar',
-  'never encountered in any app this project has touched, live or otherwise. No basis to design an API yet.',
+  'confirmed present in real exports (Oracle\'s "Sample Calendar" gallery app alone has 21 calendar regions; ' +
+    'also seen in sample-master-detail and brookstrut), but zero LIVE ground truth -- none of those apps was ' +
+    'available with a running instance to check apex.region(id).widget().calendar(...) against. No basis to ' +
+    'design an API from documentation alone -- see docs/ecosystem-roadmap.md Tier 2/3.',
 );
 
 export const MapRegion = unsupportedComponent(
   'MapRegion',
-  'never encountered in any app this project has touched, live or otherwise. No basis to design an API yet.',
+  'confirmed present in real exports (apextogo, sample-application-search), but zero LIVE ground truth -- ' +
+    'neither app was available with a running instance to check against. No basis to design an API from ' +
+    'documentation alone.',
 );
 
 export const Chart = unsupportedComponent(
   'Chart',
   'confirmed present live (Oracle JET, SVG-rendered), but container DOM ids are JET-generated hashes, not the ' +
-    '.apx static id -- unlike pageItems. Needs its own discovery pass into what apex.region(id).widget() ' +
-    'exposes before a wrapper can be verified, not assumed. See docs/ecosystem-roadmap.md Tier 2.',
+    '.apx static id -- unlike pageItems. Oracle\'s own "Sample Charts" gallery app has 97 chart regions -- by ' +
+    'far the richest static ground truth of any region type in this project -- but still zero live method-level ' +
+    'verification (that app was only ever seen as a static export, not a running instance). Needs its own ' +
+    'discovery pass into what apex.region(id).widget() exposes before a wrapper can be verified, not assumed. ' +
+    'See docs/ecosystem-roadmap.md Tier 2.',
 );
 
 export const Switch = unsupportedComponent(
