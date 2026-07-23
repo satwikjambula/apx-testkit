@@ -22,6 +22,38 @@ else in this project (see CLAUDE.md Invariant 2).
   confirmed BROKEN in this app (throw a real error from APEX's own client
   code) -- shipped anyway, documented as known-broken, per
   docs/grammar-assumptions.md and docs/limitations.md.
+- **Interactive Grid — DONE, live-verified.** Third real APEX app (Oracle's
+  own "Sample Interactive Grids" gallery) gave this project its first LIVE
+  Interactive Grid ground truth, moving it out of Tier 3 entirely. Shipped
+  `packages/testkit/src/components/interactive-grid.ts`
+  (`ApexInteractiveGridRegion`, extends `ApexRegion`): `getActions()`,
+  `getViews()`, `getCurrentView()`, `getCurrentViewId()`,
+  `getSelectedRecords()` -- all confirmed live via the jQuery UI
+  widget-factory pattern (`apex.region(id).widget().interactiveGrid(method)`,
+  NOT the direct `region[method]()` shape IR/Cards use). Confirmed
+  REJECTED: `model`, `view`, `getRegion`. Verified via
+  `spike/tests/interactive-grid-demo.spec.ts`, 3/3 repeated live runs.
+  Two significant findings alongside the component itself:
+  1. **Region identifier != runtime static id, confirmed concretely for
+     the first time.** The `.apx` export declares `region basic-editing
+     (type: interactiveGrid ...)`; at runtime `apex.region('basic-editing')`
+     returns `null`, `apex.region('emp')` resolves correctly. This means
+     `@apx/testgen` CANNOT auto-construct this component from `.apx`
+     metadata -- the real static id must be discovered from the live DOM
+     by hand (the widget container follows `<static id>_ig`). This is a
+     genuine, permanent limitation on automatic generation for this region
+     type specifically, not a bug to fix.
+  2. **`pageAccessProtection: argumentsMustHaveChecksum` blocks bare
+     `page.goto()` navigation, even immediately after a verified login.**
+     Discovered while trying to reach the IG page at all: a bare
+     `page.goto()` to ANY page (even the exact page just landed on
+     post-login) silently redirects to `/login`, regardless of a
+     `session=` query param. Only real in-app link clicks preserve the
+     session. `spike/tests/interactive-grid-demo.spec.ts` navigates via
+     `page.getByRole('link', ...).click()` through the real UI (Home ->
+     Editing card -> Basic Editing card) instead of `gotoApexPage()`'s
+     bare-goto strategy. See docs/quirks/26.1.json for both findings in
+     full, including the exact evidence.
 - **Automatic waits tied to APEX's client lifecycle — DONE for the
   region-operation case.** Shipped `packages/testkit/src/fixtures/lifecycle.ts`:
   `callRegionMethodAndWaitForEvent()` and `waitForRegionEvent()`, built on
@@ -106,21 +138,6 @@ else in this project (see CLAUDE.md Invariant 2).
 
 ## Tier 3 — blocked without new ground truth, or genuinely novel
 
-- **Interactive Grid.** Not present in the one *live* app this project has
-  runtime access to — but now confirmed to exist in metadata, in two real
-  exports obtained since (`sample-workflow-approvals`: 4 regions across
-  Approvers/Manage Vacation Rules/Laptop Order Management/Manage Laptop
-  Stock; `brookstrut`: 1, Sales History Interactive Grid). Both parsed and
-  generated cleanly with zero warnings — see the parser/generator section
-  below. That's static confirmation the type is real and common, not live
-  behavior. Oracle does publicly document the `interactiveGrid` widget JS
-  API (`apex.region(id).widget().interactiveGrid(...)`), so a wrapper COULD
-  be written from documentation alone the way the parser's grammar was —
-  but per this project's own M0 lesson, that's exactly the kind of
-  docs-only assumption that turned out wrong in places once checked against
-  a real app. Do not ship an `ig.ts` claiming verified behavior without a
-  *running* instance of an app that has an Interactive Grid region to check
-  it against — a static export, however real, doesn't change that.
 - **Trees as a content/data-display pattern.** The only Tree widget in the
   one available app is the universal left-nav (`a-TreeView` inside the nav
   chrome) — not a page-content region. No ground truth exists here for

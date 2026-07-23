@@ -33,6 +33,7 @@ export {
 export { buttonByLabel, clickButton } from './components/button.js';
 export { ApexCardsRegion, type CardsPageInfo } from './components/cards.js';
 export { ApexFacetsRegion } from './components/faceted-search.js';
+export { ApexInteractiveGridRegion } from './components/interactive-grid.js';
 export {
   successMessage,
   errorMessage,
@@ -43,7 +44,6 @@ export {
 } from './components/messages.js';
 export {
   UnsupportedComponentError,
-  InteractiveGrid,
   TreeRegion,
   Calendar,
   MapRegion,

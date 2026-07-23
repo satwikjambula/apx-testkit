@@ -24,6 +24,7 @@ number of real apps, and honest about what doesn't work yet.
    - [2.8 Lifecycle waits](#28-lifecycle-waits)
    - [2.9 Coverage mapping](#29-coverage-mapping)
    - [2.10 Regression detection](#210-regression-detection)
+   - [2.11 Interactive Grid](#211-interactive-grid)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -467,6 +468,66 @@ data for scripting.
 
 ---
 
+### 2.11 Interactive Grid
+
+**Status: PARTIALLY VERIFIED, hand-wired only.** Real, live-verified
+methods against a real Interactive Grid region -- Oracle's own "Sample
+Interactive Grids" gallery app -- but the generator cannot construct this
+component automatically. Read the caveat below before using it.
+
+```ts
+import { ApexInteractiveGridRegion } from '@apx/testkit';
+
+// You must supply the REAL runtime static id -- do not assume it matches
+// the .apx export's region identifier (see the caveat below).
+const ig = new ApexInteractiveGridRegion(page, 'emp');
+
+const actions = await ig.getActions();       // apex.actions instance: add/remove/invoke/toggle/list/...
+const views = await ig.getViews();           // e.g. { grid, chart }
+const currentViewId = await ig.getCurrentViewId(); // e.g. 'grid'
+const currentView = await ig.getCurrentView();     // the active view's controller object
+const selected = await ig.getSelectedRecords();    // currently selected rows
+
+// Inherited from the generic ApexRegion (region.ts):
+await ig.refresh();
+```
+
+**Critical caveat: the region's runtime static id can differ from its
+`.apx` export identifier.** Confirmed live: a region declared as `region
+basic-editing (type: interactiveGrid ...)` in the export resolved at
+runtime to static id `emp` (DOM widget container `#emp_ig`) --
+`apex.region('basic-editing')` returned `null`; `apex.region('emp')`
+worked. This is why `@apx/testgen` cannot auto-wire this component up from
+metadata alone, unlike Interactive Report/Cards/Faceted Search (where the
+export identifier has matched the runtime id in every app checked). To
+find the real static id, inspect the live DOM for a widget container whose
+id follows `<static id>_ig`.
+
+**Confirmed working** (via `apex.region(id).widget().interactiveGrid(method)`,
+the jQuery UI widget-factory pattern): `getActions`, `getViews`,
+`getCurrentView`, `getCurrentViewId`, `getSelectedRecords`. **Confirmed
+REJECTED** with a clear "no such method" error (not a silent failure):
+`model`, `view`, `getRegion`.
+
+**Navigation note:** the app used to verify this enables
+`pageAccessProtection: argumentsMustHaveChecksum`, which blocks
+`gotoApexPage()`'s bare-`page.goto()` navigation strategy -- even
+immediately after a successful login, even to the exact page just landed
+on. Reach protected pages via real UI link clicks instead:
+
+```ts
+await page.getByRole('link', { name: /^Editing/ }).click();
+await page.waitForLoadState('domcontentloaded');
+await page.getByRole('link', { name: /^Basic Editing/ }).click();
+await page.waitForLoadState('domcontentloaded');
+```
+
+See `spike/tests/interactive-grid-demo.spec.ts` for the full working
+example, and docs/quirks/26.1.json for both findings with complete
+evidence.
+
+---
+
 ## 3. Page types & patterns
 
 Everything below is built from the section 2 primitives — there's no
@@ -598,8 +659,10 @@ await loginAndSaveState(browser, `${APP_BASE}/login`, credentials, './auth.json'
 Full list in docs/limitations.md and docs/ecosystem-roadmap.md; the
 headline gaps:
 
-- **Interactive Grid** — zero ground truth; not present in any app this
-  toolkit has been built against. Not guessed at on purpose.
+- **Interactive Grid generator support** — `ApexInteractiveGridRegion` (2.11)
+  is real and live-verified, but the generator cannot auto-construct it:
+  the region's runtime static id can differ from its `.apx` identifier
+  (confirmed live). Construct it by hand with the real static id.
 - **Trees as a content/data-display pattern** — the only Tree widget seen
   is the universal left-nav, reused for one app's login picker; not a
   distinct page-content region.

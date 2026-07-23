@@ -11,15 +11,26 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   returns 400 on direct navigation. These pages need a parent-page/dialog
   context this generator doesn't construct. Generated tests for such pages
   will fail until this is addressed — that's expected, not a regression.
-- **Interactive Grid is untested and has zero ground truth.** Not present
-  anywhere in the one live app available to this project — see
-  docs/ecosystem-roadmap.md Tier 3.
+- **Interactive Grid has a real, live-verified component
+  (`ApexInteractiveGridRegion`), but the generator cannot auto-wire it up.**
+  Confirmed live: the region's runtime static id can differ from its `.apx`
+  identifier (`basic-editing` in the export, `emp` at runtime) — see
+  docs/quirks/26.1.json `region-id-not-static-id`. Construct it by hand
+  with the real static id, discovered from the live DOM.
 - **Region assertions don't exist.** The region identifier -> DOM convention
   is still an open ledger item (see docs/grammar-assumptions.md "Still
   open") — no selector guess has been committed. `@apx/testkit`'s
   `probeRegions()`/`refreshRegion()` only report what apex.region()'s own
   widget API resolves, which is known to miss non-widget regions
-  (staticContent, form).
+  (staticContent, form). Confirmed concretely divergent for Interactive
+  Grid (see above) — open whether other region types can also diverge.
+- **Pages with `security.pageAccessProtection: argumentsMustHaveChecksum`
+  cannot be reached via `gotoApexPage()`'s bare-goto navigation**, even
+  immediately after a verified login. Confirmed live: only real in-app link
+  clicks preserve the session; a bare `page.goto()` to any page (including
+  the exact page just landed on) redirects to `/login`. Navigate via real
+  UI clicks for apps/pages configured this way — see
+  docs/quirks/26.1.json `page-access-protection-blocks-bare-navigation`.
 - **`ApexCardsRegion.getRecords()`/`.getModel()` are confirmed broken** in
   the one app tested — they throw a genuine runtime error from inside
   APEX's own client code, not a testkit bug. Left in the typed API so the

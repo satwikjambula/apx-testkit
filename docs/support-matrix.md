@@ -10,7 +10,8 @@ compatibility.
 | `@apx/testkit` item.ts | Live APEX 26.1 instance (same app) | apex.item() round-trip verified for textField, textarea, numberField, selectList, datePicker, hidden |
 | `@apx/testkit` session.ts | Live APEX 26.1 instance (same app) | Friendly-URL alias resolution, title normalization rule |
 | `@apx/testkit` region.ts / button.ts | Partially — see docs/grammar-assumptions.md "Still open" | region.ts only claims what apex.region()'s own API reports; button.ts uses accessible-role/label locators, not a verified static-id convention |
-| `@apx/testkit` auth.ts | Partially verified: live, against a SECOND real APEX 26.1 app (Sample File Upload and Download) | Field ids (P101_USERNAME/P101_PASSWORD) confirmed exact match, no changes needed. Submission switched from Enter to a button click after live evidence of Enter unreliability; that specific fix is NOT yet independently re-verified — see docs/limitations.md |
+| `@apx/testkit` auth.ts | Partially verified: live, against THREE real APEX 26.1 apps (Sample File Upload and Download; Sample Interactive Grids; the P101_USERNAME/P101_PASSWORD convention held on all three) | Field ids confirmed exact match, no changes needed. Submission switched from Enter to a button click after live evidence of Enter unreliability; that specific fix is NOT yet independently re-verified — see docs/limitations.md |
+| `@apx/testkit` interactive-grid.ts | Live, against a real IG region (Sample Interactive Grids gallery app) | `getActions`/`getViews`/`getCurrentView`/`getCurrentViewId`/`getSelectedRecords` confirmed via the widget-factory pattern, 3/3 repeated runs — see docs/quirks/26.1.json. Region's runtime static id confirmed to differ from its `.apx` identifier; generator cannot auto-wire this component |
 | `@apx/testgen` generator output | Live APEX 26.1 instance, one app (UX Pattern Catalog) | 39/43 generated smoke tests passed live; determinism verified against a committed synthetic fixture, not the real export (not available in every environment) |
 
 ## What "verified against one app" means
@@ -26,7 +27,9 @@ for this one app" until that happens.
 ## Not supported, by design
 
 - Pre-26.1 APEX applications.
-- Interactive Grid deep interaction (cell editing, etc.) — v0.2 at earliest.
+- Interactive Grid cell editing / data mutation — read-only inspection methods
+  (getActions/getViews/getCurrentView/getSelectedRecords) are verified;
+  editing interaction is still v0.2 at earliest.
 - `.apx` writing/emitting — SQLcl owns import; this project is read-only.
 - Linting — APEX Advisor and SQLcl own that role.
 - Data-dependent assertions — the generator cannot know your data.

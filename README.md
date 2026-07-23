@@ -138,7 +138,9 @@ anything.
 
 Scope commitments: APEX 26.1+ only. No linter (APEX Advisor/SQLcl own that
 role). No `.apx` writer (SQLcl owns import — a writer invites round-trip
-corruption bugs). No Interactive Grid deep interaction.
+corruption bugs). Interactive Grid has a real, live-verified component
+(`ApexInteractiveGridRegion`) but the generator cannot auto-wire it up —
+see the capability matrix below.
 
 ### Running it locally
 
@@ -191,7 +193,7 @@ not existing).
 | Page messages (success/error) | N/A (global, not page metadata) | ✅ `messages.ts` | ❌ not wired into generator yet |
 | Checkbox | ✅ (type string) | ❌ not tested live | ❌ |
 | Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle | ✅ (type string) | ❌ explicit `UnsupportedComponentError` stub | ❌ |
-| Interactive Grid | ✅ (type string) | ❌ explicit stub — confirmed present in three real exports (workflow-approvals, brookstrut, and Oracle's own "Sample Interactive Grids" gallery app — 39 regions), still zero *live* ground truth | ❌ |
+| Interactive Grid | ✅ (type string) | ✅ `ApexInteractiveGridRegion` — `getActions`/`getViews`/`getCurrentView`/`getCurrentViewId`/`getSelectedRecords` confirmed live | ❌ — the region's runtime static id can differ from its `.apx` identifier (confirmed: `basic-editing` in the export, `emp` at runtime), so the generator cannot wire this up automatically; construct it by hand with the real static id |
 | Chart | 🚧 (falls to `raw`) | ❌ explicit stub — DOM ids are JET-generated hashes, needs its own discovery pass | ❌ |
 | Tree (content), Calendar, Map | ❌ | ❌ explicit stub — never encountered in any tested app | ❌ |
 | Dynamic Actions | ❌ (no typed AST field) | ❌ explicit stub — no known way to trigger one by name | ❌ |
@@ -227,11 +229,14 @@ behind specific rows:
 - **`spike/tests-generated/`'s 18 committed files are stale** relative to
   the current page-object generator template; regenerating them for real
   needs the actual export, which isn't committed (redistribution unchecked).
-- **No Interactive Grid support at all; Interactive Report only has the
-  generic `ApexRegion` methods** (search/sort/pagination are confirmed
-  private on the widget instance — see the capability matrix above). No
-  `required`-item assertion, no data-dependent assertions — the last one is
-  permanent, by design; the generator has no way to know what data your
+- **Interactive Grid support exists (`ApexInteractiveGridRegion`) but is
+  hand-wired only** — the generator cannot auto-construct it, since the
+  region's runtime static id can differ from its `.apx` identifier
+  (confirmed live). **Interactive Report only has the generic `ApexRegion`
+  methods** (search/sort/pagination are confirmed private on the widget
+  instance — see the capability matrix above). No `required`-item
+  assertion, no data-dependent assertions — the last one is permanent, by
+  design; the generator has no way to know what data your
   instance holds.
 
 ## Roadmap
@@ -256,14 +261,13 @@ find that second user.
 The longer-term direction is richer component APIs, lifecycle-aware waits,
 snapshot testing, coverage mapping, and editor integration. Done so far
 (all verified live, not just designed): Interactive Report/Cards/Faceted
-Search component APIs, event-based lifecycle waits
+Search/**Interactive Grid** component APIs, event-based lifecycle waits
 (`callRegionMethodAndWaitForEvent`), a `--watch` CLI flag for editor
 auto-regeneration, and coverage mapping — set `APX_COVERAGE_LOG=<path>`
 before running your suite, then run `apx-coverage <export-dir>
 <touch-log-path>` to see which declared items/regions/buttons a run
 actually touched vs. missed. Still open: Charts (needs its own short
 discovery pass), snapshot testing (needs a masking-policy design), and
-Interactive Grid/Trees — confirmed to exist in real exports now (two more
-apps parsed cleanly, see docs/ecosystem-roadmap.md), but still zero *live*
-ground truth since neither was available with a running instance to
-verify against.
+Trees as content — the only Tree widget seen live so far is the universal
+left-nav reused for a login picker (see docs/ecosystem-roadmap.md), not a
+distinct page-content pattern.

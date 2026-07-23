@@ -71,14 +71,25 @@
     },
     {
       "id": "region-id-not-static-id",
-      "component": "Region identifiers (all region types probed so far)",
-      "issue": "The DOM/runtime id apex.region() resolves against does not match any straightforward transform of the .apx declared static id (verbatim, R_ prefix, data-region-id, data-static-id all ruled out). Runtime ids observed were numeric hash-like strings (e.g. R14614638417487636), not human-readable.",
-      "evidence": "Oracle's own docs state static ids are mandatory and 'sensible' when auto-assigned, but the observed runtime ids don't look sensible/human-readable at all -- open tension, not yet resolved.",
-      "reproducedAgainst": "UX Pattern Catalog app (multiple pages)",
-      "workaround": "Do not assume a region's DOM/runtime id equals its .apx identifier. Obtain the runtime id by other means (read off the live DOM) until the convention is confirmed.",
-      "status": "open, unresolved",
+      "component": "Region identifiers (confirmed on Interactive Grid; open for other region types)",
+      "issue": "The DOM/runtime id apex.region() resolves against does not always match the .apx declared region identifier. Confirmed concretely on Interactive Grid: a region declared as `region basic-editing (type: interactiveGrid ...)` in the export resolved at runtime to static id \"emp\" (DOM widget container #emp_ig) -- apex.region('basic-editing') returned null, apex.region('emp') worked. For other region types (Interactive Report, Cards, Faceted Search) the export identifier HAS matched the runtime id in every app checked so far -- this mismatch is not universal, but it is real and not rare (Interactive Grid specifically).",
+      "evidence": "Live, in an authenticated session on the real Basic Editing page: apex.region('basic-editing') -> null; apex.region('emp') -> a real region object whose .widget()[0].id is \"emp_ig\". The .apx export has no separate staticId/alias property for this region -- 'basic-editing' is the only identifier the export exposes, and it is NOT the runtime id.",
+      "reproducedAgainst": "Sample Interactive Grids gallery app (Basic Editing page, page 30)",
+      "workaround": "For Interactive Grid specifically: do not assume the .apx region identifier is the runtime static id. Discover the real id from the live DOM (the IG widget container's id follows `<static id>_ig`) and pass that into ApexInteractiveGridRegion by hand -- the generator cannot wire this up automatically from .apx metadata alone.",
+      "status": "confirmed for Interactive Grid; open for whether other region types can also diverge",
       "rootCauseDiagnosed": false,
-      "source": "packages/testkit/src/components/region.ts, docs/grammar-assumptions.md 'Still open'"
+      "source": "packages/testkit/src/components/interactive-grid.ts, packages/testkit/src/components/region.ts, docs/grammar-assumptions.md 'Still open'"
+    },
+    {
+      "id": "page-access-protection-blocks-bare-navigation",
+      "component": "Pages with security.pageAccessProtection: argumentsMustHaveChecksum",
+      "issue": "A plain page.goto() to a friendly URL for a protected page -- even immediately after a successful, verified login, even to the EXACT page just landed on -- silently redirects to /login (HTTP 200, not an error) instead of loading the page. This holds regardless of whether a session= query parameter is included.",
+      "evidence": "Live: right after login(), landed on .../home?session=<id> (real, authenticated, correct title). A subsequent page.goto('.../home') (bare, no click) redirected to /login. A subsequent page.goto('.../basic-editing') did the same, with and without an explicit ?session=<id> appended. A genuine in-app link CLICK (e.g. the Help top-nav link, or the Editing/Basic Editing card links) worked correctly every time and stayed authenticated. The app's application.apx / page .apx source declares `pageAccessProtection: argumentsMustHaveChecksum` -- APEX's own documented security feature requiring a valid, per-render checksum on requests to these pages, which a hand-typed or scripted goto() URL does not carry (only APEX's own rendered links do).",
+      "reproducedAgainst": "Sample Interactive Grids gallery app (Basic Editing page, page 30; also confirmed on Home, page 1)",
+      "workaround": "For apps/pages with this protection enabled, navigate via real in-app link clicks (page.getByRole('link', ...).click()), not page.goto() to a friendly URL -- even for the generator's own gotoApexPage()-based page objects. This is a real, correctly-functioning APEX security feature, not a bug in this project's tooling -- but it means the generator's default navigation strategy (bare goto()) will not work against pages configured this way.",
+      "status": "confirmed, root cause diagnosed",
+      "rootCauseDiagnosed": true,
+      "source": "spike/tests/interactive-grid-demo.spec.ts, docs/grammar-assumptions.md"
     },
     {
       "id": "drawer-modal-pages-400",
@@ -90,6 +101,17 @@
       "status": "confirmed, root cause not diagnosed",
       "rootCauseDiagnosed": false,
       "source": "docs/limitations.md, CLAUDE.md Outstanding debts #2"
+    },
+    {
+      "id": "interactive-grid-widget-factory-api",
+      "component": "Interactive Grid (ApexInteractiveGridRegion)",
+      "issue": "Interactive Grid is NOT driven the same way as Interactive Report/Cards. Its methods live behind a jQuery UI widget-factory call (apex.region(id).widget().interactiveGrid(method)), not directly on the apex.region(id) object the way region.ts's generic ApexRegion methods are for IR/Cards. Confirmed working via that path: getActions, getViews, getCurrentView, getCurrentViewId, getSelectedRecords. Confirmed REJECTED with a clear \"no such method\" error (not a silent failure): model, view, getRegion.",
+      "evidence": "Live, method-by-method: interactiveGrid('getActions') returned a real apex.actions instance ({add, remove, invoke, toggle, list, ...}); interactiveGrid('getViews') returned {grid, chart}; interactiveGrid('getCurrentViewId') returned a string; interactiveGrid('getCurrentView') returned a rich view controller object (getSelectedRecords/setSelectedRecords/getActiveRecordId/gotoCell observed as properties on it, not yet individually invoked and confirmed); interactiveGrid('getSelectedRecords') called directly also succeeded. interactiveGrid('model'/'view'/'getRegion') all threw \"no such method '<name>' for interactiveGrid widget instance\". Separately: apex.region(id).call('refresh'|'getSelectedRecords'|'getActions') ALSO succeeded for this widget type -- a genuine contrast with Interactive Report/Cards, where region.ts documents ALL tested .call() actions being rejected with \"Call not supported.\"",
+      "reproducedAgainst": "Sample Interactive Grids gallery app (Basic Editing page, page 30, static id \"emp\")",
+      "workaround": "Use ApexInteractiveGridRegion (packages/testkit/src/components/interactive-grid.ts) for the confirmed methods. Do not call model/view/getRegion -- confirmed unsupported. Methods only observed as properties on getCurrentView()'s result (setSelectedRecords, getActiveRecordId, getContextRecord, gotoCell) are NOT yet individually verified -- treat them as unconfirmed until called directly and checked, the same discipline cards.ts applies to getRecords()/getModel().",
+      "status": "confirmed, partial API surface verified",
+      "rootCauseDiagnosed": true,
+      "source": "packages/testkit/src/components/interactive-grid.ts, spike/tests/interactive-grid-demo.spec.ts"
     }
   ]
 }

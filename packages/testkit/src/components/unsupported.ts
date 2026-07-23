@@ -29,17 +29,9 @@ function unsupportedComponent(name: string, reason: string): new (page: Page, id
   } as new (page: Page, id: string) => never;
 }
 
-export const InteractiveGrid = unsupportedComponent(
-  'InteractiveGrid',
-  'confirmed present in three real exports (workflow-approvals, brookstrut, and Oracle\'s own "Sample ' +
-    'Interactive Grids" gallery app -- 39 interactiveGrid regions in that one alone, covering editing, ' +
-    'validation, master-detail, column groups, row selection, and more), but still zero LIVE ground truth: none ' +
-    'of the three was available with a running instance to check against, so this only confirms the region type ' +
-    'exists in metadata (and is genuinely common), not what apex.region(id).widget().interactiveGrid(...) ' +
-    'actually does at runtime. Oracle documents that API, but building a wrapper from documentation alone risks ' +
-    'the same confident-wrong mistake found elsewhere in this project (Cards.getRecords(), the login() race ' +
-    'condition, the message-visibility bug) -- see docs/ecosystem-roadmap.md Tier 3.',
-);
+// InteractiveGrid graduated from a stub to a real component -- see
+// components/interactive-grid.ts (ApexInteractiveGridRegion), verified live
+// against Oracle's "Sample Interactive Grids" gallery app.
 
 export const TreeRegion = unsupportedComponent(
   'TreeRegion',

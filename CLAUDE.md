@@ -104,6 +104,13 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
    `spike/tests/p410-simple-form.spec.ts` and read the two JSON blocks),
    then: record the convention in the ledger, extend region.ts, wire region
    assertions into the generator.
+   UPDATE: confirmed concretely for Interactive Grid — the `.apx` export's
+   region identifier (`basic-editing`) is NOT the runtime static id
+   (`emp`); see docs/quirks/26.1.json `region-id-not-static-id` and
+   `packages/testkit/src/components/interactive-grid.ts`. Still open
+   whether IR/Cards/Faceted Search (where identifier == runtime id in
+   every app checked so far) can also diverge, or whether this is
+   IG-specific.
 2. DONE: full generated-suite run against the live instance —
    39/43 passed; the only failures are p00420-data-entry-drawer-form (4
    tests, GET returns 400 — drawer/modal pages don't resolve via plain

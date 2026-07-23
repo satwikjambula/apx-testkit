@@ -207,6 +207,54 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       `expectNoSuccessMessage`). Verified live, 3 repeated runs, 4/4
       passing each time -- `spike/tests/messages-demo.spec.ts`.
 
+- [x] THIRD real APEX 26.1 app confirmed available and explored: Oracle's
+      own "Sample Interactive Grids" gallery app -- the first LIVE ground
+      truth for Interactive Grid this project has had (previously a
+      zero-live-ground-truth stub; see `unsupported.ts` history and
+      docs/quirks/26.1.json `interactive-grid-widget-factory-api`).
+      Standard `@apex-accounts` scheme, `P101_USERNAME`/`P101_PASSWORD`
+      confirmed again (third independent confirmation of this convention).
+      Two real, load-bearing findings:
+      1. **Region identifier != runtime static id, confirmed concretely.**
+         The `.apx` export declares `region basic-editing (type:
+         interactiveGrid ...)` on page 30; at runtime `apex.region
+         ('basic-editing')` returns `null`, while `apex.region('emp')`
+         resolves correctly (DOM widget container `#emp_ig`). This
+         resolves the long-open "region-id-not-static-id" question from
+         speculative to confirmed, at least for Interactive Grid -- see
+         docs/quirks/26.1.json. Practical consequence: `@apx/testgen`
+         cannot auto-wire an `ApexInteractiveGridRegion` from `.apx`
+         metadata alone; the real static id must be discovered from the
+         live DOM by hand.
+      2. **`security.pageAccessProtection: argumentsMustHaveChecksum`
+         blocks bare `page.goto()` navigation, even post-login.** Right
+         after a successful, verified `login()`, landing on
+         `.../home?session=<id>` is genuinely authenticated -- but a
+         subsequent bare `page.goto()` to ANY page (including that exact
+         same `/home` URL, with or without the `session=` param) silently
+         redirects to `/login` (HTTP 200, not an error). Only real in-app
+         link clicks (which carry APEX's own embedded checksum) preserve
+         the session. This is a real, correctly-functioning APEX security
+         feature, not a bug -- but it means `gotoApexPage()`'s bare-goto
+         navigation strategy will not work against pages configured this
+         way; reaching them requires clicking through the actual UI. See
+         docs/quirks/26.1.json `page-access-protection-blocks-bare-navigation`.
+      Verified Interactive Grid API surface (via
+      `apex.region(id).widget().interactiveGrid(method)`, the jQuery
+      UI widget-factory pattern -- NOT the direct `region[method]()` shape
+      IR/Cards use): `getActions()` (a real `apex.actions` instance),
+      `getViews()` (`{grid, chart}`), `getCurrentView()`, `getCurrentViewId()`
+      (a string), `getSelectedRecords()` -- all confirmed working, 3/3
+      repeated live runs. Confirmed REJECTED with a clear "no such method"
+      error: `model`, `view`, `getRegion`. Also confirmed, a genuine
+      contrast with IR/Cards: `apex.region(id).call(action)` DOES work for
+      Interactive Grid (`refresh`/`getSelectedRecords`/`getActions` all
+      succeeded), unlike IR/Cards where every tested `.call()` action was
+      rejected with "Call not supported." Shipped as
+      `ApexInteractiveGridRegion` in
+      `packages/testkit/src/components/interactive-grid.ts`, verified via
+      `spike/tests/interactive-grid-demo.spec.ts` (3/3 repeated live runs).
+
 ## Still open
 
 - [ ] Comment syntax: none observed anywhere. Assume none until spec says so.
