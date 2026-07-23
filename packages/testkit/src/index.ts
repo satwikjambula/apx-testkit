@@ -33,6 +33,14 @@ export {
 export { buttonByLabel, clickButton } from './components/button.js';
 export { ApexCardsRegion, type CardsPageInfo } from './components/cards.js';
 export { ApexFacetsRegion } from './components/faceted-search.js';
+export {
+  successMessage,
+  errorMessage,
+  expectSuccess,
+  expectError,
+  expectNoErrors,
+  expectNoSuccessMessage,
+} from './components/messages.js';
 
 export interface ApxFixtures {
   /** Auto-armed for every test; empty array means no console/page errors so far. */

@@ -164,6 +164,33 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       -- neither hardcoded) test ready for whoever has credentials to
       close this out.
 
+- [x] `apex.message` CONFIRMED live as a universal, documented top-level
+      API (`showPageSuccess`, `hidePageSuccess`, `showErrors`,
+      `clearErrors`, `confirm`, `alert`, `showDialog`, ...).
+      `#APEX_SUCCESS_MESSAGE`/`#APEX_ERROR_MESSAGE` are standard DOM
+      elements present on every page's template (confirmed: class
+      `u-hidden` on a fresh load, before any message ever shown), toggled
+      to `u-visible` by the show calls and back to `u-hidden` by the
+      hide/clear calls.
+      REAL BUG FOUND, same class of mistake as the Cards/login findings:
+      do NOT use Playwright's `toBeVisible()`/`toBeHidden()` against these
+      elements. Confirmed live: even with `u-visible` correctly applied
+      (verified in the same DOM read that showed the class), the element's
+      rendered height stayed exactly `0px` -- checked repeatedly over
+      1.8s, not a transient animation -- when the message was triggered by
+      calling `apex.message.showPageSuccess()`/`showErrors()` directly
+      (bypassing a real form submission). Playwright's visibility check
+      requires a non-empty bounding box, so `toBeVisible()` reports
+      "hidden" regardless of the class; and because the box is *always*
+      zero-height in this app/theme, `toBeHidden()` would trivially pass
+      even while a message genuinely is showing -- unsafe in both
+      directions. Fixed by asserting the `u-visible`/`u-hidden` CLASS
+      directly instead of rendered visibility -- shipped as
+      `packages/testkit/src/components/messages.ts`
+      (`expectSuccess`/`expectError`/`expectNoErrors`/
+      `expectNoSuccessMessage`). Verified live, 3 repeated runs, 4/4
+      passing each time -- `spike/tests/messages-demo.spec.ts`.
+
 ## Still open
 
 - [ ] Comment syntax: none observed anywhere. Assume none until spec says so.
