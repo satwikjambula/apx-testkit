@@ -646,3 +646,134 @@ specifics on each.
   round for exactly why guessing at those wrappers isn't done lightly
   here. Grow the typed hierarchy one verified type at a time, as already
   established with `ApexCardsRegion`/`ApexFacetsRegion`.
+
+## Fifth round: Application Model, package boundaries, verifier, showcase app
+
+A fifth round proposed a full architectural restructuring: an
+`@apx/model` intermediate representation between parser and every
+consumer, formal package boundaries built around it, canonical stable
+IDs, version-as-data contracts, an `@apx/verifier` package, an
+`@apx/recipes` package, dependency graphs (validation -> process ->
+branch), a versioned compatibility suite, expanded Oracle sample-app
+coverage, and a dedicated `apx-testkit-showcase` application. Same
+evidence-first ledger as every prior round: what's already true (and in
+two cases, superseded by events since the proposal was written), what's
+buildable now, and what's still genuinely blocked.
+
+### Already true, or overtaken by events since this was written
+
+- **Stable IDs — already exists, not a gap.** The proposal asks for
+  canonical `Page(3)` / `Region(employee)` / `Item(P3_ENAME)` /
+  `Button(save)` identifiers that Coverage/Diff/Recipes/Navigation could
+  all reference. This is precisely what `ApexPage.id`, `ApexRegion.
+  identifier`, `ApexItem.identifier`, and `ApexButton.identifier` already
+  are — and `packages/generator/src/diff.ts` (`diffByIdentifier`) and
+  `packages/generator/src/coverage.ts` already key off exactly these
+  fields for items and regions. The one real gap is narrower than "no
+  stable IDs": buttons are matched by LABEL, not identifier, at the
+  runtime/coverage layer specifically — because there is still no
+  verified button static-id DOM convention (see CLAUDE.md Outstanding
+  debt #1), not because the export-side identifier is missing or
+  unstable. A stable-ID *system* wouldn't fix this; discovering the DOM
+  convention would. Already tracked, not a new item.
+- **Expand Oracle sample application coverage — already done, and
+  exceeded.** The proposal names four apps (Sample Database Application,
+  Sample Interactive Grids, Sample Reporting, UX Pattern Catalog). This
+  project has since acquired and parsed real exports from fourteen: UX
+  Pattern Catalog (live), Sample File Upload and Download (live), Sample
+  Workflow/Approvals/Tasks, brookstrut (a Sample-Database-App-equivalent),
+  Sample Interactive Grids (live), apextogo, image-support-rte,
+  sample-application-search, sample-calendar, sample-cards,
+  sample-charts, sample-collections, sample-master-detail, and
+  sample-vector-search. All parsed and generated cleanly. This
+  recommendation is satisfied several times over already — see "Second
+  through thirteenth real exports" above.
+
+### Buildable now, low-risk — not yet done
+
+- **A synthetic multi-region-type parser fixture, extending
+  `mini-export`.** The proposal's "APX TestKit Showcase" (a 30-page app
+  covering every item/region type) is NOT buildable as a real, running
+  APEX application — this project has no App Builder or workspace access
+  to author one (the same constraint disclosed in round 3's showcase-app
+  discussion; nothing has changed). But a hand-written, synthetic `.apx`
+  fixture covering more region/item type variety than the current
+  one-region `mini-export` IS buildable today, the same way `mini-export`
+  itself was written — pure parser/generator regression material, not a
+  live-verifiable app. This would strengthen parser test coverage but
+  would NOT let any new component graduate from stub to verified,
+  since nothing about a hand-written fixture is live ground truth.
+
+### Legitimate direction, not undertaken now (same reasoning as round 4, re-affirmed)
+
+- **`@apx/model` intermediate representation.** The stated benefit is
+  that Coverage/Diff/Docs/Mermaid/Navigation-graph/Recipes/AI-MCP would
+  all consume one shared model instead of each touching the parser AST
+  directly. Worth re-checking against current reality: Coverage and Diff
+  *are* real, already-built consumers of the AST today (not hypothetical
+  ones) — so the premise is less speculative than in round 4. But Docs,
+  Mermaid, Navigation graph, Recipes, and AI/MCP integration still don't
+  exist, and the two real consumers (`coverage.ts`, `diff.ts`) already
+  work fine against the current `ApexPage`/`ApexRegion`/`ApexItem`/
+  `ApexButton` types with zero duplication between them. Extracting a
+  formal model now would mostly be a rename/relocation exercise for
+  types that already serve their two real consumers correctly.
+  Concrete trigger to revisit: when a third NEW consumer beyond
+  generator/coverage/diff is actually being built (not just proposed),
+  extract the shared model from the (by then) three-plus real call
+  sites — don't design it from zero consumers' worth of requirements.
+- **Formal package boundaries around the model.** Directly downstream of
+  the item above — contingent on the model existing. Today's boundaries
+  are already reasonably clean without it: `@apx/testkit` has zero
+  dependency on `@apx/parser` (confirmed by its imports — genuinely
+  "runtime only, never knows about parsing" already); `@apx/testgen`
+  does parse exports directly today, which only becomes a problem once
+  there's a model to bypass.
+- **`@apx/verifier` package.** Same assessment as round 4, with one
+  update: this session ran several more rounds of the same ad hoc
+  verification method (Interactive Grid discovery, the checksum/
+  navigation investigation) since that assessment was written, which
+  means there's now more real precedent to generalize from than there
+  was — but the irregularity discovered in the SAME session (custom auth
+  schemes, checksum-protected navigation requiring real UI clicks
+  instead of goto()) shows the design space is still actively growing,
+  not settled. A verifier built today would need to already handle cases
+  this project only just discovered exist. Still better scoped
+  deliberately once the shape of "what varies between apps" stabilizes,
+  not extracted reactively mid-discovery.
+- **Version-as-data contracts (`contracts/26.1/`, `26.2/`, ...).** Same
+  blocker as round 4: this project has only ever touched APEX 26.1.
+  Nothing to version against yet.
+- **`@apx/recipes` package.** Same assessment as rounds 1, 2, and 4:
+  reasonable eventually, not urgent, and this project's own restraint
+  principle (verify before generalizing) argues against building a
+  recipe abstraction before there's more than one hand-written pattern
+  to generalize from.
+- **Dependency graphs (Page -> Validation -> Process -> Branch).** Needs
+  a parser extension first, not an architecture change: validations,
+  processes, and branches are NOT typed AST fields today — they land in
+  `raw` bags and are tracked only as names in the `unmodeled` list (true
+  across every export parsed so far, all fourteen of them). A dependency
+  graph needs these as real, typed, cross-referenceable data before it
+  can exist; that's parser work, and it's already the correction this
+  project made to an earlier round's "Automatic CRUD Tests"/"category
+  coverage" proposals for the identical reason.
+- **Versioned compatibility suite as its own repo.** Overlaps directly
+  with round 3's showcase-app recommendation and the "Full compatibility
+  lab" item above — same real constraint (no App Builder/workspace
+  access to author a live app; multiple APEX versions to compare don't
+  exist for this project). Restated here because the proposal frames it
+  as the single most essential next step; the constraint hasn't changed
+  since round 3 said the same thing.
+
+### On the explicit "what I would NOT do" note
+
+The proposal's closing point — dial back from exposing a rich API for
+every component immediately, keep verifying before generalizing — is
+exactly this project's existing, load-bearing discipline (see
+`unsupported.ts`'s entire design, the Cards `getRecords()`/`getModel()`
+known-broken methods left visible rather than hidden, and every
+"confirmed working" vs. "confirmed rejected" pairing in
+docs/quirks/26.1.json). Nothing to change here; worth noting only because
+it's confirmation the project's existing restraint is being recognized
+as a strength, not a gap to fix.
