@@ -54,6 +54,27 @@ else in this project (see CLAUDE.md Invariant 2).
      Editing card -> Basic Editing card) instead of `gotoApexPage()`'s
      bare-goto strategy. See docs/quirks/26.1.json for both findings in
      full, including the exact evidence.
+- **Charts — partially DONE, live-verified.** Fourth real APEX app
+  (Oracle's own "Sample Charts" gallery) gave this project its first
+  LIVE Chart ground truth. Two findings: (1) region identifier != runtime
+  static id, confirmed a SECOND time on an independent widget type
+  (export: `area-chart-color-javascript-code-customization`, runtime:
+  `area1`) — broadens the Interactive-Grid-only finding above to
+  "confirmed on two widget types." (2) `apex.region(id).widget()` returns
+  `null` for chart regions — a real structural difference from
+  Interactive Grid/Cards/IR. The actual widget-factory plugin is
+  `ojChart`, attached to the JET container element directly (id
+  convention `<static id>_jet`), not reachable through `region.widget()`.
+  Confirmed callable: `refresh`, `getContextByNode` (returns `null` with
+  no args). Confirmed NOT valid method names: `getProperty`, `getOption`.
+  Most valuable result: the EXISTING generic `ApexRegion` class already
+  works for `refresh()` against chart regions — `new ApexRegion(page,
+  'area1').refresh()`, verified live 3/3 runs via
+  `spike/tests/chart-demo.spec.ts` — zero new component code needed for
+  that. No dedicated `ApexChartRegion` was built: the two confirmed
+  `ojChart` methods weren't compelling enough alone to justify one, per
+  this project's restraint principle. See docs/quirks/26.1.json for the
+  full investigation.
 - **Automatic waits tied to APEX's client lifecycle — DONE for the
   region-operation case.** Shipped `packages/testkit/src/fixtures/lifecycle.ts`:
   `callRegionMethodAndWaitForEvent()` and `waitForRegionEvent()`, built on
@@ -165,13 +186,6 @@ apps) dwarfs everything else still sitting in Tier 2/3.
 
 ## Tier 2 — real ground truth exists, but needs care
 
-- **Charts.** Present and confirmed live (Oracle JET, SVG-rendered) — but
-  chart container DOM ids are JET-generated hashes
-  (`chart1000639411058$cp5`), NOT the `.apx` static id, unlike pageItems.
-  Any chart API must go through `apex.region(id).widget()`-level calls
-  (data refresh, series inspection via the documented JET/APEX chart API),
-  never a DOM id assumption. Needs its own short discovery pass to confirm
-  exactly what the widget API exposes before writing `chart.ts`.
 - **Snapshot testing for regions and pages.** Feasible (Playwright has
   built-in screenshot/snapshot assertions), but needs a design decision
   first: APEX pages often render live/seeded data, so a naive

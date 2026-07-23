@@ -194,7 +194,7 @@ not existing).
 | Checkbox | ✅ (type string) | ❌ not tested live | ❌ |
 | Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle | ✅ (type string) | ❌ explicit `UnsupportedComponentError` stub | ❌ |
 | Interactive Grid | ✅ (type string) | ✅ `ApexInteractiveGridRegion` — `getActions`/`getViews`/`getCurrentView`/`getCurrentViewId`/`getSelectedRecords` confirmed live | ❌ — the region's runtime static id can differ from its `.apx` identifier (confirmed: `basic-editing` in the export, `emp` at runtime), so the generator cannot wire this up automatically; construct it by hand with the real static id |
-| Chart | 🚧 (falls to `raw`) | ❌ explicit stub — DOM ids are JET-generated hashes, needs its own discovery pass | ❌ |
+| Chart | 🚧 (falls to `raw`) | 🚧 no dedicated component, but the generic `ApexRegion.refresh()` confirmed live against a real chart region | ❌ — `apex.region(id).widget()` returns `null` for charts (real structural difference from IG/Cards/IR), and the runtime static id can differ from the `.apx` identifier (confirmed) |
 | Tree (content), Calendar, Map | ❌ | ❌ explicit stub — never encountered in any tested app | ❌ |
 | Dynamic Actions | ❌ (no typed AST field) | ❌ explicit stub — no known way to trigger one by name | ❌ |
 | LOVs, server-side validations, navigation/branches | ❌ (no typed AST field — fall into `raw`) | — | ❌ |

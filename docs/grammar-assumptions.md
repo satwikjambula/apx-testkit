@@ -255,6 +255,40 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       `packages/testkit/src/components/interactive-grid.ts`, verified via
       `spike/tests/interactive-grid-demo.spec.ts` (3/3 repeated live runs).
 
+- [x] FOURTH real APEX 26.1 app confirmed available and explored: Oracle's
+      own "Sample Charts" gallery app -- the first LIVE ground truth for
+      Chart this project has had. Same `@apex-auth` scheme and
+      `pageAccessProtection: argumentsMustHaveChecksum` pattern as Sample
+      Interactive Grids (navigate via real UI clicks, not `page.goto()`).
+      Two significant findings:
+      1. **Region identifier != runtime static id, confirmed a SECOND
+         time on an independent widget type.** Export declares `region
+         area-chart-color-javascript-code-customization (type: chart
+         ...)`; at runtime the real static id is `area1` (widget
+         container `#area1_jet`). This broadens the earlier Interactive
+         Grid-only finding to "confirmed on two independent region
+         types" -- see docs/quirks/26.1.json.
+      2. **`apex.region(id).widget()` returns `null` for chart regions --
+         a real structural difference from Interactive Grid/Cards/IR,
+         where it returns a real jQuery-wrapped element.** The actual
+         jQuery UI widget-factory plugin for Oracle JET charts is
+         `ojChart` (confirmed present in `jQuery.fn`), attached directly
+         to the JET container element, NOT reachable through
+         `region.widget()` at all. Confirmed live via
+         `apex.jQuery('#area1_jet').ojChart(method)`: `refresh` and
+         `getContextByNode` are callable (the latter returns `null` with
+         no arguments); `getProperty`/`getOption` are confirmed NOT valid
+         method names ("no such method" errors).
+      Most valuable finding: the ALREADY-EXISTING generic `ApexRegion`
+      class (region.ts) works cleanly against chart regions --
+      `new ApexRegion(page, 'area1').refresh()` confirmed live, 3/3
+      repeated runs, no new component code required. No dedicated
+      `ApexChartRegion` was built -- the two confirmed `ojChart` methods
+      weren't compelling enough alone to justify one (matching this
+      project's restraint principle: verified-and-useful, not
+      verified-for-its-own-sake). Verified via
+      `spike/tests/chart-demo.spec.ts`.
+
 ## Still open
 
 - [ ] Comment syntax: none observed anywhere. Assume none until spec says so.

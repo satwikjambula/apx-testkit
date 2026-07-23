@@ -55,14 +55,30 @@ export const MapRegion = unsupportedComponent(
     'documentation alone.',
 );
 
+// Chart graduated PARTIALLY: the GENERIC ApexRegion class (region.ts) is
+// confirmed to work against a real chart region -- `new ApexRegion(page,
+// '<real static id>').refresh()` is live-verified (see
+// spike/tests/chart-demo.spec.ts). No dedicated ApexChartRegion exists,
+// because apex.region(id).widget() returns null for chart regions
+// (confirmed -- unlike Interactive Grid, Cards, IR) and the real jQuery
+// UI widget-factory plugin (`ojChart`, attached directly to the JET
+// container element, id convention `<static id>_jet`) only had two
+// methods confirmed callable (`refresh`, `getContextByNode` -- the latter
+// returning null with no arguments, not compelling enough alone to build
+// a wrapper around) and two confirmed NOT valid method names
+// (`getProperty`, `getOption` -- "no such method" errors). See
+// docs/quirks/26.1.json for the full investigation. This stub remains
+// for a genuinely CHART-SPECIFIC rich API (series/axis inspection, view
+// switching) -- construct a plain `ApexRegion` directly for `refresh()`
+// today; do not construct `Chart` for that, it will still throw.
 export const Chart = unsupportedComponent(
   'Chart',
-  'confirmed present live (Oracle JET, SVG-rendered), but container DOM ids are JET-generated hashes, not the ' +
-    '.apx static id -- unlike pageItems. Oracle\'s own "Sample Charts" gallery app has 97 chart regions -- by ' +
-    'far the richest static ground truth of any region type in this project -- but still zero live method-level ' +
-    'verification (that app was only ever seen as a static export, not a running instance). Needs its own ' +
-    'discovery pass into what apex.region(id).widget() exposes before a wrapper can be verified, not assumed. ' +
-    'See docs/ecosystem-roadmap.md Tier 2.',
+  'no chart-specific rich API confirmed useful enough to build yet (getProperty/getOption rejected; ' +
+    'getContextByNode callable but not compelling alone) -- but the GENERIC ApexRegion class already works for ' +
+    "refresh() against chart regions, confirmed live (Oracle's \"Sample Charts\" gallery app, Area page). Use " +
+    "`new ApexRegion(page, '<real static id>')` directly for that -- the real static id must be discovered from " +
+    "the live DOM (`<static id>_jet` widget container), NOT assumed from the .apx export identifier (confirmed " +
+    'to differ, same pattern as Interactive Grid). See docs/quirks/26.1.json.',
 );
 
 export const Switch = unsupportedComponent(

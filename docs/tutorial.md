@@ -666,7 +666,13 @@ headline gaps:
 - **Trees as a content/data-display pattern** — the only Tree widget seen
   is the universal left-nav, reused for one app's login picker; not a
   distinct page-content region.
-- **Charts** — see 3.5.
+- **Charts** — no dedicated component, but the generic `ApexRegion` (2.3)
+  works today: `new ApexRegion(page, '<real static id>').refresh()` is
+  confirmed live. Two caveats confirmed live: `apex.region(id).widget()`
+  returns `null` for charts (unlike Interactive Grid/Cards/IR), and the
+  runtime static id can differ from the `.apx` export identifier — same
+  pattern as 2.11. See docs/quirks/26.1.json for the full investigation
+  (what `ojChart`'s widget-factory methods do and don't do).
 - **Region *assertions*** (as opposed to the `ApexRegion` API, which
   exists) — the region-identifier-to-DOM convention is still open, so the
   generator doesn't emit region-presence checks yet.

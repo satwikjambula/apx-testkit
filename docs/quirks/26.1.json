@@ -71,12 +71,12 @@
     },
     {
       "id": "region-id-not-static-id",
-      "component": "Region identifiers (confirmed on Interactive Grid; open for other region types)",
-      "issue": "The DOM/runtime id apex.region() resolves against does not always match the .apx declared region identifier. Confirmed concretely on Interactive Grid: a region declared as `region basic-editing (type: interactiveGrid ...)` in the export resolved at runtime to static id \"emp\" (DOM widget container #emp_ig) -- apex.region('basic-editing') returned null, apex.region('emp') worked. For other region types (Interactive Report, Cards, Faceted Search) the export identifier HAS matched the runtime id in every app checked so far -- this mismatch is not universal, but it is real and not rare (Interactive Grid specifically).",
-      "evidence": "Live, in an authenticated session on the real Basic Editing page: apex.region('basic-editing') -> null; apex.region('emp') -> a real region object whose .widget()[0].id is \"emp_ig\". The .apx export has no separate staticId/alias property for this region -- 'basic-editing' is the only identifier the export exposes, and it is NOT the runtime id.",
-      "reproducedAgainst": "Sample Interactive Grids gallery app (Basic Editing page, page 30)",
-      "workaround": "For Interactive Grid specifically: do not assume the .apx region identifier is the runtime static id. Discover the real id from the live DOM (the IG widget container's id follows `<static id>_ig`) and pass that into ApexInteractiveGridRegion by hand -- the generator cannot wire this up automatically from .apx metadata alone.",
-      "status": "confirmed for Interactive Grid; open for whether other region types can also diverge",
+      "component": "Region identifiers (confirmed on Interactive Grid AND Chart; open for other region types)",
+      "issue": "The DOM/runtime id apex.region() resolves against does not always match the .apx declared region identifier. Confirmed on TWO independent widget types now: Interactive Grid (export identifier \"basic-editing\" -> runtime static id \"emp\") and Chart (export identifier \"area-chart-color-javascript-code-customization\" -> runtime static id \"area1\"). For other region types (Interactive Report, Cards, Faceted Search) the export identifier HAS matched the runtime id in every app checked so far.",
+      "evidence": "Live, in authenticated sessions: apex.region('basic-editing') -> null, apex.region('emp') -> real region (Interactive Grid, Sample Interactive Grids app). apex.region('area-chart-color-javascript-code-customization') -> null, apex.region('area1') -> real region with widget container id 'area1_jet' (Chart, Sample Charts app). Both exports have no separate staticId/alias property -- the export's only identifier field is NOT the runtime id, in both cases.",
+      "reproducedAgainst": "Sample Interactive Grids (Basic Editing page); Sample Charts (Area page)",
+      "workaround": "For Interactive Grid and Chart specifically: do not assume the .apx region identifier is the runtime static id. Discover the real id from the live DOM (widget containers follow `<static id>_ig` for Interactive Grid, `<static id>_jet` for Chart) and pass that in by hand -- the generator cannot wire either of these up automatically from .apx metadata alone.",
+      "status": "confirmed on two independent region types; open for whether IR/Cards/Faceted Search can also diverge",
       "rootCauseDiagnosed": false,
       "source": "packages/testkit/src/components/interactive-grid.ts, packages/testkit/src/components/region.ts, docs/grammar-assumptions.md 'Still open'"
     },
@@ -112,6 +112,17 @@
       "status": "confirmed, partial API surface verified",
       "rootCauseDiagnosed": true,
       "source": "packages/testkit/src/components/interactive-grid.ts, spike/tests/interactive-grid-demo.spec.ts"
+    },
+    {
+      "id": "chart-region-widget-returns-null",
+      "component": "Chart (apex.region(id).widget())",
+      "issue": "apex.region(id).widget() returns null for chart regions -- unlike Interactive Grid, Cards, and Interactive Report, where it returns a real jQuery-wrapped element. The real jQuery UI widget-factory plugin for Oracle JET charts is \"ojChart\" (confirmed present in jQuery.fn), attached directly to the JET container element (id convention: `<static id>_jet`), not reachable through region.widget() at all.",
+      "evidence": "Live: apex.region('area1').widget() returned null (confirmed via explicit null-check, not just falsy). apex.jQuery('#area1_jet').ojChart('refresh') succeeded (callable, no error -- return value is a circular object, not independently useful). apex.jQuery('#area1_jet').ojChart('getContextByNode') succeeded, returned null with no arguments. apex.jQuery('#area1_jet').ojChart('getProperty'/'getOption') both threw \"no such method '<name>' for ojChart widget instance\" -- confirmed NOT valid method names on this widget. Separately, the ALREADY-EXISTING generic ApexRegion.refresh() (region.refresh(), not via widget() at all) was confirmed to work cleanly against the same chart region.",
+      "reproducedAgainst": "Sample Charts gallery app (Area page, static id \"area1\")",
+      "workaround": "For refresh(): use the existing generic `ApexRegion` class directly (`new ApexRegion(page, '<real static id>').refresh()`) -- no new component needed. For anything chart-specific (series/axis inspection, view state): wrap the JET container element directly via `apex.jQuery('#<static id>_jet')` and call `.ojChart(method)` -- region.widget() will not find it. getProperty/getOption are NOT the right method names; the correct accessor names for reading chart properties are not yet confirmed.",
+      "status": "confirmed, partial API surface verified",
+      "rootCauseDiagnosed": true,
+      "source": "packages/testkit/src/components/unsupported.ts, spike/tests/chart-demo.spec.ts"
     }
   ]
 }
