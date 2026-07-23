@@ -73,9 +73,9 @@ else in this project (see CLAUDE.md Invariant 2).
   conflating the two would misrepresent "nobody tested this" as
   indistinguishable from "this can't be tracked yet." Verified against a
   synthetic fixture with a mixed form + interactiveGrid page, and against
-  two real exports (see "Second and third real exports" below) whose
-  `tree`/`chart`/`calendar` regions correctly fell into the untrackable
-  bucket instead of misreporting as untouched-but-trackable.
+  real exports (see "Second, third, and fourth real exports" below) whose
+  `tree`/`chart`/`calendar`/`interactiveGrid` regions correctly fell into
+  the untrackable bucket instead of misreporting as untouched-but-trackable.
 - **Message/notification assertions — DONE.** `apex.message` confirmed
   live as a universal, documented top-level API;
   `#APEX_SUCCESS_MESSAGE`/`#APEX_ERROR_MESSAGE` confirmed present on every
@@ -140,11 +140,12 @@ Interactive Grid/Tree content or a design spike resolves what "coverage"
 means here — building them earlier risks the exact kind of confident-wrong
 assumption this project has structured itself to avoid.
 
-**Second and third real exports (parser/generator only, no live app).**
-Both were handed over as `.apx` export zips, no URL or credentials — so
-these only exercise the *static* side (parser, generator, coverage, diff),
-not `@apx/testkit`'s runtime components. Both parsed and generated cleanly:
-34 and 48 pages respectively, zero warnings, deterministic output (each
+**Second, third, and fourth real exports (parser/generator only, no live
+app).** All three were handed over as `.apx` export zips, no URL or
+credentials — so these only exercise the *static* side (parser, generator,
+coverage, diff), not `@apx/testkit`'s runtime components.
+`sample-workflow-approvals` (34 pages) and `brookstrut` (48 pages) parsed
+and generated cleanly: zero warnings, deterministic output (each
 regenerated three times, byte-identical), `apx-diff` self-diff correctly
 reports zero changes on both. They surfaced real, new region-type variety
 this project had never parsed before — `interactiveGrid` (5x), `chart`
@@ -163,6 +164,29 @@ authentication scheme (`@demo-purposes-only-custom-auth-scheme`) with no
 page 101 in the export at all — real evidence that the generator's
 default-scheme login assumption (see Tier 1 login item above) doesn't hold
 universally, which is now documented rather than silently assumed.
+
+The fourth, Oracle's own **"Sample Interactive Grids" gallery app** (49
+pages, dedicated IG showcase — editing, validation, column groups, row
+selection, master-detail, dialogs, dynamic actions, and more), initially
+produced 22 parser warnings across 11 pages, all the same pattern:
+`column "Row Header" (` — the IG row-selector pseudo-column uses a quoted,
+space-containing identifier, which the grammar's `COMPONENT_OPEN` regex
+(a single `\S+` token) didn't match. This wasn't a benign warning: the
+desync it caused let the column's own `type: rowSelector` property leak
+onto and silently overwrite the enclosing region's real `type`
+(`interactiveGrid` corrupted into `rowSelector`), and the column's closing
+`)` got consumed as the region's own closer, orphaning everything declared
+after it (a real `next` button, confirmed missing from the parsed AST).
+Fixed in `packages/parser/src/parser.ts` (quoted identifiers now supported
+and unquoted), regression-guarded with a minimal reproduction in
+`parser.test.ts`, confirmed to fail all four ways against the pre-fix
+regex. After the fix: zero warnings, 49/49 pages generated, deterministic,
+self-diff clean — and coverage now correctly reports 39 `interactiveGrid`
+regions as untrackable (up from what would have been ~28 correctly-typed
+plus 11 silently mistyped before the fix). This is by far the richest
+Interactive Grid ground truth this project has — see the "Second and
+third real exports" caveat above: still zero *live* verification, since
+none of the three came with a running instance.
 
 ## Extended vision: 16-point product roadmap (maintainer proposal)
 

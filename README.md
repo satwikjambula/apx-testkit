@@ -191,7 +191,7 @@ not existing).
 | Page messages (success/error) | N/A (global, not page metadata) | ✅ `messages.ts` | ❌ not wired into generator yet |
 | Checkbox | ✅ (type string) | ❌ not tested live | ❌ |
 | Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle | ✅ (type string) | ❌ explicit `UnsupportedComponentError` stub | ❌ |
-| Interactive Grid | ✅ (type string) | ❌ explicit stub — confirmed present in two real exports (workflow-approvals, brookstrut), still zero *live* ground truth | ❌ |
+| Interactive Grid | ✅ (type string) | ❌ explicit stub — confirmed present in three real exports (workflow-approvals, brookstrut, and Oracle's own "Sample Interactive Grids" gallery app — 39 regions), still zero *live* ground truth | ❌ |
 | Chart | 🚧 (falls to `raw`) | ❌ explicit stub — DOM ids are JET-generated hashes, needs its own discovery pass | ❌ |
 | Tree (content), Calendar, Map | ❌ | ❌ explicit stub — never encountered in any tested app | ❌ |
 | Dynamic Actions | ❌ (no typed AST field) | ❌ explicit stub — no known way to trigger one by name | ❌ |
