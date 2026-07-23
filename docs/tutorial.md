@@ -23,6 +23,7 @@ number of real apps, and honest about what doesn't work yet.
    - [2.7 Navigation & console](#27-navigation--console)
    - [2.8 Lifecycle waits](#28-lifecycle-waits)
    - [2.9 Coverage mapping](#29-coverage-mapping)
+   - [2.10 Regression detection](#210-regression-detection)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -408,6 +409,46 @@ page 10: Mixed (MIXED)
   untrackable (no @apx/testkit component for this type): emp-grid (interactiveGrid)
   buttons: 0/0 (n/a)
 ```
+
+### 2.10 Regression detection
+
+**Status: VERIFIED**, and unlike everything else in this list, needs no
+live app at all -- it's pure AST-to-AST comparison between two exports:
+
+```bash
+node /path/to/apx-testkit/packages/generator/dist/diff-cli.js <old-export-dir> <new-export-dir>
+```
+
+```
+~ page 3: Employee (EMPLOYEE)
+    title: "Employee" -> "Employee Record"
+  + item P3_EMAIL
+  ~ item P3_ENAME
+      label: "Name" -> "Full Name"
+  - item P3_JOB
+  ~ button save
+      label: "Save" -> "Save Changes"
+
+- page 5: Legacy Page (LEGACY)
++ page 7: Reports (REPORTS)
+Summary: 1 added, 1 removed, 1 changed, 0 unchanged
+```
+
+Field-by-field diffs (with old->new values) are shown for everything the
+AST actually types: page alias/name/title/`authentication`, item type/
+label/required/sourceColumn, region type/name/source, button label/action.
+For anything NOT typed yet (LOVs, server-side validations, Dynamic
+Actions, processes — see the parser-coverage correction in
+docs/ecosystem-roadmap.md), every component also gets an order-independent
+comparison of its full `raw` bag; if that differs, you'll see `other
+metadata changed (raw properties differ -- ...)` without a claim about
+*what* changed. That's the honest signal for untyped constructs: "go look
+here," not a specific claim this project can't back up.
+
+Use this in CI to catch exactly the case the whole project cares about:
+an AI agent (or a colleague) edits a page, and you want to know precisely
+what changed before regenerating tests — `--json <path>` gives the same
+report as structured data for scripting.
 
 ---
 

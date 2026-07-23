@@ -348,13 +348,24 @@ developing against a single app.
 
 ### Buildable now, high confidence, and genuinely novel (no new ground truth)
 
-- **Regression detection between two exports.** The standout idea in this
-  round. Pure AST-to-AST diffing — no live app, no browser, no DOM
-  involved at all, so it carries none of the risk profile of anything else
-  proposed across all three rounds. Compare `parseApp()` output for the
-  same page across two export directories; report added/removed/changed
-  items, regions, buttons. Directly buildable on top of the existing
-  parser with zero new verification burden.
+- **Regression detection between two exports — DONE.** Shipped as
+  `packages/generator/src/diff.ts` (`computeDiff()`) + the `apx-diff` CLI
+  bin. Per page: added/removed pages, page-level field changes
+  (alias/name/title/`security.authentication`), and added/removed/changed
+  items, regions, buttons matched by identifier with old->new field
+  values shown. Every item/region/button/page ALSO gets an
+  order-independent structural comparison of its full `raw` bag (sorted
+  keys before comparing, to avoid false positives from mere property
+  reordering) — if anything there differs, it's reported as "other
+  metadata changed" WITHOUT claiming to know what specifically changed.
+  That's the honest signal for untyped constructs (LOV/validations/
+  Dynamic Actions/processes): "something changed here, go look," not "the
+  LOV changed," which this project cannot back up yet (see the parser-
+  coverage correction above). Verified with synthetic before/after
+  fixtures covering every category (page added, page removed, page
+  changed with title/item-added/item-changed/item-removed/button-changed)
+  plus a same-export identity check (0 changes, 1 unchanged — no false
+  positives) and `--json` output shape.
 - **Metadata assertions** (`expectRegion`, `expectButton`, `expectRequiredItems`
   at the page level). This is `expectItemsPresent` generalized to the
   other AST categories — same verified pattern, not a new risk.
