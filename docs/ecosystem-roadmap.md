@@ -146,6 +146,23 @@ trap this project has caught itself in (and corrected) multiple times
 already (Cards.getRecords(), the login() race condition, and the
 message-visibility bug above).
 
+**Load-bearing correction to a sequencing assumption in this proposal:**
+a follow-up round of the same proposal claimed "the parser already knows
+required items, LOVs, buttons, regions, validations, navigation, item
+types" as justification for shifting focus entirely to the runtime/
+generator side. Checked directly against `packages/parser/src/ast.ts`:
+`ApexPage` has `regions`/`items`/`buttons` (typed); `ApexItem` has
+`required` as a real typed field (though its canonical property name is
+itself unverified per CLAUDE.md debt #3 -- no required item has ever
+appeared in a live export). **LOVs, server-side validations, and
+navigation/branches have NO typed AST field at all** -- they currently
+fall into `raw` bags or the `unmodeled` list, exactly like anything else
+the parser hasn't built a typed projection for yet. This means
+metadata-driven generation for LOV flows, validation-message tests, or
+navigation/branch testing needs *parser* extension first, not just
+runtime/generator work -- "the parser is solid, shift to runtime" does not
+hold uniformly across this whole proposal.
+
 ### Already done / substantially overlaps existing work
 
 - **Semantic naming (1.1).** The generator already emits camelCased,
@@ -226,6 +243,23 @@ message-visibility bug above).
 - **Faceted Search per-facet interaction (2).** `facet("Department").select("Sales")`
   — already flagged in `faceted-search.ts` as parameter-shape-inferred,
   not directly exercised live.
+- **`waitForAjax()` (5, follow-up round).** Same idea as `waitForSubmit()` --
+  plausible a generic AJAX-in-flight signal exists (APEX's own busy/loading
+  indicator, or a jQuery ajaxStart/ajaxStop-style event), but unverified;
+  same discovery method as the region-refresh events would apply.
+- **`waitForDialog()` (5, follow-up round).** Tied to Dialog support above
+  -- needs the same discovery pass before a wait can be built on top of it.
+- **`toBeReadOnly()` item assertion (6, follow-up round).** Whether an
+  item's read-only state is reliably observable (a DOM attribute,
+  `apex.item(id)` property, or CSS class) has not been checked; `required`
+  has a real AST field already (though its canonical property name is
+  itself unverified -- see CLAUDE.md debt #3) but read-only does not.
+- **`toContainRow()`/`toHaveRows()` region assertions (6, follow-up
+  round).** For Interactive Grid this is blocked the same way `grid.*` is
+  (zero ground truth, Tier 3 below). For Interactive Report/Classic
+  Report, this would need the UI-locator-based approach noted in "Correction
+  to the proposal" below, not a JS-API call -- and Classic Report itself is
+  still an untested "needs discovery" item.
 
 ### Correction to the proposal itself (would contradict a verified finding)
 
@@ -244,8 +278,9 @@ message-visibility bug above).
   cannot be verified without an app that has one.
 - **Trees as content (2)** — already Tier 3 above. Only the nav-reuse case
   is confirmed; no hierarchical-data-browser Tree has ever been seen.
-- **Calendar, Map (2)** — never encountered in any app this project has
-  touched, live or otherwise. No basis to design an API yet.
+- **Calendar, Map, Timeline, Smart Filters (2, follow-up round)** — never
+  encountered in any app this project has touched, live or otherwise. No
+  basis to design an API yet for any of these four.
 - **Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle
   (1.2)** — none tested. Popup LOV is the most plausible near-term win
   (Oracle documents a fairly standard open/search/select flow) but still

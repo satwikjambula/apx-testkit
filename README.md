@@ -1,14 +1,5 @@
 # apx-testkit
 
-`apx-*` naming (not "apexlang"/"apex") is a permanent, compliance-driven
-choice per Oracle's trademark guidelines, not a placeholder — see
-docs/license-check.md.
-
-**Status: pre-alpha (M3 engineering-complete).** Verified against exactly
-one real APEX 26.1 application (UX Pattern Catalog) — see
-docs/support-matrix.md before trusting anything here beyond that, and
-docs/grammar-assumptions.md for the full ledger of what's confirmed vs. open.
-
 ## What apx-testkit is
 
 apx-testkit generates a maintainable Playwright regression suite directly
@@ -167,13 +158,19 @@ was verified fresh from a clean clone.
 integration test and the full spike suite both need a real APEX
 export/instance and skip cleanly without one).
 
-## Current limitations
+## Current status
 
-Full list in docs/limitations.md; the headline ones:
+**Pre-alpha (M3 engineering-complete).** Verified against exactly one real
+APEX 26.1 application (UX Pattern Catalog) — see docs/support-matrix.md
+before trusting anything here beyond that, and docs/grammar-assumptions.md
+for the full ledger of what's confirmed vs. open.
 
-- **Verified against one real app only** (UX Pattern Catalog) — see
-  docs/support-matrix.md. Nothing here should be trusted beyond that app
-  until a second, independent export confirms it.
+`apx-*` naming (not "apexlang"/"apex") is a permanent, compliance-driven
+choice per Oracle's trademark guidelines, not a placeholder — see
+docs/license-check.md.
+
+Full list of limitations in docs/limitations.md; the headline ones:
+
 - **Region/button assertions don't exist yet.** The DOM identifier
   convention is still an open discovery item (see
   docs/grammar-assumptions.md "Still open"); button *click methods* work
