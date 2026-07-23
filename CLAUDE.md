@@ -150,6 +150,10 @@ Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
 - docs/editor-integration.md — CLI / MCP / agent-rules usage.
 - docs/license-check.md, docs/validation-post.md, docs/support-matrix.md,
   docs/limitations.md, CONTRIBUTING.md.
+- docs/quirks/26.1.json — structured index of real bugs found and fixed
+  (or found and left open) by live verification, one JSON record per
+  quirk with evidence/workaround/status. Documentation, not (yet) wired
+  into runtime warnings — see docs/ecosystem-roadmap.md.
 
 ## Style
 - Boring, conventional TypeScript over clever. Strict mode. ESM (`.js`

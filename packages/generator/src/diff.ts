@@ -17,10 +17,19 @@
  * specifically changed. That's the honest signal this can give for
  * untyped constructs: "something changed here, go look," not "the LOV
  * changed" (which would be a claim this project cannot back up yet).
+ *
+ * Each added/removed/changed page also lists the generated `.page.ts`/
+ * `.spec.ts` filenames a regeneration would touch -- computed from the
+ * same `pageObjectFileName()`/`specFileName()` helpers `generate()` itself
+ * uses (single source of truth, so this can never drift from what the
+ * generator actually names things), closing the loop from "what changed"
+ * to "which generated files need re-review" without any new
+ * infrastructure.
  */
 import { parseApp, type ApexButton, type ApexItem, type ApexPage, type ApexRegion, type RawBag } from '@apx/parser';
 import { resolve } from 'node:path';
 import { loadExport } from './lib.js';
+import { pageObjectFileName, specFileName } from './page-object.js';
 
 export type ChangeKind = 'added' | 'removed' | 'changed';
 
@@ -36,6 +45,14 @@ export interface PageDiff {
   id: number;
   alias: string | null;
   name: string | null;
+  /**
+   * Generated `.page.ts`/`.spec.ts` filenames a regeneration touches for
+   * this page -- computed from the same naming helpers `generate()` uses.
+   * For 'removed' pages these are the files a prior generation would have
+   * produced (and that regenerating against the new export will no longer
+   * emit); for 'added'/'changed', the files the new export will produce.
+   */
+  affectedFiles: string[];
   /** Page-level field changes (alias/name/title/authentication); empty for added/removed. */
   pageChanges: string[];
   items: ComponentDiff[];
@@ -158,18 +175,40 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
   const pages: PageDiff[] = [];
   const summary: DiffSummary = { pagesAdded: 0, pagesRemoved: 0, pagesChanged: 0, pagesUnchanged: 0 };
 
+  const filesFor = (page: ApexPage): string[] => [pageObjectFileName(page), specFileName(page)];
+
   for (const id of ids) {
     const oldPage = oldPages.get(id);
     const newPage = newPages.get(id);
 
     if (oldPage && !newPage) {
       summary.pagesRemoved++;
-      pages.push({ kind: 'removed', id, alias: oldPage.alias, name: oldPage.name, pageChanges: [], items: [], regions: [], buttons: [] });
+      pages.push({
+        kind: 'removed',
+        id,
+        alias: oldPage.alias,
+        name: oldPage.name,
+        affectedFiles: filesFor(oldPage),
+        pageChanges: [],
+        items: [],
+        regions: [],
+        buttons: [],
+      });
       continue;
     }
     if (!oldPage && newPage) {
       summary.pagesAdded++;
-      pages.push({ kind: 'added', id, alias: newPage.alias, name: newPage.name, pageChanges: [], items: [], regions: [], buttons: [] });
+      pages.push({
+        kind: 'added',
+        id,
+        alias: newPage.alias,
+        name: newPage.name,
+        affectedFiles: filesFor(newPage),
+        pageChanges: [],
+        items: [],
+        regions: [],
+        buttons: [],
+      });
       continue;
     }
     if (oldPage && newPage) {
@@ -180,7 +219,17 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
       const hasChanges = pageChanges.length > 0 || items.length > 0 || regions.length > 0 || buttons.length > 0;
       if (hasChanges) {
         summary.pagesChanged++;
-        pages.push({ kind: 'changed', id, alias: newPage.alias, name: newPage.name, pageChanges, items, regions, buttons });
+        pages.push({
+          kind: 'changed',
+          id,
+          alias: newPage.alias,
+          name: newPage.name,
+          affectedFiles: filesFor(newPage),
+          pageChanges,
+          items,
+          regions,
+          buttons,
+        });
       } else {
         summary.pagesUnchanged++;
       }

@@ -31,7 +31,14 @@
 import { readFileSync, readdirSync, mkdirSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { parseApp, type ApexPage } from '@apx/parser';
-import { computeItemPropNames, pageObjectBaseName, pageObjectClassName, pageObjectFor } from './page-object.js';
+import {
+  computeItemPropNames,
+  pageObjectBaseName,
+  pageObjectClassName,
+  pageObjectFileName,
+  pageObjectFor,
+  specFileName,
+} from './page-object.js';
 
 export function loadExport(dir: string): Record<string, string> {
   const files: Record<string, string> = {};
@@ -133,11 +140,11 @@ export function generate(exportDir: string, outDir: string): GenerateResult {
   const pages = [...result.ast.pages].sort((a, b) => a.id - b.id).filter((p) => p.id !== 0 && p.alias);
   const files: string[] = [];
   for (const p of pages) {
-    const poName = `${pageObjectBaseName(p)}.ts`;
+    const poName = pageObjectFileName(p);
     writeFileSync(join(resolve(outDir), poName), pageObjectFor(p));
     files.push(poName);
 
-    const specName = `p${String(p.id).padStart(5, '0')}-${p.alias!.toLowerCase()}.spec.ts`;
+    const specName = specFileName(p);
     writeFileSync(join(resolve(outDir), specName), specFor(p));
     files.push(specName);
   }

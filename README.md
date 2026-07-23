@@ -169,7 +169,39 @@ for the full ledger of what's confirmed vs. open.
 choice per Oracle's trademark guidelines, not a placeholder — see
 docs/license-check.md.
 
-Full list of limitations in docs/limitations.md; the headline ones:
+### Capability matrix
+
+Three questions per component, because they have different answers:
+does the **parser** type it (or does it fall into `raw`/`unmodeled`)? Does
+**`@apx/testkit`** have a verified runtime wrapper? Does the **generator**
+emit assertions for it automatically? ✅ verified · 🚧 partial/known gap ·
+❌ not built (see `packages/testkit/src/components/unsupported.ts` for
+components that throw an explicit, reasoned error rather than silently
+not existing).
+
+| Component | Parser (metadata) | Runtime (`@apx/testkit`) | Generator (auto-assertions) |
+|---|---|---|---|
+| Page (alias/name/title) | ✅ | ✅ `gotoApexPage`/`normalizeTitle` | ✅ load + title |
+| pageItem (text/number/select/date/hidden) | ✅ | ✅ `ApexItem` | ✅ presence + round-trip |
+| Button | ✅ (label/action) | 🚧 accessible-role locator, no verified id convention | ✅ click methods generated |
+| Region (generic) | ✅ (type/name/source) | ✅ `ApexRegion` — confirmed on 2 widget types | ❌ region-id convention still open |
+| Interactive Report | ✅ | 🚧 `ApexRegion` only — search/sort/pagination confirmed private, no public API | ❌ |
+| Cards | ✅ | ✅ `ApexCardsRegion` — `getRecords()`/`getModel()` confirmed broken | ❌ not wired into generator yet |
+| Faceted Search | ✅ | ✅ `ApexFacetsRegion` | ❌ not wired into generator yet |
+| Page messages (success/error) | N/A (global, not page metadata) | ✅ `messages.ts` | ❌ not wired into generator yet |
+| Checkbox | ✅ (type string) | ❌ not tested live | ❌ |
+| Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle | ✅ (type string) | ❌ explicit `UnsupportedComponentError` stub | ❌ |
+| Interactive Grid | ✅ (type string) | ❌ explicit stub — zero ground truth | ❌ |
+| Chart | 🚧 (falls to `raw`) | ❌ explicit stub — DOM ids are JET-generated hashes, needs its own discovery pass | ❌ |
+| Tree (content), Calendar, Map | ❌ | ❌ explicit stub — never encountered in any tested app | ❌ |
+| Dynamic Actions | ❌ (no typed AST field) | ❌ explicit stub — no known way to trigger one by name | ❌ |
+| LOVs, server-side validations, navigation/branches | ❌ (no typed AST field — fall into `raw`) | — | ❌ |
+| Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ❌ login-required pages emitted as `test.describe.skip()` |
+| Coverage mapping (`apx-coverage`) | — | ✅ | — |
+| Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed) | — |
+
+Full list of limitations in docs/limitations.md; a few of the stories
+behind specific rows:
 
 - **Region/button assertions don't exist yet.** The DOM identifier
   convention is still an open discovery item (see
@@ -195,9 +227,12 @@ Full list of limitations in docs/limitations.md; the headline ones:
 - **`spike/tests-generated/`'s 18 committed files are stale** relative to
   the current page-object generator template; regenerating them for real
   needs the actual export, which isn't committed (redistribution unchecked).
-- **No Interactive Report/Grid support, no `required`-item assertion, no
-  data-dependent assertions** — the last one is permanent, by design; the
-  generator has no way to know what data your instance holds.
+- **No Interactive Grid support at all; Interactive Report only has the
+  generic `ApexRegion` methods** (search/sort/pagination are confirmed
+  private on the widget instance — see the capability matrix above). No
+  `required`-item assertion, no data-dependent assertions — the last one is
+  permanent, by design; the generator has no way to know what data your
+  instance holds.
 
 ## Roadmap
 

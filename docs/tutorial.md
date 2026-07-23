@@ -428,9 +428,14 @@ node /path/to/apx-testkit/packages/generator/dist/diff-cli.js <old-export-dir> <
   - item P3_JOB
   ~ button save
       label: "Save" -> "Save Changes"
+    affected: p00003-employee.page.ts, p00003-employee.spec.ts
 
 - page 5: Legacy Page (LEGACY)
+    no longer generated: p00005-legacy.page.ts, p00005-legacy.spec.ts
+
 + page 7: Reports (REPORTS)
+    generated: p00007-reports.page.ts, p00007-reports.spec.ts
+
 Summary: 1 added, 1 removed, 1 changed, 0 unchanged
 ```
 
@@ -445,10 +450,17 @@ metadata changed (raw properties differ -- ...)` without a claim about
 *what* changed. That's the honest signal for untyped constructs: "go look
 here," not a specific claim this project can't back up.
 
+Every added/removed/changed page also lists the generated `.page.ts`/
+`.spec.ts` filenames a regeneration touches — computed from the exact same
+naming helpers `apx-testgen` itself uses (`pageObjectFileName()`/
+`specFileName()` in `page-object.ts`), so this can never drift from what
+the generator actually names things.
+
 Use this in CI to catch exactly the case the whole project cares about:
 an AI agent (or a colleague) edits a page, and you want to know precisely
-what changed before regenerating tests — `--json <path>` gives the same
-report as structured data for scripting.
+what changed — and which generated test files to review — before
+regenerating tests. `--json <path>` gives the same report as structured
+data for scripting.
 
 ---
 

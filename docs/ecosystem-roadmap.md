@@ -365,7 +365,15 @@ developing against a single app.
   fixtures covering every category (page added, page removed, page
   changed with title/item-added/item-changed/item-removed/button-changed)
   plus a same-export identity check (0 changes, 1 unchanged — no false
-  positives) and `--json` output shape.
+  positives) and `--json` output shape. Follow-up: each added/removed/
+  changed page also lists the generated `.page.ts`/`.spec.ts` filenames a
+  regeneration touches, computed from the exact same naming helpers
+  `generate()` itself uses (`pageObjectFileName()`/`specFileName()`,
+  extracted into `page-object.ts` as shared single-source-of-truth
+  functions) — cross-checked against real `generate()` output on the same
+  fixture to confirm the filenames actually match. This closes the loop on
+  what round 4's "differential testing" proposal asked for without new
+  infrastructure: `apx-diff` + `apx-testgen` already compose.
 - **Metadata assertions** (`expectRegion`, `expectButton`, `expectRequiredItems`
   at the page level). This is `expectItemsPresent` generalized to the
   other AST categories — same verified pattern, not a new risk.

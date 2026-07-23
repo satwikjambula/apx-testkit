@@ -76,6 +76,16 @@ export function pageObjectBaseName(page: ApexPage): string {
   return `p${String(page.id).padStart(5, '0')}-${path}.page`;
 }
 
+/** Deterministic page id/alias -> generated spec filename, e.g. p00410-data-entry-simple-form.spec.ts. Single source of truth shared by lib.ts (generate) and diff.ts (affected-file cross-reference) so they can never drift apart. */
+export function specFileName(page: ApexPage): string {
+  return `p${String(page.id).padStart(5, '0')}-${(page.alias ?? '').toLowerCase()}.spec.ts`;
+}
+
+/** Deterministic page id/alias -> generated page-object filename, e.g. p00410-data-entry-simple-form.page.ts. */
+export function pageObjectFileName(page: ApexPage): string {
+  return `${pageObjectBaseName(page)}.ts`;
+}
+
 function itemDoc(item: ApexItem): string {
   const bits = [item.type ?? 'unknown'];
   if (item.label) bits.push(`"${esc(item.label)}"`);

@@ -41,10 +41,14 @@ console.log('');
 for (const p of report.pages) {
   if (p.kind === 'added') {
     console.log(`+ page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
+    console.log(`    generated: ${p.affectedFiles.join(', ')}`);
+    console.log('');
     continue;
   }
   if (p.kind === 'removed') {
     console.log(`- page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
+    console.log(`    no longer generated: ${p.affectedFiles.join(', ')}`);
+    console.log('');
     continue;
   }
   console.log(`~ page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
@@ -52,6 +56,7 @@ for (const p of report.pages) {
   printComponentDiffs('item', p.items);
   printComponentDiffs('region', p.regions);
   printComponentDiffs('button', p.buttons);
+  console.log(`    affected: ${p.affectedFiles.join(', ')}`);
   console.log('');
 }
 

@@ -41,6 +41,21 @@ export {
   expectNoErrors,
   expectNoSuccessMessage,
 } from './components/messages.js';
+export {
+  UnsupportedComponentError,
+  InteractiveGrid,
+  TreeRegion,
+  Calendar,
+  MapRegion,
+  Chart,
+  Switch,
+  RadioGroup,
+  PopupLov,
+  RichText,
+  FileBrowse,
+  Shuttle,
+  triggerDynamicAction,
+} from './components/unsupported.js';
 
 export interface ApxFixtures {
   /** Auto-armed for every test; empty array means no console/page errors so far. */
