@@ -31,9 +31,11 @@ function unsupportedComponent(name: string, reason: string): new (page: Page, id
 
 export const InteractiveGrid = unsupportedComponent(
   'InteractiveGrid',
-  'zero ground truth -- not present in any app this project has been verified against. Oracle documents ' +
-    'apex.region(id).widget().interactiveGrid(...), but building a wrapper from documentation alone risks the ' +
-    'same confident-wrong mistake found elsewhere in this project (Cards.getRecords(), the login() race ' +
+  'confirmed present in two real exports (workflow-approvals, brookstrut -- 5 interactiveGrid regions total), ' +
+    'but still zero LIVE ground truth: neither app was available with a running instance to check against, so ' +
+    'this only confirms the region type exists in metadata, not what apex.region(id).widget().interactiveGrid(...) ' +
+    'actually does at runtime. Oracle documents that API, but building a wrapper from documentation alone risks ' +
+    'the same confident-wrong mistake found elsewhere in this project (Cards.getRecords(), the login() race ' +
     'condition, the message-visibility bug) -- see docs/ecosystem-roadmap.md Tier 3.',
 );
 

@@ -106,15 +106,21 @@ else in this project (see CLAUDE.md Invariant 2).
 
 ## Tier 3 — blocked without new ground truth, or genuinely novel
 
-- **Interactive Grid.** NOT present anywhere in the one live app available
-  to this project. Oracle does publicly document the `interactiveGrid`
-  widget JS API (`apex.region(id).widget().interactiveGrid(...)`), so a
-  wrapper COULD be written from documentation alone the way the parser's
-  grammar was — but per this project's own M0 lesson, that's exactly the
-  kind of docs-only assumption that turned out wrong in places once checked
-  against a real app. Do not ship an `ig.ts` claiming verified behavior
-  without a live app that actually has an Interactive Grid region to check
-  it against.
+- **Interactive Grid.** Not present in the one *live* app this project has
+  runtime access to — but now confirmed to exist in metadata, in two real
+  exports obtained since (`sample-workflow-approvals`: 4 regions across
+  Approvers/Manage Vacation Rules/Laptop Order Management/Manage Laptop
+  Stock; `brookstrut`: 1, Sales History Interactive Grid). Both parsed and
+  generated cleanly with zero warnings — see the parser/generator section
+  below. That's static confirmation the type is real and common, not live
+  behavior. Oracle does publicly document the `interactiveGrid` widget JS
+  API (`apex.region(id).widget().interactiveGrid(...)`), so a wrapper COULD
+  be written from documentation alone the way the parser's grammar was —
+  but per this project's own M0 lesson, that's exactly the kind of
+  docs-only assumption that turned out wrong in places once checked against
+  a real app. Do not ship an `ig.ts` claiming verified behavior without a
+  *running* instance of an app that has an Interactive Grid region to check
+  it against — a static export, however real, doesn't change that.
 - **Trees as a content/data-display pattern.** The only Tree widget in the
   one available app is the universal left-nav (`a-TreeView` inside the nav
   chrome) — not a page-content region. No ground truth exists here for
@@ -123,14 +129,40 @@ else in this project (see CLAUDE.md Invariant 2).
 ## Sequencing note
 
 Given the current state (M3 engineering-complete, M4 launch-prep done,
-still short a second real user and a second real export), Tier 1 items are
-the highest-leverage next work: they extend `@apx/testkit`'s existing
-verified-primitive pattern into more of what the one available app can
+still short a second real *user* and a second *live* app — two more real
+exports now exist, `sample-workflow-approvals` and `brookstrut`, see below,
+but neither is a running instance this project can navigate to), Tier 1
+items are the highest-leverage next work: they extend `@apx/testkit`'s
+existing verified-primitive pattern into more of what a live app can
 actually prove, without waiting on external dependencies. Tier 3 items
-should stay on this ledger, unbuilt, until either a new export with
+should stay on this ledger, unbuilt, until either a *live* app with
 Interactive Grid/Tree content or a design spike resolves what "coverage"
 means here — building them earlier risks the exact kind of confident-wrong
 assumption this project has structured itself to avoid.
+
+**Second and third real exports (parser/generator only, no live app).**
+Both were handed over as `.apx` export zips, no URL or credentials — so
+these only exercise the *static* side (parser, generator, coverage, diff),
+not `@apx/testkit`'s runtime components. Both parsed and generated cleanly:
+34 and 48 pages respectively, zero warnings, deterministic output (each
+regenerated three times, byte-identical), `apx-diff` self-diff correctly
+reports zero changes on both. They surfaced real, new region-type variety
+this project had never parsed before — `interactiveGrid` (5x), `chart`
+(9x), `calendar` (3x), `tree`, `list`, `breadcrumb`, `smartFilters`,
+`dynamicContent`, `plSqlDynamicContent`, `themeTemplateComponent/*`,
+`workflowDiagram`, `regionDisplaySelector`, `plugin/*` — all parsed without
+crashing, since `KNOWN_REGION_TYPES` is documentation-only, not enforced.
+This found and fixed one real bug: `packages/generator/src/coverage.ts`'s
+`UNTRACKABLE_REGION_TYPES` only listed `interactiveGrid`, drifted from the
+broader claim already committed in `unsupported.ts` (tree/calendar/chart
+also have no component) — brookstrut's real `chart`/`calendar` regions
+would have been silently miscounted as "untouched" instead of correctly
+flagged untrackable. Fixed and verified against both exports. Separately,
+`sample-workflow-approvals`'s `application.apx` declares a *custom*
+authentication scheme (`@demo-purposes-only-custom-auth-scheme`) with no
+page 101 in the export at all — real evidence that the generator's
+default-scheme login assumption (see Tier 1 login item above) doesn't hold
+universally, which is now documented rather than silently assumed.
 
 ## Extended vision: 16-point product roadmap (maintainer proposal)
 

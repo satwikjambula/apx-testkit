@@ -191,7 +191,7 @@ not existing).
 | Page messages (success/error) | N/A (global, not page metadata) | ✅ `messages.ts` | ❌ not wired into generator yet |
 | Checkbox | ✅ (type string) | ❌ not tested live | ❌ |
 | Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle | ✅ (type string) | ❌ explicit `UnsupportedComponentError` stub | ❌ |
-| Interactive Grid | ✅ (type string) | ❌ explicit stub — zero ground truth | ❌ |
+| Interactive Grid | ✅ (type string) | ❌ explicit stub — confirmed present in two real exports (workflow-approvals, brookstrut), still zero *live* ground truth | ❌ |
 | Chart | 🚧 (falls to `raw`) | ❌ explicit stub — DOM ids are JET-generated hashes, needs its own discovery pass | ❌ |
 | Tree (content), Calendar, Map | ❌ | ❌ explicit stub — never encountered in any tested app | ❌ |
 | Dynamic Actions | ❌ (no typed AST field) | ❌ explicit stub — no known way to trigger one by name | ❌ |
@@ -263,5 +263,7 @@ before running your suite, then run `apx-coverage <export-dir>
 <touch-log-path>` to see which declared items/regions/buttons a run
 actually touched vs. missed. Still open: Charts (needs its own short
 discovery pass), snapshot testing (needs a masking-policy design), and
-Interactive Grid/Trees (zero ground truth in the one live app available —
-see docs/ecosystem-roadmap.md).
+Interactive Grid/Trees — confirmed to exist in real exports now (two more
+apps parsed cleanly, see docs/ecosystem-roadmap.md), but still zero *live*
+ground truth since neither was available with a running instance to
+verify against.
