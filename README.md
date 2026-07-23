@@ -196,7 +196,7 @@ not existing).
 | Tree (content), Calendar, Map | ❌ | ❌ explicit stub — never encountered in any tested app | ❌ |
 | Dynamic Actions | ❌ (no typed AST field) | ❌ explicit stub — no known way to trigger one by name | ❌ |
 | LOVs, server-side validations, navigation/branches | ❌ (no typed AST field — fall into `raw`) | — | ❌ |
-| Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ❌ login-required pages emitted as `test.describe.skip()` |
+| Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
 | Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed) | — |
 

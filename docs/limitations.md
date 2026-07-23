@@ -66,8 +66,17 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   for the same underlying race; both submission methods can trigger this.)
   Fixed by waiting for an actual URL change (`page.waitForURL`, up to
   `timeoutMs`) instead of a single fixed-point check. This fix has NOT been
-  independently re-verified either — `.apx` pages requiring login are still
-  emitted as `test.describe.skip()` in generated suites.
+  independently re-verified against workflow-approvals/brookstrut-style
+  apps either. `.apx` pages requiring login now get a real generated test
+  (login via `beforeEach`, gated on `APX_LOGIN_TEST_USERNAME`/
+  `APX_LOGIN_TEST_PASSWORD`, skips cleanly if unset) instead of a permanent
+  `test.describe.skip()` — but this assumes the app's default APEX
+  authentication scheme with a standard `P101_USERNAME`/`P101_PASSWORD`
+  login page. Apps with a custom authentication scheme (no `P101` login
+  page in their export at all — confirmed true of the real
+  `sample-workflow-approvals` export, whose `application.apx` declares
+  `scheme: @demo-purposes-only-custom-auth-scheme` and has no page 101)
+  will fail loudly and specifically from inside `login()` rather than run.
   `spike/tests/auth-login-verify.spec.ts` is ready for whoever has
   credentials for a real login page to run (`APX_LOGIN_TEST_USERNAME=<user>
   APX_LOGIN_TEST_PASSWORD=<password> npx playwright test

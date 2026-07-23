@@ -76,17 +76,39 @@ function specFor(page: ApexPage): string {
  * (./${poBase}.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: ${page.regions.map((r) => r.identifier).join(', ') || '(none)'}
  * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * establishes the DOM convention for region static ids.${isPublic ? '' : `
+ * This page is not authentication:public. Tests log in via @apx/testkit's
+ * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
+ * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
+ * rather than being permanently skipped at file-load time. login() assumes
+ * this app's DEFAULT APEX authentication scheme, with a standard
+ * P101_USERNAME/P101_PASSWORD login page reachable at <app-base>/login
+ * (confirmed live against a real APEX app -- see
+ * spike/tests/auth-login-verify.spec.ts). Apps using a CUSTOM
+ * authentication scheme will get a clear, specific error straight from
+ * login() itself (e.g. "P101_USERNAME not found") instead of a silent
+ * hang -- that is the correct, intended failure mode for those apps, not a
+ * bug to work around here.`}
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, normalizeTitle } from '@apx/testkit';
-import { ${className} } from './${poBase}.js';
+import { expectItemsPresent, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
+import { ${className} } from './${poBase}.js';${isPublic ? '' : `
+import { APP_BASE } from '../playwright.config.js';`}
 `;
 
   const describeOpen = isPublic
     ? `test.describe('page ${page.id}: ${esc(page.name ?? alias)}', () => {`
-    : `// Page is not authentication:public — needs the login fixture (M2). Skipped until then.
-test.describe.skip('page ${page.id}: ${esc(page.name ?? alias)} [requires auth]', () => {`;
+    : `test.describe('page ${page.id}: ${esc(page.name ?? alias)} [requires auth]', () => {
+  test.beforeEach(async ({ page }) => {
+    const username = process.env.APX_LOGIN_TEST_USERNAME;
+    const password = process.env.APX_LOGIN_TEST_PASSWORD;
+    test.skip(
+      !username || !password,
+      'Set APX_LOGIN_TEST_USERNAME and APX_LOGIN_TEST_PASSWORD to run tests against this authenticated page.',
+    );
+    await page.goto(\`\${APP_BASE}/login\`, { waitUntil: 'domcontentloaded' });
+    await login(page, { username: username!, password: password! });
+  });`;
 
   const bodyParts: string[] = [];
 

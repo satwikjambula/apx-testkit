@@ -537,9 +537,21 @@ this, it's the known gap, not a regression in your setup.
 ## 4. Authorization
 
 Every ground-truth page used to build most of this toolkit is
-`authentication: public` — that's why `.apx` pages requiring login are
-generated as `test.describe.skip()` rather than a real test. For
-login-protected pages, use the `login()` fixture by hand:
+`authentication: public`. Pages requiring login still get real generated
+tests, not a permanent skip: each non-public page's spec logs in via
+`login()` in a `test.beforeEach`, gated at runtime on
+`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` — set both to actually
+run the suite against a real account; leave either unset and the tests
+skip cleanly instead of failing. This assumes the app's DEFAULT APEX
+authentication scheme with a standard `P101_USERNAME`/`P101_PASSWORD`
+login page at `<app-base>/login`; an app using a CUSTOM authentication
+scheme (no `P101` login page in its export at all) will fail loudly and
+specifically from inside `login()` itself (e.g. "P101_USERNAME not
+found") rather than hang — that's the correct, intended outcome for those
+apps, not something the generator special-cases around.
+
+For login-protected pages in hand-written specs, use the `login()` fixture
+directly:
 
 ```ts
 import { login } from '@apx/testkit';
