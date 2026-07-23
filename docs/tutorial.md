@@ -392,6 +392,23 @@ Buttons are matched by LABEL (there's no verified button-id convention —
 see 2.2), everything else by `.apx` identifier. This is "which declared
 components did my suite touch," not code-line coverage.
 
+**Untrackable region types are reported separately, not counted as
+"untouched."** A region whose type has no `@apx/testkit` component at all
+(currently: `interactiveGrid` — see docs/ecosystem-roadmap.md Tier 3) can
+never show a real touch, no matter how thoroughly it's tested by hand
+through some other means. Counting it alongside a genuinely-untested
+trackable region would conflate "nobody wrote a test for this" with "this
+can't be tracked yet." Those regions are excluded from the
+touched/total percentage and listed in their own line instead:
+
+```
+page 10: Mixed (MIXED)
+  items:   1/1 (100%)
+  regions: 1/1 (100%)
+  untrackable (no @apx/testkit component for this type): emp-grid (interactiveGrid)
+  buttons: 0/0 (n/a)
+```
+
 ---
 
 ## 3. Page types & patterns

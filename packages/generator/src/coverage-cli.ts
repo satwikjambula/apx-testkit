@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, writeFileSync } from 'node:fs';
-import { computeCoverage, type CategoryCoverage } from './coverage.js';
+import { computeCoverage, type CategoryCoverage, type RegionCoverage } from './coverage.js';
 
 const args = process.argv.slice(2);
 const exportDir = args[0];
@@ -30,6 +30,12 @@ function line(label: string, c: CategoryCoverage): string {
   return c.untouched.length > 0 ? `${base} -- untouched: ${c.untouched.join(', ')}` : base;
 }
 
+function untrackableLine(c: RegionCoverage): string | null {
+  if (c.untrackable.length === 0) return null;
+  const items = c.untrackable.map((r) => `${r.identifier} (${r.type ?? 'unknown type'})`).join(', ');
+  return `  untrackable (no @apx/testkit component for this type): ${items}`;
+}
+
 const report = computeCoverage(exportDir, touchLogPath);
 
 if (!existsSync(touchLogPath)) {
@@ -48,6 +54,8 @@ for (const p of report.pages) {
   console.log(`page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
   console.log(line('items:', p.items));
   console.log(line('regions:', p.regions));
+  const pageUntrackable = untrackableLine(p.regions);
+  if (pageUntrackable) console.log(pageUntrackable);
   console.log(line('buttons:', p.buttons));
   console.log('');
 }
@@ -55,6 +63,8 @@ for (const p of report.pages) {
 console.log('Overall');
 console.log(line('items:', report.overall.items));
 console.log(line('regions:', report.overall.regions));
+const overallUntrackable = untrackableLine(report.overall.regions);
+if (overallUntrackable) console.log(overallUntrackable);
 console.log(line('buttons:', report.overall.buttons));
 
 if (jsonOut) {

@@ -82,6 +82,12 @@ else in this project (see CLAUDE.md Invariant 2).
   confirmed every recorded touch matched exactly what those specs did (the
   6 items checked by `expectItemsPresent`, both real region ids, the
   "Primary Action" button label).
+  Follow-up refinement: regions whose type has no `@apx/testkit` component
+  at all (currently `interactiveGrid`) are now reported in a separate
+  "untrackable" bucket rather than counted as "untouched" — conflating the
+  two would misrepresent "nobody tested this" as indistinguishable from
+  "this can't be tracked yet." Verified against a synthetic fixture with a
+  mixed form + interactiveGrid page.
 
 ## Tier 3 — blocked without new ground truth, or genuinely novel
 

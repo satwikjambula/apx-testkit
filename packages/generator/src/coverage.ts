@@ -11,10 +11,20 @@
  * not identifier -- there's no verified button-id convention yet (see
  * docs/grammar-assumptions.md), and buttonByLabel() is label-based by
  * design.
+ *
+ * Regions get one extra distinction: a region whose TYPE has no
+ * @apx/testkit component at all (currently: interactiveGrid -- see
+ * docs/ecosystem-roadmap.md Tier 3, zero ground truth, no wrapper exists)
+ * can never show a real touch, no matter how thoroughly it's actually
+ * tested by hand through some other means. Counting it as "untouched"
+ * alongside a region that genuinely has no test written for it would be
+ * dishonest -- it conflates "nobody tested this" with "this can't be
+ * tracked yet." Untrackable regions are reported in their own bucket and
+ * excluded from the touched/total percentage entirely.
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parseApp } from '@apx/parser';
+import { parseApp, type ApexRegion } from '@apx/parser';
 import { loadExport } from './lib.js';
 
 interface RawTouch {
@@ -22,10 +32,34 @@ interface RawTouch {
   identifier: string;
 }
 
+/**
+ * Region types with no @apx/testkit component at all -- not "partial
+ * support," genuinely zero. Extend this list only when a type is
+ * confirmed to have no wrapper, backed by docs/ecosystem-roadmap.md, not
+ * by assumption. Interactive Report/Cards/Faceted Search/form/static are
+ * all trackable (via ApexRegion, ApexCardsRegion, or ApexFacetsRegion),
+ * even where their coverage is partial in other respects.
+ */
+const UNTRACKABLE_REGION_TYPES = new Set(['interactiveGrid']);
+
 export interface CategoryCoverage {
   total: number;
   touched: number;
   untouched: string[];
+}
+
+export interface UntrackableRegion {
+  identifier: string;
+  type: string | null;
+}
+
+export interface RegionCoverage extends CategoryCoverage {
+  /**
+   * Regions whose type has no @apx/testkit component -- excluded from
+   * total/touched/untouched above, listed here instead so they can never
+   * be misread as "tested" or "failed to be tested."
+   */
+  untrackable: UntrackableRegion[];
 }
 
 export interface PageCoverage {
@@ -33,7 +67,7 @@ export interface PageCoverage {
   alias: string | null;
   name: string | null;
   items: CategoryCoverage;
-  regions: CategoryCoverage;
+  regions: RegionCoverage;
   buttons: CategoryCoverage;
 }
 
@@ -42,7 +76,7 @@ export interface CoverageReport {
   touchLogPath: string;
   touchCount: number;
   pages: PageCoverage[];
-  overall: { items: CategoryCoverage; regions: CategoryCoverage; buttons: CategoryCoverage };
+  overall: { items: CategoryCoverage; regions: RegionCoverage; buttons: CategoryCoverage };
 }
 
 function readTouches(touchLogPath: string): RawTouch[] {
@@ -69,10 +103,27 @@ function summarize(declared: readonly string[], touched: ReadonlySet<string>): C
   return { total: declared.length, touched: declared.length - untouched.length, untouched };
 }
 
+function summarizeRegions(declared: readonly ApexRegion[], touched: ReadonlySet<string>): RegionCoverage {
+  const trackable = declared.filter((r) => !UNTRACKABLE_REGION_TYPES.has(r.type ?? ''));
+  const untrackable = declared
+    .filter((r) => UNTRACKABLE_REGION_TYPES.has(r.type ?? ''))
+    .map((r): UntrackableRegion => ({ identifier: r.identifier, type: r.type }));
+  const base = summarize(
+    trackable.map((r) => r.identifier),
+    touched,
+  );
+  return { ...base, untrackable };
+}
+
 function mergeCategory(into: CategoryCoverage, from: CategoryCoverage): void {
   into.total += from.total;
   into.touched += from.touched;
   into.untouched.push(...from.untouched);
+}
+
+function mergeRegionCoverage(into: RegionCoverage, from: RegionCoverage): void {
+  mergeCategory(into, from);
+  into.untrackable.push(...from.untrackable);
 }
 
 export function computeCoverage(exportDir: string, touchLogPath: string): CoverageReport {
@@ -91,26 +142,25 @@ export function computeCoverage(exportDir: string, touchLogPath: string): Covera
     .sort((a, b) => a.id - b.id)
     .map((p): PageCoverage => {
       const itemIds = p.items.map((i) => i.identifier);
-      const regionIds = p.regions.map((r) => r.identifier);
       const buttonLabels = p.buttons.filter((b) => b.label).map((b) => b.label!);
       return {
         id: p.id,
         alias: p.alias,
         name: p.name,
         items: summarize(itemIds, touchedByKind.item),
-        regions: summarize(regionIds, touchedByKind.region),
+        regions: summarizeRegions(p.regions, touchedByKind.region),
         buttons: summarize(buttonLabels, touchedByKind.button),
       };
     });
 
   const overall = {
     items: { total: 0, touched: 0, untouched: [] as string[] },
-    regions: { total: 0, touched: 0, untouched: [] as string[] },
+    regions: { total: 0, touched: 0, untouched: [] as string[], untrackable: [] as UntrackableRegion[] },
     buttons: { total: 0, touched: 0, untouched: [] as string[] },
   };
   for (const p of pages) {
     mergeCategory(overall.items, p.items);
-    mergeCategory(overall.regions, p.regions);
+    mergeRegionCoverage(overall.regions, p.regions);
     mergeCategory(overall.buttons, p.buttons);
   }
 
