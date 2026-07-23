@@ -431,3 +431,97 @@ constraint: authoring an Oracle APEX application requires App Builder and
 a workspace — outside what this project can do by itself. Testing,
 parsing, and analyzing such an app once it exists (or hand-writing its
 `.apx` source for someone to import) is squarely in scope.
+
+## Fourth round: engineering-process vision
+
+A further round shifted from features to process: Capability Levels
+(done above), per-API verification metadata comments, explicit
+"unsupported" contracts (done above), a dedicated verification-harness
+package, versioned runtime contracts per APEX release, an intermediate
+Application Model between parser and generator, a plugin architecture
+(repeated from earlier rounds), a formal public-API stability boundary,
+a Known Oracle Quirks database (done above), a real compatibility lab
+with nightly runs across versions, and a stronger push to stop exposing
+`ApexItem` in favor of fully typed components (repeated from round 1).
+
+### Done this round (see the commit above)
+
+Capability matrix, `UnsupportedComponentError` stubs, `docs/quirks/26.1.json`,
+and the `apx-diff` affected-files cross-reference are all shipped and
+verified — see the Tier 1 / "buildable now" sections above for the
+specifics on each.
+
+### Already substantially true, just less formal than proposed
+
+- **Per-API verification metadata.** Every component module already
+  states what's verified, against which app, and with what confidence —
+  in prose doc comments (see `item.ts`, `region.ts`, `cards.ts`,
+  `faceted-search.ts`, `messages.ts`, `auth.ts`, `lifecycle.ts`). The
+  proposed rigid `/** Verified against: ... Confidence: High */` template
+  would make this more scannable, but converting genuinely useful prose
+  (which often explains *why*, including dead-end diagnoses that were
+  corrected) into fill-in-the-blank fields risks losing exactly the
+  reasoning that's made this project's corrections possible. Worth a
+  light touch — a one-line `Confidence: High/Medium/Low` tag added to
+  existing comments — not a mechanical rewrite.
+
+### Bigger infrastructure — legitimate direction, not undertaken now
+
+- **Dedicated verification-harness package (`packages/verifier`).** This
+  session's actual verification method (navigate live, run a targeted JS
+  probe via the browser tool, read the result, decide) is real and has
+  caught several genuine bugs. Formalizing it into a reusable, scripted
+  harness that emits structured JSON is a legitimate idea and would make
+  future verification passes faster and more consistent. Not built this
+  round: it's a new package with its own design questions (what's a
+  "probe," how are results scored, how does it interact with a real
+  browser outside this session's tools), better scoped deliberately than
+  extracted reactively from four rounds of ad hoc discovery.
+- **Versioned runtime contracts (`contracts/26.1/*.json`).** Downstream
+  of the verification harness above — without it, "versioned contracts"
+  would just be hand-written JSON restating what prose docs already say,
+  with no mechanism to regenerate or validate them. And there is nothing
+  to version against yet: this project has only ever touched APEX 26.1.
+  The comparison workflow (26.1 → 26.2 → compatibility report) needs a
+  second version's data to exist at all, which is the same constraint
+  that blocks "version-to-version upgrade analysis" in round 3.
+- **Application Model IR between parser and generator.** The same idea
+  as round 3's Application Model, now framed as enabling multi-target
+  codegen (Playwright today, hypothetically Cypress/Selenium/docs later).
+  This project has exactly one consumer of the AST (the Playwright
+  generator) and one output format. Inserting an abstraction layer for
+  targets that don't exist and haven't been asked for is the specific
+  kind of premature generalization this project's own conventions warn
+  against — "don't design for hypothetical future requirements." If a
+  second real output target is ever needed, that's the moment to extract
+  the IR from the two concrete consumers, not before.
+- **Plugin architecture.** Same assessment as rounds 1 and 3: legitimate
+  eventually, not urgent, start with one concrete extension point (e.g. a
+  pluggable naming function) rather than a `generator/plugins/` ecosystem
+  designed ahead of any actual plugin author.
+- **Formal public-API stability boundary** (`@apx/testkit/runtime` =
+  internal, top-level = stable). Reasonable once the package has enough
+  surface area and enough external consumers that internal refactors
+  risk breaking someone. At the current size (a handful of modules, one
+  real consumer — this project's own generator and spike suite) the
+  cost of declaring and maintaining that boundary likely exceeds the
+  benefit. Worth revisiting once `@apx/testkit` has outside consumers.
+- **Full compatibility lab** (`compatibility/oracle/26.1/`, `26.2/`,
+  `nightly/`, generated/verified/reports per version). The most
+  infrastructure-heavy proposal across all four rounds. Requires: (a) the
+  verification harness above, (b) multiple real APEX versions to compare
+  (this project has only ever run against 26.1), and (c) a nightly CI
+  environment with live APEX access — none of which exist today. The
+  underlying need is real (this project's single biggest weakness really
+  is "verified against one app, one version"), but the showcase-app
+  recommendation from round 3 is the more tractable first step toward it;
+  a nightly multi-version lab is a natural extension once that exists,
+  not a starting point on its own.
+- **Fully typed component hierarchy (stop exposing `ApexItem`).** Same
+  assessment as round 1: reasonable direction, premature as a wholesale
+  change while most item types (Switch, RadioGroup, PopupLOV, RichText,
+  FileBrowse, Shuttle, even Checkbox) have no verified behavior to build
+  a typed wrapper from yet — see the `unsupported.ts` stubs shipped this
+  round for exactly why guessing at those wrappers isn't done lightly
+  here. Grow the typed hierarchy one verified type at a time, as already
+  established with `ApexCardsRegion`/`ApexFacetsRegion`.
