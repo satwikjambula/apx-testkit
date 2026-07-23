@@ -71,6 +71,17 @@ else in this project (see CLAUDE.md Invariant 2).
   two would misrepresent "nobody tested this" as indistinguishable from
   "this can't be tracked yet." Verified against a synthetic fixture with a
   mixed form + interactiveGrid page.
+- **Message/notification assertions — DONE.** `apex.message` confirmed
+  live as a universal, documented top-level API;
+  `#APEX_SUCCESS_MESSAGE`/`#APEX_ERROR_MESSAGE` confirmed present on every
+  page's template. Real bug found before shipping: Playwright's
+  `toBeVisible()`/`toBeHidden()` are unsafe against these elements
+  (rendered height stuck at `0px` even with the `u-visible` class
+  correctly applied, when triggered outside a real form submission) —
+  fixed by asserting the `u-visible`/`u-hidden` class directly instead.
+  Shipped as `packages/testkit/src/components/messages.ts`
+  (`expectSuccess`/`expectError`/`expectNoErrors`/
+  `expectNoSuccessMessage`), verified live across 3 repeated runs.
 
 ## Tier 2 — real ground truth exists, but needs care
 
@@ -115,3 +126,167 @@ should stay on this ledger, unbuilt, until either a new export with
 Interactive Grid/Tree content or a design spike resolves what "coverage"
 means here — building them earlier risks the exact kind of confident-wrong
 assumption this project has structured itself to avoid.
+
+## Extended vision: 16-point product roadmap (maintainer proposal)
+
+A much larger product vision was proposed: semantic page-object APIs,
+per-widget-type components (Text/Number/Checkbox/Switch/RadioGroup/
+SelectList/DatePicker/PopupLOV/RichText/FileBrowse/Shuttle), per-region
+components (Interactive Grid/Report/Classic Report/Cards/Tree/Calendar/
+Chart/Map/Faceted Search), dialog support, Dynamic Action triggering,
+message assertions, session helpers, a full component type hierarchy,
+fluent `expect().toHaveValue()`-style assertions, metadata-driven test
+recipes, a generator plugin system, semantic button method names, richer
+lifecycle waits, doc improvements, and a versioned support strategy.
+Classified below against the same evidence standard as the rest of this
+project — several items duplicate what's already built, several are
+buildable now, several need a discovery pass first, and several would
+require guessing at behavior with zero ground truth, which is exactly the
+trap this project has caught itself in (and corrected) multiple times
+already (Cards.getRecords(), the login() race condition, and the
+message-visibility bug above).
+
+### Already done / substantially overlaps existing work
+
+- **Semantic naming (1.1).** The generator already emits camelCased,
+  page-prefix-stripped property names (`po.ename`, not `po.P3_ENAME`) —
+  see `packages/generator/src/page-object.ts:computeItemPropNames()`. Not
+  label-derived (`employeeName` from a "Name" label plus page context) —
+  that's a naming-heuristic choice, not a new capability; low priority.
+- **README structure (14).** Already reorganized into exactly this order
+  (what it is / 30-second example / why it's different / architecture /
+  limitations / roadmap) in an earlier pass this session.
+- **Automatic wait strategy, region case (13).** `waitForRegionEvent()`/
+  `callRegionMethodAndWaitForEvent()` already ship this generically (see
+  Tier 1 above). `waitForPageReady()` is effectively already inside
+  `gotoApexPage()` (waits for `apex.item` to exist) — worth exposing as
+  its own named export, but it's extraction, not new capability.
+- **Region generic methods (2, "Region" bullet).** `refresh()`/`wait()`
+  exist. `expectLoaded()`/`expectEmpty()`/`expectContains()` don't exist by
+  those names yet but are buildable now as thin assertion sugar over
+  already-verified `ApexRegion` methods — see "buildable now" below.
+
+### Buildable now, high confidence (no new ground truth needed)
+
+- **Fluent built-in assertions (8).** `expect(item).toHaveValue(...)` /
+  `.toExist()` / `.toBeVisible()` as Playwright custom matchers
+  (`expect.extend()`) over the already-verified `ApexItem` methods. Pure
+  ergonomics, zero new risk.
+- **Semantic button method names (12).** `save()`/`cancel()`/`delete()`
+  instead of `clickSave()` — a naming heuristic over the button's `label`/
+  `action` fields, already available in the AST. Small, safe change to
+  `page-object.ts`.
+- **Capability matrix (14).** A compact ✅/🚧/❌ table is a real
+  improvement over prose for scanning status at a glance — should be
+  added to README, generated from the same facts already in
+  docs/support-matrix.md.
+- **Region assertion sugar (2).** `expectLoaded()`/`expectEmpty()`/
+  `expectContains()` on `ApexRegion`, built from `getSessionState()`/
+  `getRecordValues()` (already verified) plus a text-content locator
+  check — no new APEX-side ground truth required, just composition.
+- **Cards indexed/text lookup (2, "Cards").** `cards.card(2)` /
+  `cards.card("Scott")` — buildable as a DOM locator over `.a-CardView-item`
+  elements (confirmed present live), finding by index or contained text.
+  Does NOT depend on the broken `getRecords()`/`getModel()` — a genuinely
+  different, safer path to the same goal. `cards.count()` likewise via
+  `getPageInfo()` or a locator count, not the broken methods.
+- **A first test recipe: `requiredFields()`-adjacent groundwork (9).**
+  Full recipes need more underlying primitives, but the *pattern* (a
+  function that reads the AST and emits several assertions) can be
+  prototyped now against what's already verified (items + presence), to
+  validate the design before committing to it broadly.
+
+### Needs a discovery pass first (real API may well exist, unverified by this project)
+
+- **Dialog support (3).** `apex.navigation.dialog` is a real, documented,
+  universal Oracle API (not per-widget) — plausible high-confidence
+  candidate, but not yet checked live in this project, and drawer/modal
+  pages already have one confirmed issue (p00420 returns 400 on direct
+  navigation) that dialog-open/close behavior might intersect with.
+- **`logout()` (6).** No confirmed generic mechanism yet; needs checking
+  whether a documented `apex.navigation`-based signout exists or whether
+  it's app-specific.
+- **`waitForSubmit()` (13).** Plausible a page submit fires an analogous
+  lifecycle event the way region refresh does (`apexbeforerefresh`/
+  `apexafterrefresh`) — unverified; worth one discovery pass the same way
+  those were found (monkey-patch `$.fn.trigger` during a real submit).
+- **Classic Report (2).** Never tested at all in this project. Oracle
+  documents it as a simpler static HTML table, plausibly low-risk, but
+  zero live verification exists yet.
+- **Select List richer methods (1.2).** `select(label)`/`selectByValue()`/
+  `expectOptions()` beyond plain `setValue()` — the underlying widget is
+  verified for get/set; the richer label/value/option-list interactions
+  are not.
+- **Checkbox (1.2).** Not among the item types actually tested
+  (textField, textarea, numberField, selectList, datePicker, hidden were —
+  checkbox wasn't). Likely tractable, not yet confirmed.
+- **Date picker rich interaction (1.2).** `date.select("2026-04-10")`
+  implies driving a calendar widget UI, not just `setValue()` (which IS
+  verified). The widget-interaction layer is unverified.
+- **Faceted Search per-facet interaction (2).** `facet("Department").select("Sales")`
+  — already flagged in `faceted-search.ts` as parameter-shape-inferred,
+  not directly exercised live.
+
+### Correction to the proposal itself (would contradict a verified finding)
+
+- **Interactive Report `search()`/`filter()`/`sort()` (2).** CONFIRMED
+  live that IR's search/sort/pagination internals are ALL private
+  (`_`-prefixed) on the widget instance — there is no public JS method to
+  call for these. Building `report.search()` as a JS-API wrapper isn't
+  possible without a different approach: driving the actual UI (fill the
+  visible search input, click a sort header) via accessible locators,
+  which is a real option but a fundamentally different implementation
+  than "call a method" — and still needs its own verification pass.
+
+### Zero ground truth — do not build without a real app to check against
+
+- **Interactive Grid (2)** — already Tier 3 above. `grid.addRow()` etc.
+  cannot be verified without an app that has one.
+- **Trees as content (2)** — already Tier 3 above. Only the nav-reuse case
+  is confirmed; no hierarchical-data-browser Tree has ever been seen.
+- **Calendar, Map (2)** — never encountered in any app this project has
+  touched, live or otherwise. No basis to design an API yet.
+- **Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle
+  (1.2)** — none tested. Popup LOV is the most plausible near-term win
+  (Oracle documents a fairly standard open/search/select flow) but still
+  needs a live app with one to verify against, not just documentation.
+- **Dynamic Action triggering (4).** No known generic, documented JS API
+  to trigger a *named* Dynamic Action programmatically — DAs are bound to
+  specific DOM events on specific components, not individually addressable
+  by name as far as this project has found. This needs research into
+  whether such a capability exists at all before any design, let alone
+  code — flag as "may not be feasible via any public API."
+- **`asUser()`/`switchWorkspace()` (6).** Workspace switching is an App
+  Builder / development-time concept, not something a typical deployed
+  end-user app exposes at runtime — likely a scope mismatch rather than a
+  missing feature. `asUser()` is already achievable today by calling
+  `login()` again with different credentials; no new primitive needed.
+
+### Bigger architecture, not blocked but not urgent
+
+- **Full component type hierarchy (7).** Reasonable direction, but
+  premature as a big-bang refactor while most item/region types in the
+  hierarchy are still unverified. Grow the class tree incrementally as
+  each type gets real verification, the way `ApexCardsRegion`/
+  `ApexFacetsRegion` were added one at a time this session.
+- **Metadata-driven test generation / recipes (9, 10).** Real
+  differentiator, but composed almost entirely of primitives that don't
+  exist yet (PopupLOV, confirmed `required` behavior, Dynamic Actions).
+  Revisit once more of the "needs discovery" and "zero ground truth"
+  items above have real primitives.
+- **Generator plugin system (11).** No ground-truth blocker — pure
+  software design — but a real plugin architecture is significant scope
+  on its own. Start smaller: one pluggable extension point (e.g. a custom
+  naming function) rather than a full `generator/plugins/` ecosystem.
+- **Version support strategy (15).** support-matrix.md already states
+  "verified against 26.1 only" plainly. A tiered framing
+  ("primary/previous/community supported") would need HONEST wording —
+  this project has zero evidence about any version besides 26.1, so
+  claiming "previous release: best effort" isn't something to assert
+  without having actually tried it.
+- **Full directory restructure (16).** A sensible long-term shape, but
+  reorganizing `packages/testkit/src/` into `components/items/`,
+  `components/regions/`, `dialogs/`, `messages/`, `navigation/`,
+  `assertions/`, `fixtures/`, `recipes/`, `plugins/` now — before most of
+  those exist — would be restructuring for a future that isn't built yet.
+  Let the directory shape follow what's actually there.
