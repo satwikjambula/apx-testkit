@@ -48,23 +48,6 @@ else in this project (see CLAUDE.md Invariant 2).
   `--watch` was running triggered a real regeneration with the updated
   content. Run it in an integrated terminal / VS Code task and leave it
   running while editing in App Builder/VS Code's APEXlang support.
-
-## Tier 2 — real ground truth exists, but needs care
-
-- **Charts.** Present and confirmed live (Oracle JET, SVG-rendered) — but
-  chart container DOM ids are JET-generated hashes
-  (`chart1000639411058$cp5`), NOT the `.apx` static id, unlike pageItems.
-  Any chart API must go through `apex.region(id).widget()`-level calls
-  (data refresh, series inspection via the documented JET/APEX chart API),
-  never a DOM id assumption. Needs its own short discovery pass to confirm
-  exactly what the widget API exposes before writing `chart.ts`.
-- **Snapshot testing for regions and pages.** Feasible (Playwright has
-  built-in screenshot/snapshot assertions), but needs a design decision
-  first: APEX pages often render live/seeded data, so a naive
-  pixel/DOM-tree snapshot will be flaky by default. Needs a policy for what
-  gets masked/excluded (timestamps, generated ids, chart data) before it's
-  useful rather than noisy.
-
 - **Code coverage mapping from generated tests back to APEX components —
   DONE.** Design resolved: "coverage" here means which declared
   items/regions/buttons (by `.apx` identifier, or label for buttons -- no
@@ -88,6 +71,22 @@ else in this project (see CLAUDE.md Invariant 2).
   two would misrepresent "nobody tested this" as indistinguishable from
   "this can't be tracked yet." Verified against a synthetic fixture with a
   mixed form + interactiveGrid page.
+
+## Tier 2 — real ground truth exists, but needs care
+
+- **Charts.** Present and confirmed live (Oracle JET, SVG-rendered) — but
+  chart container DOM ids are JET-generated hashes
+  (`chart1000639411058$cp5`), NOT the `.apx` static id, unlike pageItems.
+  Any chart API must go through `apex.region(id).widget()`-level calls
+  (data refresh, series inspection via the documented JET/APEX chart API),
+  never a DOM id assumption. Needs its own short discovery pass to confirm
+  exactly what the widget API exposes before writing `chart.ts`.
+- **Snapshot testing for regions and pages.** Feasible (Playwright has
+  built-in screenshot/snapshot assertions), but needs a design decision
+  first: APEX pages often render live/seeded data, so a naive
+  pixel/DOM-tree snapshot will be flaky by default. Needs a policy for what
+  gets masked/excluded (timestamps, generated ids, chart data) before it's
+  useful rather than noisy.
 
 ## Tier 3 — blocked without new ground truth, or genuinely novel
 
