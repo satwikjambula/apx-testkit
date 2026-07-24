@@ -1,33 +1,12 @@
-# apx-testkit — AI agent entry point
+# apx-testkit — AI agent entry point (Claude Code)
 
-Read this first. Then read `../DESIGN_GUARDRAILS.md`. Then read whichever
-`.ai/knowledge/*.md` files match the work at hand. This directory
-separates AI operating guidance from user-facing documentation (`docs/`,
-`README.md`) — the latter describes the product to humans; this
-describes how to work on it correctly.
-
-## The constitution
-
-1. Never guess an Oracle APEX API — verify live before exposing a runtime
-   wrapper (ADR-002).
-2. Prefer a documented public API or the standard jQuery UI widget-factory
-   convention over a DOM heuristic (`.ai/knowledge/oracle-apex.md`).
-3. The parser is lossless — every unmodeled construct survives in `raw`
-   (ADR-001).
-4. The typed semantic AST is canonical for every downstream consumer
-   (ADR-001).
-5. The parser only extracts facts; it does not decide what a component
-   *means* at runtime — that's Oracle APEX Architect / Runtime & Test
-   Automation Engineer territory.
-6. Runtime code never depends on an undocumented Oracle internal without
-   live verification (ADR-002).
-7. A region's runtime id is resolved in layers, never guessed
-   (ADR-003).
-8. Every new runtime API requires: live verification, a
-   `docs/quirks/26.1.json` entry, regression tests, and a documentation
-   update in the same change (ADR-004, `.ai/checklists/`).
-
-Full reasoning for each: `.ai/ADR/001` through `004`.
+Read `../AGENTS.md` first — the portable constitution, package summary,
+and evidence discipline, shared with every other AI coding tool this
+project supports (Cursor, Codex, Antigravity, etc.). This file adds the
+Claude-Code-specific layer on top of that: six role-scoped subagents,
+slash-command shortcuts, and dispatch mechanics that have no equivalent
+in `AGENTS.md` because they don't port to other tools. Then read
+whichever `.ai/knowledge/*.md` files match the work at hand.
 
 ## The team
 

@@ -1,6 +1,11 @@
 # Contributing
 
-Thanks for considering it. Ground rules that keep this project trustworthy:
+Thanks for considering it. If you're an AI coding agent (or a human using
+one), read `AGENTS.md` first — the constitution, package summary, and
+evidence discipline this project is built on, plus pointers to the ADRs
+and checklists behind the ground rules below.
+
+Ground rules that keep this project trustworthy:
 
 **Evidence over assumption.** The parser and generator only encode behaviors
 verified against real 26.1 exports and live instances. docs/grammar-assumptions.md

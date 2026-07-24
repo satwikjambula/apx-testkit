@@ -1,23 +1,27 @@
 # CLAUDE.md — apx-testkit
 
+@AGENTS.md
+
 Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
 (.apx) exports. Monorepo, npm workspaces, TypeScript/ESM, Node 22.
 
 ## AI agent governance — read before making any change
 
-This project is developed under an explicit, written governance structure,
-not ad-hoc conventions. Read `DESIGN_GUARDRAILS.md` (repo root) and
-`.ai/AGENT.md` before writing code — they cover architecture decisions
-(`.ai/ADR/`), what each package actually does (`.ai/knowledge/`), and
-step-by-step procedures for common changes (`.ai/checklists/`). Six
-role-scoped subagents are defined in `.claude/agents/` (Software
-Architect, Oracle APEX Architect, Compiler/Parser Engineer, Runtime &
-Test Automation Engineer, QA/Verification Engineer, Documentation & DX
-Engineer) — invoke the one matching the work at hand rather than working
-across all of `packages/*` in one undifferentiated pass. Fastest way in:
-the `/architect`, `/apex`, `/parser`, `/runtime`, `/qa`, `/docs` slash
-commands (see `.ai/AGENT.md` "Invoking these agents" for all three
-invocation methods and a path-to-agent quick reference).
+The portable constitution, package summary, and evidence discipline are
+in `AGENTS.md` (imported above) — shared with every other AI coding tool
+this project supports (Cursor, Codex, Antigravity, etc.). This section is
+the Claude-Code-specific layer on top of that. Read `.ai/AGENT.md` next —
+it covers architecture decisions (`.ai/ADR/`), what each package actually
+does (`.ai/knowledge/`), and step-by-step procedures for common changes
+(`.ai/checklists/`). Six role-scoped subagents are defined in
+`.claude/agents/` (Software Architect, Oracle APEX Architect,
+Compiler/Parser Engineer, Runtime & Test Automation Engineer,
+QA/Verification Engineer, Documentation & DX Engineer) — invoke the one
+matching the work at hand rather than working across all of `packages/*`
+in one undifferentiated pass. Fastest way in: the `/architect`, `/apex`,
+`/parser`, `/runtime`, `/qa`, `/docs` slash commands (see `.ai/AGENT.md`
+"Invoking these agents" for all three invocation methods and a
+path-to-agent quick reference).
 
 ## What this is
 - `packages/parser` (@apx/parser): .apx -> typed JSON AST. Read-only by
