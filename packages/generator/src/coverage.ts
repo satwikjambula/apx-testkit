@@ -107,16 +107,27 @@ function summarize(declared: readonly string[], touched: ReadonlySet<string>): C
   return { total: declared.length, touched: declared.length - untouched.length, untouched };
 }
 
-function summarizeRegions(declared: readonly ApexRegion[], touched: ReadonlySet<string>): RegionCoverage {
+/**
+ * A recorded region touch is keyed by the RUNTIME id (see
+ * fixtures/coverage.ts / testkit's ApexRegion/ApexChartRegion/
+ * ApexInteractiveGridRegion, which all construct against a real runtime
+ * static id, not necessarily the .apx export identifier). Per ADR-003,
+ * that runtime id is `r.htmlDomId ?? r.identifier` -- matching only
+ * against `r.identifier` silently under-reported coverage for any region
+ * with an `htmlDomId` override (confirmed on real Chart/Interactive
+ * Grid/Interactive Report regions) even when a generated or hand-written
+ * spec genuinely exercised it. The report still DISPLAYS the export
+ * identifier (what's declared in the .apx source, consistent with every
+ * other category here) -- only the touch-matching lookup uses the
+ * resolved runtime id.
+ */
+export function summarizeRegions(declared: readonly ApexRegion[], touched: ReadonlySet<string>): RegionCoverage {
   const trackable = declared.filter((r) => !UNTRACKABLE_REGION_TYPES.has(r.type ?? ''));
   const untrackable = declared
     .filter((r) => UNTRACKABLE_REGION_TYPES.has(r.type ?? ''))
     .map((r): UntrackableRegion => ({ identifier: r.identifier, type: r.type }));
-  const base = summarize(
-    trackable.map((r) => r.identifier),
-    touched,
-  );
-  return { ...base, untrackable };
+  const untouched = trackable.filter((r) => !touched.has(r.htmlDomId ?? r.identifier)).map((r) => r.identifier);
+  return { total: trackable.length, touched: trackable.length - untouched.length, untouched, untrackable };
 }
 
 function mergeCategory(into: CategoryCoverage, from: CategoryCoverage): void {

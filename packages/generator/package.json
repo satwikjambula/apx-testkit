@@ -9,14 +9,16 @@
   },
   "main": "dist/cli.js",
   "scripts": {
-    "build": "tsc -p tsconfig.json"
+    "build": "tsc -p tsconfig.json",
+    "test": "vitest run"
   },
   "dependencies": {
     "@apx/parser": "0.0.1"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
-    "@types/node": "^22.0.0"
+    "@types/node": "^22.0.0",
+    "vitest": "^2.0.0"
   },
   "exports": {
     ".": "./dist/cli.js",
