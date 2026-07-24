@@ -130,6 +130,7 @@ function diffRegionFields(a: ApexRegion, b: ApexRegion): string[] {
   const chartA = JSON.stringify(a.chartSettings);
   const chartB = JSON.stringify(b.chartSettings);
   if (chartA !== chartB) changes.push(`chartSettings: ${chartA} -> ${chartB}`);
+  if (a.htmlDomId !== b.htmlDomId) changes.push(`htmlDomId: ${JSON.stringify(a.htmlDomId)} -> ${JSON.stringify(b.htmlDomId)}`);
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }

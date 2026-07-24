@@ -58,34 +58,15 @@ export const MapRegion = unsupportedComponent(
     'documentation alone.',
 );
 
-// Chart graduated PARTIALLY: the GENERIC ApexRegion class (region.ts) is
-// confirmed to work against a real chart region -- `new ApexRegion(page,
-// '<real static id>').refresh()` is live-verified (see
-// spike/tests/chart-demo.spec.ts). No dedicated ApexChartRegion exists,
-// because apex.region(id).widget() returns null for chart regions
-// (confirmed -- unlike Interactive Grid, Cards, IR) and the real jQuery
-// UI widget-factory plugin (`ojChart`, attached directly to the JET
-// container element, id convention `<static id>_jet`) only had two
-// methods confirmed callable (`refresh`, `getContextByNode` -- the latter
-// returning null with no arguments, not compelling enough alone to build
-// a wrapper around) and two confirmed NOT valid method names
-// (`getProperty`, `getOption` -- "no such method" errors). See
-// docs/quirks/26.1.json for the full investigation. This stub remains
-// for a genuinely CHART-SPECIFIC rich API (series/axis inspection, view
-// switching) -- construct a plain `ApexRegion` directly for `refresh()`
-// today; do not construct `Chart` for that, it will still throw.
-export const Chart = unsupportedComponent(
-  'Chart',
-  'no chart-specific rich API confirmed useful enough to build yet (getProperty/getOption rejected; ' +
-    'getContextByNode callable but not compelling alone) -- but the GENERIC ApexRegion class already works for ' +
-    "refresh() against chart regions, confirmed live (Oracle's \"Sample Charts\" gallery app, Area page). Use " +
-    "`new ApexRegion(page, '<real static id>')` directly for that -- the real static id must be discovered from " +
-    "the live DOM (`<static id>_jet` widget container), NOT assumed from the .apx export identifier (confirmed " +
-    'to differ, same pattern as Interactive Grid). Static metadata (which chart type -- bar/pie/line/... -- a ' +
-    'region declares) is separately typed at the PARSER level (ApexRegion.chartSettings, confirmed against the ' +
-    'official EBNF and 107 real chart regions across every export this project has parsed); that is metadata ' +
-    'only, not a runtime capability, and does not change this stub. See docs/quirks/26.1.json.',
-);
+// Chart graduated from a stub to a real component -- see
+// components/chart.ts (ApexChartRegion), verified live against Oracle's
+// "Sample Charts" gallery app on THREE independent chart types. This
+// corrected an earlier wrong finding: apex.region(id).widget() does NOT
+// return null for chart regions (unlike the original claim in
+// docs/quirks/26.1.json, based on a single region) -- it returns a real
+// jQuery-wrapped element supporting the standard ojChart('option', ...)
+// getter/setter, confirmed both directions. See chart.ts's module doc for
+// the full correction.
 
 export const Switch = unsupportedComponent(
   'Switch',

@@ -348,6 +348,7 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
                 type: str(r.props['chart.type']) ?? 'bar',
               }
             : null,
+        htmlDomId: str(r.props['advanced.htmlDomId']),
         items: [],
         buttons: [],
         loc: r.loc,

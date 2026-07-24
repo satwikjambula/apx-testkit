@@ -26,6 +26,7 @@ number of real apps, and honest about what doesn't work yet.
    - [2.10 Regression detection](#210-regression-detection)
    - [2.11 Interactive Grid](#211-interactive-grid)
    - [2.12 Dynamic Actions (metadata only)](#212-dynamic-actions-metadata-only)
+   - [2.13 Chart](#213-chart)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -587,6 +588,76 @@ latter still falls into `unmodeled`.
 
 ---
 
+### 2.13 Chart
+
+**Status: VERIFIED, graduated from a stub.** Real, live-verified methods
+against real Chart regions — Oracle's own "Sample Charts" gallery app, on
+three independent chart types (Area, Bar, Pie). This corrected an earlier
+wrong finding (see the caveat below) — read it before assuming
+`apex.region(id).widget()` doesn't work for charts.
+
+```ts
+import { ApexChartRegion } from '@apx/testkit';
+
+// You must supply the REAL runtime static id -- see the caveat below.
+// JET chart widgets initialize asynchronously; wait for the precondition
+// first (see "Initialization race" below) before constructing this class.
+const chart = new ApexChartRegion(page, 'pie1');
+
+const type = await chart.getOption('type');        // e.g. 'pie'
+const fullConfig = await chart.getOption();         // full config: type/series/groups/xAxis/legend/...
+await chart.setOption('selectionMode', 'multiple'); // real setter, confirmed round-trip
+
+// Inherited from the generic ApexRegion (region.ts):
+await chart.refresh();
+```
+
+**Correction, for the record:** this project previously claimed
+`apex.region(id).widget()` returns `null` for chart regions, based on a
+single region tested once. Re-tested live and found FALSE — it returns a
+real jQuery-wrapped element, confirmed independently on three chart types,
+corroborated by the Sample Charts app's own exported JS code calling
+`apex.region("stackCategoryChart").widget().ojChart(...)` directly. The
+real jQuery UI widget-factory plugin, `ojChart`, IS reachable through
+`widget().ojChart(method, ...args)` — not a dead end requiring a raw
+jQuery selector. `getProperty`/`getOption` remain confirmed NOT valid
+method names ("no such method" errors) — the real method is the standard
+widget-factory `option`, used both as a getter and a confirmed-working
+setter (round-trip verified: get → set → get reflects the new value
+immediately).
+
+**Critical caveat: the region's runtime static id can differ from its
+`.apx` export identifier** — same pattern as Interactive Grid (2.11). This
+now has a diagnosed root cause: `ApexRegion.htmlDomId`
+(`advanced { htmlDomId: ... }` in the export), when set, deterministically
+predicts the runtime id as `<htmlDomId>_jet`. Confirmed exactly on
+`pie-chart` → `pie1`, `donut-chart-sorting` → `donut1`,
+`bar-chart-stack-label-stack-category` → `stackCategoryChart`. When
+`htmlDomId` is absent — confirmed on 66/97 real chart regions in Sample
+Charts — the runtime id is an APEX-internal auto-generated numeric id with
+no corresponding field anywhere in the static export at all; that case is
+genuinely undiscoverable without live access, so `@apx/testgen` cannot
+auto-wire every chart region up from metadata alone.
+
+**Initialization race, confirmed live:** JET chart widgets attach
+`ojChart` asynchronously, after `page.waitForLoadState('domcontentloaded')`
+resolves. Calling `getOption()`/`setOption()` immediately after navigation
+can race this. Wait for the actual precondition first:
+
+```ts
+await page.waitForFunction((id) => {
+  const region = (window as any).apex?.region?.(id);
+  return typeof region?.widget?.()?.ojChart === 'function';
+}, 'pie1');
+```
+
+See `spike/tests/chart-demo.spec.ts` for the full working example, and
+docs/quirks/26.1.json (`chart-region-widget-returns-null`,
+`chart-widget-initialization-race`, `region-id-not-static-id`) for all
+three findings with complete evidence.
+
+---
+
 ## 3. Page types & patterns
 
 Everything below is built from the section 2 primitives — there's no
@@ -635,17 +706,14 @@ plain items (3.1).
 
 ### 3.5 Dashboards
 
-**Not yet supported — real ground truth exists, no component built.**
-Dashboards commonly include Oracle JET charts (confirmed present, SVG-
-rendered) — but their container DOM ids are JET-generated hashes
-(`chart1000639411058$cp5`), NOT the `.apx` static id, unlike every other
-component in this toolkit. A chart component would need its own short
-discovery pass into what `apex.region(id).widget()` actually exposes
-before it could ship with the same confidence as the rest of this list.
-Static chart config (which of the 17 chart types a region declares) is
-separately typed at the parser level as `ApexRegion.chartSettings.type`
-(2.9/2.10) — metadata only, it doesn't change this runtime gap.
-See docs/ecosystem-roadmap.md Tier 2.
+No dedicated component — a dashboard page is typically just several Chart
+regions (2.13) composed on one page, same treatment as master-detail
+(3.4). Use `ApexChartRegion` against each chart region's own runtime
+static id. The runtime id can differ from the `.apx` export identifier —
+see `ApexRegion.htmlDomId` (2.13) for when it's predictable vs. when it
+requires live DOM discovery. Static chart config (which of the 17 chart
+types a region declares) is separately typed at the parser level as
+`ApexRegion.chartSettings.type` (2.9/2.10).
 
 ### 3.6 Drawer / modal pages
 
@@ -728,16 +796,13 @@ headline gaps:
 - **Trees as a content/data-display pattern** — the only Tree widget seen
   is the universal left-nav, reused for one app's login picker; not a
   distinct page-content region.
-- **Charts** — no dedicated component, but the generic `ApexRegion` (2.3)
-  works today: `new ApexRegion(page, '<real static id>').refresh()` is
-  confirmed live. Two caveats confirmed live: `apex.region(id).widget()`
-  returns `null` for charts (unlike Interactive Grid/Cards/IR), and the
-  runtime static id can differ from the `.apx` export identifier — same
-  pattern as 2.11. See docs/quirks/26.1.json for the full investigation
-  (what `ojChart`'s widget-factory methods do and don't do). The chart
-  type declared in the export (`ApexRegion.chartSettings.type`) is typed
-  at the parser level and diffable via `apx-diff`, but that's static
-  metadata, not a runtime capability.
+- **Chart generator support** — `ApexChartRegion` (2.13) is real and
+  live-verified, but the generator cannot always auto-construct it: the
+  region's runtime static id can differ from its `.apx` identifier, same
+  pattern as 2.11 — predictable via `ApexRegion.htmlDomId` when set,
+  otherwise undiscoverable from the export alone (confirmed on 66/97 real
+  chart regions in Oracle's "Sample Charts" app). Construct it by hand
+  with the real static id when `htmlDomId` is absent.
 - **Region *assertions*** (as opposed to the `ApexRegion` API, which
   exists) — the region-identifier-to-DOM convention is still open, so the
   generator doesn't emit region-presence checks yet.

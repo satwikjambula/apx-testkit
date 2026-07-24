@@ -1,57 +1,88 @@
 /**
- * Verifies the generic ApexRegion class against a real Chart region --
- * fourth real APEX 26.1 app: Oracle's own "Sample Charts" gallery app
- * (Area page, DOM static id "area1" -- NOT the .apx export's region
- * identifier "area-chart-color-javascript-code-customization"; a second,
- * independent confirmation of the region-id-not-static-id pattern first
- * found on Interactive Grid -- see docs/quirks/26.1.json).
+ * Verifies ApexChartRegion (graduated from a stub -- see
+ * packages/testkit/src/components/chart.ts) against real Chart regions --
+ * Oracle's own "Sample Charts" gallery app.
  *
- * Unlike Interactive Grid, Chart regions do NOT expose a jQuery widget
- * instance via apex.region(id).widget() (confirmed: returns null). The
- * real jQuery UI widget-factory plugin is "ojChart" (Oracle JET), attached
- * directly to the JET container element (id convention: `<static id>_jet`),
- * not reachable through region.widget(). Two of its methods are confirmed
- * live: `refresh` (callable, no error) and `getContextByNode` (callable,
- * returns null with no arguments). `getProperty`/`getOption` are confirmed
- * NOT valid method names on this widget ("no such method" errors). None of
- * that is exposed as a dedicated component here -- the one thing confirmed
- * useful enough to verify is that the EXISTING generic ApexRegion class
- * already works for `refresh()` against a chart region, using the real
- * static id. See docs/quirks/26.1.json for the full ojChart investigation.
+ * CORRECTION, for the record: this file previously claimed
+ * `apex.region(id).widget()` returns `null` for chart regions, based on a
+ * single region ("area1"). Re-tested live and found FALSE -- it returns a
+ * real jQuery-wrapped element on every chart type tried. The real jQuery
+ * UI widget-factory plugin is "ojChart" (Oracle JET), attached to the JET
+ * container element (id convention: `<runtime static id>_jet`), reachable
+ * THROUGH `region.widget()`, not around it. `getProperty`/`getOption`
+ * remain confirmed NOT valid method names ("no such method" errors) --
+ * the real method is the standard widget-factory `option` (getter AND
+ * setter), which chart.ts wraps as `getOption()`/`setOption()`.
  *
- * This app enables the same `pageAccessProtection: argumentsMustHaveChecksum`
- * pattern as Sample Interactive Grids -- navigate via real UI clicks.
+ * Runtime static ids used below ("area1", "pie1") are NOT the .apx
+ * export's region identifiers -- see `ApexRegion.htmlDomId`
+ * (packages/parser/src/ast.ts) for the now-diagnosed root cause
+ * (`advanced { htmlDomId: ... }` in the export, when present, predicts
+ * `<htmlDomId>_jet`).
+ *
+ * This app enables `pageAccessProtection: argumentsMustHaveChecksum` --
+ * navigate via real UI clicks, not page.goto() to a friendly URL.
  *
  * Requires BOTH APX_LOGIN_TEST_USERNAME and APX_LOGIN_TEST_PASSWORD --
  * skips cleanly if either is unset. Neither credential is hardcoded here.
  */
 import { expect, test } from '@playwright/test';
-import { ApexRegion, login } from '@apx/testkit';
+import { ApexChartRegion, ApexRegion, login } from '@apx/testkit';
 
 const BASE =
   'https://g9323cdc071900d-tjta51y2tod5o8ej.adb.us-ashburn-1.oraclecloudapps.com/ords/r/satwik/sample-charts';
 
-test('ApexRegion.refresh() against a real Chart region (Area page)', async ({ page }) => {
+test.beforeEach(async ({ page }) => {
   const username = process.env.APX_LOGIN_TEST_USERNAME;
   const password = process.env.APX_LOGIN_TEST_PASSWORD;
   test.skip(
     !username || !password,
     'APX_LOGIN_TEST_USERNAME/APX_LOGIN_TEST_PASSWORD not set -- skipping live Chart verification',
   );
-
   await page.goto(`${BASE}/login`, { waitUntil: 'domcontentloaded' });
   await login(page, { username: username!, password: password! });
+});
 
-  // pageAccessProtection: argumentsMustHaveChecksum -- navigate via a real
-  // link click, not page.goto().
+test('ApexRegion.refresh() against a real Chart region (Area page)', async ({ page }) => {
   await page.getByRole('link', { name: 'Area', exact: true }).click();
   await page.waitForLoadState('domcontentloaded');
   expect(page.url()).toContain('/area');
   expect(await page.title()).toBe('Area');
 
   // Real runtime static id ("area1"), NOT the .apx export identifier
-  // ("area-chart-color-javascript-code-customization") -- discovered by
-  // inspecting the live DOM for the `<static id>_jet` widget container.
+  // ("area-chart-color-javascript-code-customization") -- predicted by
+  // that region's `advanced { htmlDomId: area1 }` override.
   const chart = new ApexRegion(page, 'area1');
   await chart.refresh();
+});
+
+test('ApexChartRegion.getOption()/setOption() against a real Chart region (Pie page)', async ({ page }) => {
+  await page.getByRole('link', { name: 'Pie', exact: true }).click();
+  await page.waitForLoadState('domcontentloaded');
+  expect(page.url()).toContain('/pie');
+  expect(await page.title()).toBe('Pie');
+
+  // JET chart widgets finish initializing asynchronously, after
+  // domcontentloaded -- wait for the actual precondition (ojChart
+  // attached to the widget) rather than guessing a fixed delay.
+  await page.waitForFunction(() => {
+    const region = (window as any).apex?.region?.('pie1');
+    return typeof region?.widget?.()?.ojChart === 'function';
+  });
+
+  const chart = new ApexChartRegion(page, 'pie1');
+
+  const type = await chart.getOption('type');
+  expect(type).toBe('pie');
+
+  const fullConfig = await chart.getOption();
+  expect(fullConfig).toHaveProperty('series');
+
+  const before = await chart.getOption('selectionMode');
+  await chart.setOption('selectionMode', 'multiple');
+  const afterSet = await chart.getOption('selectionMode');
+  expect(afterSet).toBe('multiple');
+  // Restore, since this is a shared gallery app -- client-side only, but
+  // leave it as found for the next run/person.
+  await chart.setOption('selectionMode', before ?? 'single');
 });

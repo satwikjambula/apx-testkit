@@ -13,10 +13,10 @@
  * design.
  *
  * Regions get one extra distinction: a region whose TYPE has no
- * @apx/testkit component at all (interactiveGrid, tree, calendar, chart,
- * map -- see packages/testkit/src/components/unsupported.ts, the same
- * list of region-shaped UnsupportedComponentError stubs, kept in sync with
- * this set so the two don't drift) can never show a real touch, no matter
+ * @apx/testkit component at all (tree, calendar, map -- see
+ * packages/testkit/src/components/unsupported.ts, the same list of
+ * region-shaped UnsupportedComponentError stubs, kept in sync with this
+ * set so the two don't drift) can never show a real touch, no matter
  * how thoroughly it's actually tested by hand through some other means.
  * Counting it as "untouched" alongside a region that genuinely has no test
  * written for it would be dishonest -- it conflates "nobody tested this"
@@ -36,14 +36,15 @@ interface RawTouch {
 /**
  * Region types with no @apx/testkit component at all -- not "partial
  * support," genuinely zero. This must match the region-shaped stubs in
- * packages/testkit/src/components/unsupported.ts (InteractiveGrid,
- * TreeRegion, Calendar, Chart, MapRegion) exactly -- extend this list only
- * when a type gets a matching UnsupportedComponentError stub there, not by
- * assumption here alone. Interactive Report/Cards/Faceted Search/form/static
- * are all trackable (via ApexRegion, ApexCardsRegion, or ApexFacetsRegion),
- * even where their coverage is partial in other respects.
+ * packages/testkit/src/components/unsupported.ts (TreeRegion, Calendar,
+ * MapRegion) exactly -- extend this list only when a type gets a matching
+ * UnsupportedComponentError stub there, not by assumption here alone.
+ * Interactive Report/Cards/Faceted Search/Interactive Grid/Chart/form/
+ * static are all trackable (via ApexRegion, ApexCardsRegion,
+ * ApexFacetsRegion, ApexInteractiveGridRegion, or ApexChartRegion), even
+ * where their coverage is partial in other respects.
  */
-const UNTRACKABLE_REGION_TYPES = new Set(['interactiveGrid', 'tree', 'calendar', 'chart', 'map']);
+const UNTRACKABLE_REGION_TYPES = new Set(['tree', 'calendar', 'map']);
 
 export interface CategoryCoverage {
   total: number;

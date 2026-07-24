@@ -381,6 +381,73 @@ describe('typed Chart region settings', () => {
   });
 });
 
+describe('region.htmlDomId (advanced { htmlDomId: ... })', () => {
+  // Confirmed live against the real "Sample Charts" app: this is the
+  // deterministic root cause of the previously-open "runtime static id
+  // differs from .apx identifier" question (docs/quirks/26.1.json
+  // 'region-id-not-static-id') -- when set, it predicts the widget
+  // container id (`<htmlDomId>_jet` for Chart, `<htmlDomId>_ig` for
+  // Interactive Grid).
+  it('projects an explicit htmlDomId override', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region pie-chart (
+    type: chart
+    advanced {
+      htmlDomId: pie1
+      regionDisplaySelector: true
+    }
+    chart {
+      type: pie
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.htmlDomId).toBe('pie1');
+  });
+
+  it('is null when no advanced { } group is present', () => {
+    // Confirmed live: 66/97 real chart regions in Oracle's own "Sample
+    // Charts" app have no advanced { } override at all -- the runtime id
+    // for these is an APEX-internal auto-generated numeric id with no
+    // corresponding field anywhere in the static .apx export.
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region colors-set-via-js-code (
+    type: chart
+    chart {
+      type: pie
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.htmlDomId).toBeNull();
+  });
+
+  it('is not gated on region type -- applies equally to Interactive Grid', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region basic-editing (
+    type: interactiveGrid
+    advanced {
+      htmlDomId: emp
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.htmlDomId).toBe('emp');
+  });
+});
+
 describe('multi-line array parsing (bug: first element dropped)', () => {
   // Reproduces a real, wide-reaching bug found via a calendar region's
   // `calendarViewsAndNavigation` array: when '[' is the LAST character on

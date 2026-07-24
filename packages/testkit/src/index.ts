@@ -34,6 +34,7 @@ export { buttonByLabel, clickButton } from './components/button.js';
 export { ApexCardsRegion, type CardsPageInfo } from './components/cards.js';
 export { ApexFacetsRegion } from './components/faceted-search.js';
 export { ApexInteractiveGridRegion } from './components/interactive-grid.js';
+export { ApexChartRegion } from './components/chart.js';
 export {
   successMessage,
   errorMessage,
@@ -47,7 +48,6 @@ export {
   TreeRegion,
   Calendar,
   MapRegion,
-  Chart,
   Switch,
   RadioGroup,
   PopupLov,

@@ -193,8 +193,8 @@ not existing).
 | Page messages (success/error) | N/A (global, not page metadata) | ✅ `messages.ts` | ❌ not wired into generator yet |
 | Checkbox | ✅ (type string) | ❌ not tested live | ❌ |
 | Switch, RadioGroup, Popup LOV, Rich Text, File Browse, Shuttle | ✅ (type string) | ❌ explicit `UnsupportedComponentError` stub | ❌ |
-| Interactive Grid | ✅ (type string) | ✅ `ApexInteractiveGridRegion` — `getActions`/`getViews`/`getCurrentView`/`getCurrentViewId`/`getSelectedRecords` confirmed live | ❌ — the region's runtime static id can differ from its `.apx` identifier (confirmed: `basic-editing` in the export, `emp` at runtime), so the generator cannot wire this up automatically; construct it by hand with the real static id |
-| Chart | ✅ `ApexRegion.chartSettings.type` (17-value chart type enum; defaults to `'bar'` when the `chart {}` group is omitted — confirmed live) | 🚧 no dedicated component, but the generic `ApexRegion.refresh()` confirmed live against a real chart region | ❌ — `apex.region(id).widget()` returns `null` for charts (real structural difference from IG/Cards/IR), and the runtime static id can differ from the `.apx` identifier (confirmed) |
+| Interactive Grid | ✅ (type string) + `ApexRegion.htmlDomId` (predicts the runtime static id when set) | ✅ `ApexInteractiveGridRegion` — `getActions`/`getViews`/`getCurrentView`/`getCurrentViewId`/`getSelectedRecords` confirmed live | ❌ — the region's runtime static id can differ from its `.apx` identifier (confirmed: `basic-editing` in the export, `emp` at runtime; predictable via `htmlDomId` when set), so the generator cannot always wire this up automatically; construct it by hand with the real static id |
+| Chart | ✅ `ApexRegion.chartSettings.type` (17-value chart type enum; defaults to `'bar'` when the `chart {}` group is omitted — confirmed live) + `ApexRegion.htmlDomId` (predicts the runtime static id when set) | ✅ `ApexChartRegion` — `getOption()`/`getOption(key)`/`setOption(key, value)` confirmed live on 3 chart types, plus inherited `ApexRegion.refresh()`; corrects an earlier wrong claim that `apex.region(id).widget()` returns `null` for charts — it does not | ❌ — the runtime static id can differ from the `.apx` identifier; predictable via `htmlDomId` when set (see docs/quirks/26.1.json `region-id-not-static-id`), otherwise undiscoverable from the export alone, so the generator cannot always wire this up automatically |
 | Calendar | ✅ `ApexRegion.calendarSettings` (displayColumn/startDateColumn/endDateColumn/pkColumn/showTime/views/dragAndDrop) | ❌ explicit stub — confirmed present in real exports (`sample-calendar`: 21 regions), typed metadata now exists, but zero LIVE ground truth on the runtime widget | ❌ |
 | Map | 🚧 (falls to `raw`) | ❌ explicit stub — confirmed present in real exports (`apextogo`/`sample-application-search`), but zero LIVE ground truth | ❌ |
 | Tree (as a content/data-display pattern) | 🚧 (falls to `raw`) | ❌ explicit stub — the only Tree seen live is the universal left-nav reused as a login picker, not a distinct content region | ❌ |
@@ -263,13 +263,12 @@ find that second user.
 The longer-term direction is richer component APIs, lifecycle-aware waits,
 snapshot testing, coverage mapping, and editor integration. Done so far
 (all verified live, not just designed): Interactive Report/Cards/Faceted
-Search/**Interactive Grid** component APIs, event-based lifecycle waits
-(`callRegionMethodAndWaitForEvent`), a `--watch` CLI flag for editor
+Search/**Interactive Grid**/**Chart** component APIs, event-based lifecycle
+waits (`callRegionMethodAndWaitForEvent`), a `--watch` CLI flag for editor
 auto-regeneration, and coverage mapping — set `APX_COVERAGE_LOG=<path>`
 before running your suite, then run `apx-coverage <export-dir>
 <touch-log-path>` to see which declared items/regions/buttons a run
-actually touched vs. missed. Still open: Charts (needs its own short
-discovery pass), snapshot testing (needs a masking-policy design), and
-Trees as content — the only Tree widget seen live so far is the universal
-left-nav reused for a login picker (see docs/ecosystem-roadmap.md), not a
-distinct page-content pattern.
+actually touched vs. missed. Still open: snapshot testing (needs a
+masking-policy design), and Trees as content — the only Tree widget seen
+live so far is the universal left-nav reused for a login picker (see
+docs/ecosystem-roadmap.md), not a distinct page-content pattern.

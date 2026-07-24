@@ -71,6 +71,25 @@ export interface ApexRegion {
   calendarSettings: ApexCalendarSettings | null;
   /** Only populated when `type === 'chart'`. */
   chartSettings: ApexChartSettings | null;
+  /**
+   * `advanced { htmlDomId: ... }`, confirmed against the official EBNF's
+   * `region-advanced-property` production. This is the real, deterministic
+   * root cause of a long-open question in this project (see
+   * docs/quirks/26.1.json `region-id-not-static-id`): a region's RUNTIME
+   * static id -- the id `apex.region()` and the widget container element
+   * (`<runtime id>_jet` for Chart, `<runtime id>_ig` for Interactive Grid)
+   * actually use -- can differ from the `.apx` export's own `identifier`.
+   * When `htmlDomId` is set here, it deterministically PREDICTS that
+   * runtime id -- confirmed live across Chart (`pie1`, `donut1`,
+   * `stackCategoryChart`) and Interactive Grid (`emp`, consistently across
+   * every page in that export) region examples. When `null` (confirmed:
+   * 65/97 real chart regions in Oracle's own "Sample Charts" app have no
+   * `advanced { }` override at all), the runtime id is an APEX-internal
+   * auto-generated numeric id (e.g. `R738095923010136870`) that has NO
+   * corresponding field anywhere in the static `.apx` export -- genuinely
+   * undiscoverable from export data alone, not a parser gap.
+   */
+  htmlDomId: string | null;
   items: ApexItem[];
   buttons: ApexButton[];
   loc: Loc;

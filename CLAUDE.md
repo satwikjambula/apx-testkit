@@ -149,6 +149,19 @@ detail, even though it lives inside `@apx/parser`.
    whether IR/Cards/Faceted Search (where identifier == runtime id in
    every app checked so far) can also diverge, or whether this is
    IG-specific.
+   UPDATE 2: root cause diagnosed. The `.apx` export's `region { advanced {
+   htmlDomId: ... } }` property, when present, deterministically predicts
+   the runtime id (`<htmlDomId>_jet` for Chart, `<htmlDomId>_ig` for IG) —
+   now typed at the parser level as `ApexRegion.htmlDomId`
+   (packages/parser/src/ast.ts). When absent (confirmed: 66/97 real chart
+   regions in Oracle's "Sample Charts" app), the runtime id is an
+   APEX-internal auto-generated numeric id with no corresponding field
+   anywhere in the static export — genuinely undiscoverable without live
+   access, not a parser gap. See docs/quirks/26.1.json
+   `region-id-not-static-id`. Separately, this same investigation found
+   and corrected a wrong prior claim that `apex.region(id).widget()`
+   returns `null` for Chart regions — see `chart-region-widget-returns-null`
+   in the same file and `packages/testkit/src/components/chart.ts`.
 2. DONE: full generated-suite run against the live instance —
    39/43 passed; the only failures are p00420-data-entry-drawer-form (4
    tests, GET returns 400 — drawer/modal pages don't resolve via plain

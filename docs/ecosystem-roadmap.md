@@ -54,27 +54,28 @@ else in this project (see CLAUDE.md Invariant 2).
      Editing card -> Basic Editing card) instead of `gotoApexPage()`'s
      bare-goto strategy. See docs/quirks/26.1.json for both findings in
      full, including the exact evidence.
-- **Charts — partially DONE, live-verified.** Fourth real APEX app
-  (Oracle's own "Sample Charts" gallery) gave this project its first
-  LIVE Chart ground truth. Two findings: (1) region identifier != runtime
+- **Charts — DONE, live-verified, graduated to a real component.** Fourth
+  real APEX app (Oracle's own "Sample Charts" gallery) gave this project
+  its first LIVE Chart ground truth. Finding: region identifier != runtime
   static id, confirmed a SECOND time on an independent widget type
   (export: `area-chart-color-javascript-code-customization`, runtime:
   `area1`) — broadens the Interactive-Grid-only finding above to
-  "confirmed on two widget types." (2) `apex.region(id).widget()` returns
-  `null` for chart regions — a real structural difference from
-  Interactive Grid/Cards/IR. The actual widget-factory plugin is
-  `ojChart`, attached to the JET container element directly (id
-  convention `<static id>_jet`), not reachable through `region.widget()`.
-  Confirmed callable: `refresh`, `getContextByNode` (returns `null` with
-  no args). Confirmed NOT valid method names: `getProperty`, `getOption`.
-  Most valuable result: the EXISTING generic `ApexRegion` class already
-  works for `refresh()` against chart regions — `new ApexRegion(page,
-  'area1').refresh()`, verified live 3/3 runs via
-  `spike/tests/chart-demo.spec.ts` — zero new component code needed for
-  that. No dedicated `ApexChartRegion` was built: the two confirmed
-  `ojChart` methods weren't compelling enough alone to justify one, per
-  this project's restraint principle. See docs/quirks/26.1.json for the
-  full investigation.
+  "confirmed on two widget types."
+  **UPDATE (2026-07-24), with renewed live access:** the claim below this
+  line originally read that `apex.region(id).widget()` returns `null` for
+  chart regions. Re-tested and found FALSE, confirmed independently on
+  THREE chart types (`area1`, `stackCategoryChart`, `pie1`), corroborated
+  by the Sample Charts app's own exported JS calling
+  `apex.region("stackCategoryChart").widget().ojChart(...)` directly. The
+  real widget-factory plugin `ojChart` IS reachable through
+  `region.widget()`. Its standard `option` method (getter AND setter) is
+  real and working — confirmed via round-trip get→set→get. This
+  overturned the earlier "not compelling enough to build" call:
+  `ApexChartRegion` (packages/testkit/src/components/chart.ts) now
+  exists, wrapping `getOption()`/`getOption(key)`/`setOption(key, value)`.
+  `getProperty`/`getOption` remain confirmed NOT valid method names,
+  unchanged. See the dedicated entry above (Tier 1) and
+  docs/quirks/26.1.json for the full corrected investigation.
 - **Automatic waits tied to APEX's client lifecycle — DONE for the
   region-operation case.** Shipped `packages/testkit/src/fixtures/lifecycle.ts`:
   `callRegionMethodAndWaitForEvent()` and `waitForRegionEvent()`, built on
@@ -119,8 +120,8 @@ else in this project (see CLAUDE.md Invariant 2).
   6 items checked by `expectItemsPresent`, both real region ids, the
   "Primary Action" button label).
   Follow-up refinement: regions whose type has no `@apx/testkit` component
-  at all (`interactiveGrid`, `tree`, `calendar`, `chart`, `map` — kept in
-  sync with the region-shaped stubs in
+  at all (at the time: `interactiveGrid`, `tree`, `calendar`, `chart`,
+  `map` — kept in sync with the region-shaped stubs in
   `packages/testkit/src/components/unsupported.ts`) are now reported in a
   separate "untrackable" bucket rather than counted as "untouched" —
   conflating the two would misrepresent "nobody tested this" as
@@ -129,6 +130,10 @@ else in this project (see CLAUDE.md Invariant 2).
   real exports (see "Second, third, and fourth real exports" below) whose
   `tree`/`chart`/`calendar`/`interactiveGrid` regions correctly fell into
   the untrackable bucket instead of misreporting as untouched-but-trackable.
+  (`interactiveGrid` and `chart` later graduated to real components and
+  were removed from this bucket in `packages/generator/src/coverage.ts` —
+  see the Tier 1 entries above; this paragraph describes the state as
+  built at the time.)
 - **Message/notification assertions — DONE.** `apex.message` confirmed
   live as a universal, documented top-level API;
   `#APEX_SUCCESS_MESSAGE`/`#APEX_ERROR_MESSAGE` confirmed present on every
@@ -156,12 +161,15 @@ This batch is the richest static ground truth this project has for two
 previously near-empty region types: **`calendar`** (21 regions in
 `sample-calendar` alone, plus 1 more in `sample-master-detail`) and
 **`chart`** (97 regions in `sample-charts` — by far the largest count of
-any region type in any single export this project has seen). Both remain
-`UnsupportedComponentError` stubs — this is static confirmation the types
-are real and common, not live method-level verification, which needs a
-running instance neither Chart nor Calendar has had (unlike Interactive
-Grid, which got exactly this kind of live access — see the Tier 1 entry
-above — and graduated to a real component as a direct result). `map` also
+any region type in any single export this project has seen). Both remained
+`UnsupportedComponentError` stubs at the time — this was static
+confirmation the types are real and common, not live method-level
+verification, which needed a running instance neither Chart nor Calendar
+had yet (unlike Interactive Grid, which got exactly this kind of live
+access — see the Tier 1 entry above — and graduated to a real component
+as a direct result). **UPDATE:** Chart later got that same live access
+and graduated too (see the Tier 1 Chart entry above) — Calendar has not,
+and its stub is unchanged. `map` also
 showed up for the first time (`apextogo`, `sample-application-search`),
 updating its stub reason from "never encountered" to "confirmed present,
 still no live ground truth."
@@ -182,7 +190,9 @@ If live URLs become available for `sample-calendar` or `sample-charts`
 specifically, those are now the highest-leverage next live-verification
 targets in this project by a wide margin — the ground truth volume alone
 (21 and 97 regions respectively, across dedicated single-purpose gallery
-apps) dwarfs everything else still sitting in Tier 2/3.
+apps) dwarfs everything else still sitting in Tier 2/3. **UPDATE:** a live
+URL for `sample-charts` did become available — see the Tier 1 Chart
+entry above. `sample-calendar` remains the highest-leverage open target.
 
 - **Dynamic Actions — typed AST support, DONE.** Thirteenth real export,
   Oracle's own "Sample Dynamic Actions" gallery app, closed out a gap
@@ -245,11 +255,9 @@ apps) dwarfs everything else still sitting in Tier 2/3.
   `chart {}` group is entirely OMITTED from the export when the chart
   type is `bar` (16 of the 97 "Sample Charts" regions, 23 of 107 overall)
   — `bar` is the implicit default, represented directly as `'bar'` rather
-  than `null`. Parser-only, no live app needed. The `Chart` runtime stub
-  in `unsupported.ts` is UNCHANGED and still correct — typed metadata
-  about which chart type a region declares is not the same as a verified
-  runtime API; the generic `ApexRegion.refresh()` remains the only
-  live-verified capability against a chart region. Regression-guarded
+  than `null`. Parser-only, no live app needed. (UPDATE: the `Chart`
+  runtime stub referenced here later graduated to a real
+  `ApexChartRegion` component — see the entry below.) Regression-guarded
   with 3 new tests. Also closed a related gap found in the same pass:
   `calendarSettings` had been typed in an earlier batch but never wired
   into `apx-diff`'s `diffRegionFields()` — both `calendarSettings` and
@@ -282,6 +290,59 @@ apps) dwarfs everything else still sitting in Tier 2/3.
   entire evidence-over-assumption discipline exists to catch — found not
   by looking for it, but by building something real (calendar settings)
   against a genuinely new export and noticing the output looked wrong.
+
+- **Chart graduated from a stub to a real component (`ApexChartRegion`),
+  DONE — and corrected two wrong prior claims along the way.** Live access
+  to Oracle's own "Sample Charts" gallery app (2026-07-24) let this
+  project re-test claims made in an earlier session without live access.
+  Both turned out wrong:
+  1. `apex.region(id).widget()` does **not** return `null` for chart
+     regions — it returns a real jQuery-wrapped element, confirmed
+     independently on THREE chart types (`area1`, `stackCategoryChart`,
+     `pie1`), corroborated by the Sample Charts app's own exported JS code
+     calling `apex.region("stackCategoryChart").widget().ojChart(...)`
+     directly (a Dynamic Action's `executeJsCode` action, found in the
+     `.apx` export itself). The original claim was based on a single
+     region tested once.
+  2. The standard jQuery UI widget-factory `option` method (getter AND
+     setter) is a real, working, generic API on this widget — confirmed
+     via round-trip get→set→get on `selectionMode`, and the setter call
+     returns the widget itself for chaining (the standard widget-factory
+     contract). `getProperty`/`getOption` remain confirmed invalid method
+     names, unchanged from before.
+
+  `ApexChartRegion.getOption()`/`getOption(key)`/`setOption(key, value)`
+  wrap this. `refresh()` (inherited, generic `ApexRegion` path) is
+  unchanged. See docs/quirks/26.1.json
+  (`chart-region-widget-returns-null`, now corrected in place;
+  `chart-widget-initialization-race`, a new finding — JET chart widgets
+  attach `ojChart` asynchronously, after `domcontentloaded`, so calling
+  `getOption`/`setOption` immediately after navigation can race this,
+  worked around with `page.waitForFunction`).
+
+  Separately, this same investigation diagnosed the root cause of the
+  long-open "runtime static id differs from `.apx` identifier" question
+  (docs/quirks/26.1.json `region-id-not-static-id`, previously
+  `rootCauseDiagnosed: false`): the export's `advanced { htmlDomId: ... }`
+  property, when present, deterministically predicts the runtime id
+  (`<htmlDomId>_jet` for Chart, `<htmlDomId>_ig` for Interactive Grid).
+  Confirmed on both region types. Now typed at the parser level as
+  `ApexRegion.htmlDomId` (packages/parser/src/ast.ts), regression-guarded
+  with 3 new parser tests, wired into `apx-diff`. When absent (confirmed
+  on 66/97 real chart regions in Sample Charts), the runtime id is an
+  APEX-internal auto-generated numeric id with no corresponding field
+  anywhere in the static export — genuinely undiscoverable without live
+  access, not a parser gap; `@apx/testgen` still cannot auto-wire every
+  chart region up from metadata alone.
+
+  Bonus fix found in passing while updating `packages/generator/src/
+  coverage.ts`'s `UNTRACKABLE_REGION_TYPES`: `interactiveGrid` had been
+  left in that set since the coverage-mapping feature was first built,
+  even though Interactive Grid graduated to a real
+  `ApexInteractiveGridRegion` component in an earlier session (which
+  already calls `recordCoverageTouch`) — meaning IG test coverage was
+  being silently excluded from the coverage report this whole time. Fixed
+  in the same pass as removing `chart` from that set.
 
 ## Tier 2 — real ground truth exists, but needs care
 
@@ -331,7 +392,10 @@ This found and fixed one real bug: `packages/generator/src/coverage.ts`'s
 broader claim already committed in `unsupported.ts` (tree/calendar/chart
 also have no component) — brookstrut's real `chart`/`calendar` regions
 would have been silently miscounted as "untouched" instead of correctly
-flagged untrackable. Fixed and verified against both exports. Separately,
+flagged untrackable. Fixed and verified against both exports. (This set
+changed again later: `interactiveGrid` and `chart` both graduated to real
+components and were removed from it — see the Tier 1 Chart entry above.)
+Separately,
 `sample-workflow-approvals`'s `application.apx` declares a *custom*
 authentication scheme (`@demo-purposes-only-custom-auth-scheme`) with no
 page 101 in the export at all — real evidence that the generator's
