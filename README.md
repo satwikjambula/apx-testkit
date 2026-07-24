@@ -1,10 +1,41 @@
 # apx-testkit
 
+[![CI](https://github.com/satwikjambula/apx-testkit/actions/workflows/ci.yml/badge.svg)](https://github.com/satwikjambula/apx-testkit/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Node](https://img.shields.io/badge/node-22-brightgreen.svg)](package.json)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.5%2B-blue.svg)](tsconfig.base.json)
+
+**End-to-end Playwright testing for Oracle APEX — built for humans and AI
+agents (Cursor, Claude Code, Copilot) alike, via MCP.**
+
+If apx-testkit saves you from hand-writing Playwright specs for Oracle
+APEX, **star the repo** ⭐ — it's the easiest way to help others find it.
+
 ## What apx-testkit is
 
 apx-testkit generates a maintainable Playwright regression suite directly
-from an Oracle APEX 26.1+ application's APEXlang (`.apx`) export. It's three
-pieces wired together:
+from an Oracle APEX 26.1+ application's APEXlang (`.apx`) export — and,
+because it ships an MCP server alongside the parser and generator, an AI
+coding agent can drive that same pipeline natively as part of its own
+workflow, not just a human running a CLI. That MCP server
+(`@apx/mcp`) is the actual differentiator here: point Cursor, Claude Code,
+or any other MCP-capable agent at it and it can inspect a real APEX export
+and regenerate deterministic tests itself — see
+docs/editor-integration.md.
+
+```mermaid
+flowchart LR
+    A["Oracle APEX export<br/>(.apx files)"] --> P["@apx/parser<br/>typed, lossless AST"]
+    P --> G["@apx/testgen<br/>PageObject + spec generation<br/>apx-diff / apx-coverage"]
+    P --> T["@apx/testkit<br/>Playwright fixtures +<br/>live-verified components"]
+    G --> T
+    G --> M["@apx/mcp<br/>MCP server"]
+    M -->|stdio| AI["Cursor / Claude Code /<br/>Copilot agent mode / Windsurf"]
+    T --> Tests["Generated + hand-written<br/>Playwright specs"]
+    G --> Tests
+```
+
+The pipeline is four pieces wired together:
 
 1. **A parser** (`@apx/parser`) — `.apx` source in, a typed, read-only JSON
    AST out. Unrecognized constructs are preserved in `raw` bags and reported
@@ -15,10 +46,19 @@ pieces wired together:
 3. **A testkit** (`@apx/testkit`) — the Playwright fixtures and component
    helpers (built on `apex.item()`/`apex.region()`, never raw CSS selectors)
    that both the generated code and hand-written specs import from.
+4. **An MCP server** (`@apx/mcp`) — exposes the parser + generator to any
+   MCP-capable agentic tool (Cursor, Claude Code, Copilot agent mode,
+   Windsurf) over stdio, so an AI assistant regenerates tests as part of
+   its own workflow instead of hand-authoring them.
 
-An MCP server (`@apx/mcp`) exposes the generator to agentic editors (Cursor,
-Claude Code, etc.), so an AI assistant regenerates tests as part of its own
-workflow instead of hand-authoring them — see docs/editor-integration.md.
+### See it run
+
+`docs/demo.tape` is a [VHS](https://github.com/charmbracelet/vhs) script
+that generates a real terminal recording of `apx-testgen` turning the
+committed synthetic fixture into a page object + spec — nothing staged,
+every command in it is one this project's own CI actually runs. Render it
+yourself (`brew install vhs && vhs docs/demo.tape`) to produce
+`docs/demo.gif`, then it's a one-line embed here.
 
 ## Quick example (30 seconds)
 
@@ -272,3 +312,7 @@ actually touched vs. missed. Still open: snapshot testing (needs a
 masking-policy design), and Trees as content — the only Tree widget seen
 live so far is the universal left-nav reused for a login picker (see
 docs/ecosystem-roadmap.md), not a distinct page-content pattern.
+
+---
+
+If `apx-testkit` makes testing your APEX apps easier, give us a ⭐️ on GitHub!
