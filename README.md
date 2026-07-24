@@ -53,12 +53,11 @@ The pipeline is four pieces wired together:
 
 ### See it run
 
-`docs/demo.tape` is a [VHS](https://github.com/charmbracelet/vhs) script
-that generates a real terminal recording of `apx-testgen` turning the
-committed synthetic fixture into a page object + spec — nothing staged,
-every command in it is one this project's own CI actually runs. Render it
-yourself (`brew install vhs && vhs docs/demo.tape`) to produce
-`docs/demo.gif`, then it's a one-line embed here.
+![apx-testgen turning a .apx export into a typed page object + spec, in one command](docs/demo.gif)
+
+Real terminal recording — `apx-testgen` against the committed synthetic
+fixture, nothing staged. Regenerate it yourself from `docs/demo.tape` with
+[VHS](https://github.com/charmbracelet/vhs) (`vhs docs/demo.tape`).
 
 ## Quick example (30 seconds)
 
