@@ -46,6 +46,69 @@ culture), not tooling.
 | **QA/Verification Engineer** | `docs/quirks/26.1.json`, `docs/grammar-assumptions.md`, the real Oracle sample-app corpus, the regression sweep | Has this actually been verified? Against which app? What's the confidence level? Empowered to say **no**. |
 | **Documentation & DX Engineer** | `docs/*`, `README.md` capability matrix, `CLAUDE.md`, tutorials, error message wording | Can a user understand this? Is every doc file that describes this component's status in sync? |
 
+## Invoking these agents
+
+Three ways, from most to least automatic. None of them is "it just
+always happens" — pick the one that matches how deliberate you want to
+be about it.
+
+### 1. Slash-command shortcut (recommended default)
+
+Six commands in `.claude/commands/`, one per agent — the fastest, most
+repeatable habit:
+
+| Command | Invokes |
+|---|---|
+| `/architect <question>` | `software-architect` |
+| `/apex <question>` | `oracle-apex-architect` |
+| `/parser <task>` | `compiler-parser-engineer` |
+| `/runtime <task>` | `runtime-test-automation-engineer` |
+| `/qa <claim or change>` | `qa-verification-engineer` |
+| `/docs <update>` | `documentation-dx-engineer` |
+
+Each command expands into an explicit instruction telling the current
+session to delegate to that subagent via the Task/Agent tool — it's a
+deterministic dispatch, not a suggestion Claude might follow.
+
+### 2. Dedicate a whole terminal session to one role
+
+```bash
+claude --agent software-architect
+claude --agent oracle-apex-architect
+claude --agent compiler-parser-engineer
+claude --agent runtime-test-automation-engineer
+claude --agent qa-verification-engineer
+claude --agent documentation-dx-engineer
+```
+
+Use this when you know a whole work session is going to stay in one
+domain — e.g. a pure parser-bugfix afternoon. Add `--chrome` (or this
+project's browser tooling equivalent) for agents that need live
+verification (`oracle-apex-architect`, `runtime-test-automation-engineer`,
+`qa-verification-engineer`).
+
+### 3. Ask by name mid-session
+
+Within an ordinary session, naming the agent explicitly ("use the
+qa-verification-engineer subagent to check this") makes delegation
+reliable. Relying on the agent's `description` field alone (every
+subagent's description starts with "Use PROACTIVELY...") makes Claude
+*more likely* to self-delegate for a matching task without being asked —
+but that's a heuristic match, not a guarantee. If a task clearly belongs
+to one domain and you want it handled by that specific agent, say so —
+don't assume it'll route itself.
+
+### Quick reference: which agent owns which path
+
+| Touching... | Invoke |
+|---|---|
+| `packages/parser/**` | `/parser` |
+| `packages/testkit/**`, `packages/generator/**`, `packages/mcp/**` | `/runtime` |
+| `docs/quirks/26.1.json`, `docs/grammar-assumptions.md`, real sample-app verification | `/qa` |
+| `docs/ecosystem-roadmap.md`, `docs/component-coverage-matrix.md`, `docs/support-matrix.md`, `README.md` capability matrix, `docs/tutorial.md` | `/docs` |
+| Package boundaries, `.ai/ADR/`, `package.json`/`tsconfig.base.json`, "is this a new package/breaking change" | `/architect` |
+| "How does this component actually behave" / "is there a real public API" | `/apex` |
+
 ## How a feature typically flows
 
 ```

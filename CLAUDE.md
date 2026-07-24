@@ -14,7 +14,10 @@ role-scoped subagents are defined in `.claude/agents/` (Software
 Architect, Oracle APEX Architect, Compiler/Parser Engineer, Runtime &
 Test Automation Engineer, QA/Verification Engineer, Documentation & DX
 Engineer) — invoke the one matching the work at hand rather than working
-across all of `packages/*` in one undifferentiated pass.
+across all of `packages/*` in one undifferentiated pass. Fastest way in:
+the `/architect`, `/apex`, `/parser`, `/runtime`, `/qa`, `/docs` slash
+commands (see `.ai/AGENT.md` "Invoking these agents" for all three
+invocation methods and a path-to-agent quick reference).
 
 ## What this is
 - `packages/parser` (@apx/parser): .apx -> typed JSON AST. Read-only by
