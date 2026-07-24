@@ -3,6 +3,19 @@
 Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
 (.apx) exports. Monorepo, npm workspaces, TypeScript/ESM, Node 22.
 
+## AI agent governance — read before making any change
+
+This project is developed under an explicit, written governance structure,
+not ad-hoc conventions. Read `DESIGN_GUARDRAILS.md` (repo root) and
+`.ai/AGENT.md` before writing code — they cover architecture decisions
+(`.ai/ADR/`), what each package actually does (`.ai/knowledge/`), and
+step-by-step procedures for common changes (`.ai/checklists/`). Six
+role-scoped subagents are defined in `.claude/agents/` (Software
+Architect, Oracle APEX Architect, Compiler/Parser Engineer, Runtime &
+Test Automation Engineer, QA/Verification Engineer, Documentation & DX
+Engineer) — invoke the one matching the work at hand rather than working
+across all of `packages/*` in one undifferentiated pass.
+
 ## What this is
 - `packages/parser` (@apx/parser): .apx -> typed JSON AST. Read-only by
   design; NO emitter (SQLcl owns import). Unknown constructs are preserved in
