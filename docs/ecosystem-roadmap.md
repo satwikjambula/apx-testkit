@@ -228,6 +228,33 @@ apps) dwarfs everything else still sitting in Tier 2/3.
   `apex.region(id).widget()` even returns for a calendar region, let
   alone what methods it exposes.
 
+- **Chart region settings — typed AST support, DONE.** Same treatment as
+  Calendar above: `ApexRegion.chartSettings` is now typed, but
+  deliberately restrained to a single field, `type` (the 17-value chart
+  type enum — area/bar/boxPlot/bubble/combination/statusMeterGauge/donut/
+  funnel/gantt/line/lineWithArea/pie/polar/pyramid/radar/range/scatter/
+  stock — confirmed against the official EBNF's full `region-chart-`
+  property/appearance/layout productions, not just the `type` keyword).
+  `chartAppearance`/`chartLayout` and the sibling `axis`/`series`/`column`
+  sub-components are almost entirely visual styling (fonts, colors,
+  positions, axis scaling) with no clear testing value and stay in
+  `raw`/`unmodeled` — a deliberate scope decision, documented in the
+  `ApexChartSettings` doc comment. Confirmed across all 97 chart regions
+  in Oracle's own "Sample Charts" gallery app (107 total across every
+  export this project has parsed). Confirmed live/structurally that the
+  `chart {}` group is entirely OMITTED from the export when the chart
+  type is `bar` (16 of the 97 "Sample Charts" regions, 23 of 107 overall)
+  — `bar` is the implicit default, represented directly as `'bar'` rather
+  than `null`. Parser-only, no live app needed. The `Chart` runtime stub
+  in `unsupported.ts` is UNCHANGED and still correct — typed metadata
+  about which chart type a region declares is not the same as a verified
+  runtime API; the generic `ApexRegion.refresh()` remains the only
+  live-verified capability against a chart region. Regression-guarded
+  with 3 new tests. Also closed a related gap found in the same pass:
+  `calendarSettings` had been typed in an earlier batch but never wired
+  into `apx-diff`'s `diffRegionFields()` — both `calendarSettings` and
+  `chartSettings` are now diffed there.
+
 - **A real, wide-reaching parser bug was found and fixed while building
   the above.** `parseArray()` silently dropped a real content element in
   two shapes: (1) `foo: [` with nothing inline (each array item, and the

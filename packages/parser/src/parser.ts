@@ -340,6 +340,14 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
                 dragAndDrop: bool(r.props['settings.dragAndDrop']),
               }
             : null,
+        chartSettings:
+          type === 'chart'
+            ? {
+                // Omitted 'chart {}' group means 'bar' -- confirmed live,
+                // not a null/missing-data case. See ApexChartSettings doc.
+                type: str(r.props['chart.type']) ?? 'bar',
+              }
+            : null,
         items: [],
         buttons: [],
         loc: r.loc,

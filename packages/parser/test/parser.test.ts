@@ -330,6 +330,57 @@ describe('typed Calendar region settings', () => {
   });
 });
 
+describe('typed Chart region settings', () => {
+  it('projects an explicit chart type', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: chart
+    chart {
+      type: pie
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.chartSettings).toEqual({ type: 'pie' });
+  });
+
+  it('defaults to "bar" when the chart {} group is entirely omitted', () => {
+    // Confirmed live: Oracle's own "Sample Charts" gallery app has 16 bar
+    // chart regions, none of which have a chart {} group at all.
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: chart
+    layout {
+      sequence: 10
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.chartSettings).toEqual({ type: 'bar' });
+  });
+
+  it('does not populate chartSettings for a non-chart region', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: interactiveReport
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    const [region] = result.ast.pages[0].regions;
+    expect(region.chartSettings).toBeNull();
+  });
+});
+
 describe('multi-line array parsing (bug: first element dropped)', () => {
   // Reproduces a real, wide-reaching bug found via a calendar region's
   // `calendarViewsAndNavigation` array: when '[' is the LAST character on

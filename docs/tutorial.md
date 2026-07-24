@@ -446,8 +446,9 @@ Summary: 1 added, 1 removed, 1 changed, 0 unchanged
 
 Field-by-field diffs (with old->new values) are shown for everything the
 AST actually types: page alias/name/title/`authentication`, item type/
-label/required/sourceColumn, region type/name/source, button label/action,
-and dynamic action trigger/condition/nested-actions (2.12). For anything
+label/required/sourceColumn, region type/name/source/calendarSettings/
+chartSettings, button label/action, and dynamic action trigger/condition/
+nested-actions (2.12). For anything
 NOT typed yet (LOVs, server-side validations, processes — see the
 parser-coverage correction in docs/ecosystem-roadmap.md), every component
 also gets an order-independent comparison of its full `raw` bag; if that
@@ -641,6 +642,9 @@ rendered) — but their container DOM ids are JET-generated hashes
 component in this toolkit. A chart component would need its own short
 discovery pass into what `apex.region(id).widget()` actually exposes
 before it could ship with the same confidence as the rest of this list.
+Static chart config (which of the 17 chart types a region declares) is
+separately typed at the parser level as `ApexRegion.chartSettings.type`
+(2.9/2.10) — metadata only, it doesn't change this runtime gap.
 See docs/ecosystem-roadmap.md Tier 2.
 
 ### 3.6 Drawer / modal pages
@@ -730,7 +734,10 @@ headline gaps:
   returns `null` for charts (unlike Interactive Grid/Cards/IR), and the
   runtime static id can differ from the `.apx` export identifier — same
   pattern as 2.11. See docs/quirks/26.1.json for the full investigation
-  (what `ojChart`'s widget-factory methods do and don't do).
+  (what `ojChart`'s widget-factory methods do and don't do). The chart
+  type declared in the export (`ApexRegion.chartSettings.type`) is typed
+  at the parser level and diffable via `apx-diff`, but that's static
+  metadata, not a runtime capability.
 - **Region *assertions*** (as opposed to the `ApexRegion` API, which
   exists) — the region-identifier-to-DOM convention is still open, so the
   generator doesn't emit region-presence checks yet.

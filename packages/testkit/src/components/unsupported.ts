@@ -81,7 +81,10 @@ export const Chart = unsupportedComponent(
     "refresh() against chart regions, confirmed live (Oracle's \"Sample Charts\" gallery app, Area page). Use " +
     "`new ApexRegion(page, '<real static id>')` directly for that -- the real static id must be discovered from " +
     "the live DOM (`<static id>_jet` widget container), NOT assumed from the .apx export identifier (confirmed " +
-    'to differ, same pattern as Interactive Grid). See docs/quirks/26.1.json.',
+    'to differ, same pattern as Interactive Grid). Static metadata (which chart type -- bar/pie/line/... -- a ' +
+    'region declares) is separately typed at the PARSER level (ApexRegion.chartSettings, confirmed against the ' +
+    'official EBNF and 107 real chart regions across every export this project has parsed); that is metadata ' +
+    'only, not a runtime capability, and does not change this stub. See docs/quirks/26.1.json.',
 );
 
 export const Switch = unsupportedComponent(

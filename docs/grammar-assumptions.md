@@ -478,6 +478,45 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         have no home anywhere in the official grammar, not just under an
         unexpected name.
 
+  - [x] Chart region `chart { type: ... }` group promoted to a typed field
+        (`ApexRegion.chartSettings`, gated on `region.type === 'chart'`,
+        same pattern as `calendarSettings`).
+      - Checked the FULL `region-chart-property` production (not just the
+        `type` keyword) plus the sibling `region-chart-appearance-property`
+        and `region-chart-layout-property` productions, per the
+        just-updated CLAUDE.md instruction to check complete productions,
+        not narrow keyword greps. `type` is the only property with clear
+        testing value; `chartAppearance`/`chartLayout` and the
+        `axis`/`series`/`column` sub-components are font/color/position/
+        scaling styling with no assertion value -- left in `raw`/
+        `unmodeled`, documented as a deliberate scope decision in the
+        `ApexChartSettings` doc comment (not an oversight).
+      - `type` enum confirmed against the official EBNF: 17 values (area,
+        bar, boxPlot, bubble, combination, statusMeterGauge, donut, funnel,
+        gantt, line, lineWithArea, pie, polar, pyramid, radar, range,
+        scatter, stock).
+      - Real, consistent shape confirmed across all 97 chart regions in
+        Oracle's own "Sample Charts" gallery app, plus 10 more chart
+        regions found across other real exports checked this project
+        (107 total).
+      - Confirmed live/structurally: 16 bar-chart regions in "Sample
+        Charts" have the `chart {}` group entirely OMITTED from the
+        export -- `bar` is the implicit default when the group is absent,
+        not missing data. Represented directly as `'bar'`, not `null`, so
+        nothing downstream has to re-derive the omission-means-bar
+        convention itself. 23 of the 107 real chart regions across all
+        exports defaulted this way.
+      - Parser-only work, no live running app needed (this is static
+        export metadata, distinct from the separately-tracked runtime
+        `Chart` component stub in `unsupported.ts`, which remains
+        unbuilt/unverified for actual runtime behavior).
+      - Regression-guarded with 3 new tests (explicit type, omitted-group
+        default, non-chart region stays `null`) -- 26 total parser tests,
+        all passing. `diff.ts` updated in the same pass to diff
+        `chartSettings` (and `calendarSettings`, which had been typed
+        earlier but never wired into the differ -- a real gap this pass
+        also closed).
+
 ## Still open
 
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF

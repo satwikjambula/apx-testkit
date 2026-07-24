@@ -69,6 +69,8 @@ export interface ApexRegion {
    * other region types for unrelated config, so this is gated on type,
    * not just key presence, unlike `source` above. */
   calendarSettings: ApexCalendarSettings | null;
+  /** Only populated when `type === 'chart'`. */
+  chartSettings: ApexChartSettings | null;
   items: ApexItem[];
   buttons: ApexButton[];
   loc: Loc;
@@ -96,6 +98,30 @@ export interface ApexCalendarSettings {
   showTime: boolean | null;
   views: string[] | null;
   dragAndDrop: boolean | null;
+}
+
+/**
+ * `chart { type: ... }` group on a chart region, confirmed against
+ * Oracle's official EBNF (`region-chart-property`, 17 enum values: area,
+ * bar, boxPlot, bubble, combination, statusMeterGauge, donut, funnel,
+ * gantt, line, lineWithArea, pie, polar, pyramid, radar, range, scatter,
+ * stock). Deliberately the ONLY field typed here -- `chartAppearance`,
+ * `chartLayout`, and the sibling `axis`/`series`/`column` components are
+ * almost entirely visual styling (fonts, colors, positions, axis
+ * scaling) with no clear testing value; they stay in `raw`/`unmodeled`
+ * rather than bloating this type for properties nothing would ever
+ * assert on.
+ *
+ * `type` is never `null`: confirmed live that the `chart {}` group is
+ * entirely OMITTED from the export when the chart type is `bar` --
+ * Oracle's own gallery app has 16 bar-chart regions, none of which have a
+ * `chart {}` group at all. `bar` is the implicit default when the group
+ * is absent, not missing data -- represented directly as `'bar'` here
+ * rather than `null`, so nothing downstream has to re-derive that
+ * omission-means-bar convention itself.
+ */
+export interface ApexChartSettings {
+  type: string;
 }
 
 export interface ApexItem {

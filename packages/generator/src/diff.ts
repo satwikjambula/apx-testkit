@@ -124,6 +124,12 @@ function diffRegionFields(a: ApexRegion, b: ApexRegion): string[] {
   const sourceA = JSON.stringify(a.source);
   const sourceB = JSON.stringify(b.source);
   if (sourceA !== sourceB) changes.push(`source: ${sourceA} -> ${sourceB}`);
+  const calA = JSON.stringify(a.calendarSettings);
+  const calB = JSON.stringify(b.calendarSettings);
+  if (calA !== calB) changes.push(`calendarSettings: ${calA} -> ${calB}`);
+  const chartA = JSON.stringify(a.chartSettings);
+  const chartB = JSON.stringify(b.chartSettings);
+  if (chartA !== chartB) changes.push(`chartSettings: ${chartA} -> ${chartB}`);
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }
