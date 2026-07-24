@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00025-combination.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, combination-chart-data-label-positions, combination-chart-information-data-label-positions, combination-chart-information-regular-v-mixed-frequency-time-axis, combination-chart-information-y-axis-value-formatting, combination-chart-regular-v-mixed-frequency-time-axis, combination-chart-y-axis-value-formatting, mixed-frequency-time-axis, region-display-selector, regular-time-axis
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), combination-chart-data-label-positions (chart), combination-chart-information-data-label-positions (staticContent), combination-chart-information-regular-v-mixed-frequency-time-axis (staticContent), combination-chart-information-y-axis-value-formatting (staticContent), combination-chart-regular-v-mixed-frequency-time-axis (staticContent), combination-chart-y-axis-value-formatting (chart), mixed-frequency-time-axis (chart), region-display-selector (regionDisplaySelector), regular-time-axis (chart).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

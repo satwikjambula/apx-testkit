@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00003-basic-cards.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, rds, style-a, style-b, style-c
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * Region resolve-check emitted for 3 interactiveReport/cards/facetedSearch region(s) below (ADR-003 htmlDomId-resolved where set).
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), rds (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +22,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectRegionsResolve, normalizeTitle, login } from '@apx/testkit';
 import { BasicCardsPage } from './p00003-basic-cards.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -48,5 +48,11 @@ test.describe('page 3: Basic Cards [requires auth]', () => {
     const po = new BasicCardsPage(page);
     await po.goto();
     expect(normalizeTitle(await page.title())).toBe(normalizeTitle('&APP_NAME. - Styles'));
+  });
+
+  test('every interactiveReport/cards/facetedSearch region resolves (3 regions)', async ({ page }) => {
+    const po = new BasicCardsPage(page);
+    await po.goto();
+    await expectRegionsResolve(page, ['style-a', 'style-b', 'style-c']);
   });
 });

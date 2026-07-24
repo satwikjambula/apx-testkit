@@ -26,6 +26,7 @@ export {
 export {
   ApexRegion,
   probeRegions,
+  expectRegionsResolve,
   refreshRegion,
   callRegionMethod,
   type RegionProbe,

@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00045-sales-history-smart-search-w-menu-actions.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: breadcrumb, facets, facets-2, sales-history, timer
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): breadcrumb (breadcrumb), facets (staticContent), facets-2 (smartFilters), sales-history (themeTemplateComponent/contentRow), timer (dynamicContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

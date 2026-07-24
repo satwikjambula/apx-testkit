@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00100-getting-started.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: button-oci, button-openai, enter-oci-web-credentials, enter-openai-web-credentials, introduction-wizard, introduction-wizard-container, select-provider, unsupported-database-version, web-credentials, welcome-to-sample-vector-search
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): button-oci (staticContent), button-openai (staticContent), enter-oci-web-credentials (staticContent), enter-openai-web-credentials (staticContent), introduction-wizard (staticContent), introduction-wizard-container (staticContent), select-provider (staticContent), unsupported-database-version (staticContent), web-credentials (staticContent), welcome-to-sample-vector-search (staticContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00004-pie.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumbs, colors-set-via-js-code, colors-set-via-sql-query, donut-chart-new-declarative-label-option, donut-chart-new-declarative-label-option-information, donut-chart-sorting, donut-chart-sorting-information, donut-chart-v2-labels-outside-slice, master-detail-chart-links, master-detail-chart-links-information, orders-detail-chart, pie-chart, pie-chart-information, pie-chart-series-colors, pie-chart-series-colors-information, products-master-chart, region-display-selector
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumbs (breadcrumb), colors-set-via-js-code (chart), colors-set-via-sql-query (chart), donut-chart-new-declarative-label-option (chart), donut-chart-new-declarative-label-option-information (staticContent), donut-chart-sorting (chart), donut-chart-sorting-information (staticContent), donut-chart-v2-labels-outside-slice (chart), master-detail-chart-links (staticContent), master-detail-chart-links-information (staticContent), orders-detail-chart (chart), pie-chart (chart), pie-chart-information (staticContent), pie-chart-series-colors (staticContent), pie-chart-series-colors-information (staticContent), products-master-chart (chart), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

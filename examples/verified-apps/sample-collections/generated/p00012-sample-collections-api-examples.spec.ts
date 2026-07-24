@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00012-sample-collections-api-examples.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, apex-collection-add-member, apex-collection-create-collection-from-query, apex-collection-create-or-truncate-collection, apex-collection-delete-collection, apex-collection-resequence-collection, apex-collection-truncate-collection, apex-collection-update-member-attribute, apex-collections, breadcrumb
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), apex-collection-add-member (staticContent), apex-collection-create-collection-from-query (staticContent), apex-collection-create-or-truncate-collection (staticContent), apex-collection-delete-collection (staticContent), apex-collection-resequence-collection (staticContent), apex-collection-truncate-collection (staticContent), apex-collection-update-member-attribute (staticContent), apex-collections (staticContent), breadcrumb (breadcrumb).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

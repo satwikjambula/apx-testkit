@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00021-debounce-and-throttle.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: breadcrumb, debounce-delay, debounce-delay-help-text, debounce-immediate, debounce-immediate-help-text, enter-text-here, examples, immediate, immediate-help-text, overview, throttle-delay, throttle-delay-help-text, throttle-immediate, throttle-immediate-help-text
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): breadcrumb (breadcrumb), debounce-delay (staticContent), debounce-delay-help-text (staticContent), debounce-immediate (staticContent), debounce-immediate-help-text (staticContent), enter-text-here (staticContent), examples (staticContent), immediate (staticContent), immediate-help-text (staticContent), overview (staticContent), throttle-delay (staticContent), throttle-delay-help-text (staticContent), throttle-immediate (staticContent), throttle-immediate-help-text (staticContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

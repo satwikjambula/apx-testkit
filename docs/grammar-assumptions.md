@@ -603,6 +603,51 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         rule that a clean, uneventful re-parse is still evidence worth
         recording, not nothing.
 
+- [x] **`htmlDomId` region-id resolution generalized from Chart/Interactive
+      Grid to ALL region types -- a correction, not just an extension.**
+      While building an auto-generated "region resolves" assertion for
+      Interactive Report/Cards/Faceted Search (assumed safe because their
+      export identifier had matched the runtime id in every app checked
+      so far), a real counter-example turned up: `sample-charts` page 13
+      has an `interactiveReport` region declared as `region projects (
+      type: interactiveReport ... advanced { htmlDomId: projects_report }
+      )`. Confirmed live: `apex.region('projects')` -> `false`;
+      `apex.region('projects_report')` -> `true`. The earlier "IR/Cards/
+      Facets always match" claim (in ADR-003 and `docs/quirks/26.1.json`
+      `region-id-not-static-id`) was wrong, based on incomplete sampling,
+      and both are corrected in place with this finding.
+      - A full sweep of the 13-app local corpus: 6/86 (~7%)
+        `interactiveReport`/`cards`/`facetedSearch` regions have
+        `htmlDomId` set (5 IR, 1 Cards, 0 Faceted Search) -- confirmed a
+        real, if minority, pattern, not a one-off fluke.
+      - Also confirmed: unlike Chart/IG's OWN internal widget-factory
+        dispatch (which additionally appends `_jet`/`_ig` to reach a
+        nested widget container), plain `apex.region(id)` resolution uses
+        `htmlDomId` VERBATIM, no suffix -- `apex.region('area1')` (no
+        suffix) already resolved the region itself in earlier Chart work;
+        the suffix is specific to Chart/IG's nested widget lookup, not
+        generic region resolution.
+      - `packages/testkit/src/components/region.ts` gained
+        `expectRegionsResolve()` -- a safe pass/fail assertion for
+        `interactiveReport`/`cards`/`facetedSearch` specifically (all
+        three confirmed live to resolve as widget regions; `form`/
+        `staticContent` confirmed NOT to, by design). `@apx/testgen` now
+        auto-emits this per page, resolving each region's id as
+        `htmlDomId ?? identifier` (ADR-003's layered strategy, now
+        correctly generalized), with an explicit comment listing which
+        other region types on that page were skipped and why.
+      - Live-verified via direct manual browser evaluation against the
+        real `sample-charts` Interactive Report page (reachable only via
+        a drill-down path, not a stable nav link, and itself declares
+        `pageAccessProtection: argumentsMustHaveChecksum` -- scripting a
+        reliable Playwright click path was not attempted this pass; the
+        underlying mechanism is the identical `apex.region(id)` check
+        already scripted and passing for Chart/IG elsewhere).
+      - Regenerated `examples/employee-page` and all 13
+        `examples/verified-apps/` outputs to match; zero warnings across
+        all 13 real exports; determinism reconfirmed (regenerate twice,
+        byte-identical).
+
 ## Still open
 
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF

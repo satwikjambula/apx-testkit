@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00031-transactions-generated.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: breadcrumb, generate-100-transactions-on-page-load, show-last-generation, timing
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): breadcrumb (breadcrumb), generate-100-transactions-on-page-load (staticContent), show-last-generation (plSqlDynamicContent), timing (dynamicContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

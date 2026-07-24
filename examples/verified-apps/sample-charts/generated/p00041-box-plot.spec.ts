@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00041-box-plot.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumbs, grades-custom-q2-q3-colours, grades-mixed-series-types, grades-multi-series, grades-single-series, information, rds, samples-report-data, survey-results, survey-results-normalised-tables, survey-sample-data-time-axis
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumbs (breadcrumb), grades-custom-q2-q3-colours (chart), grades-mixed-series-types (chart), grades-multi-series (chart), grades-single-series (chart), information (staticContent), rds (regionDisplaySelector), samples-report-data (classicReport), survey-results (chart), survey-results-normalised-tables (chart), survey-sample-data-time-axis (chart).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

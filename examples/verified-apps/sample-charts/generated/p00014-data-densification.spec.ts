@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00014-data-densification.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, multi-series-chart-densified-sorted-by-label-desc, multi-series-chart-stacked-with-stack-label, multi-series-chart-using-order-by, region-display-selector, single-series-chart-using-order-by-value-asc
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), multi-series-chart-densified-sorted-by-label-desc (chart), multi-series-chart-stacked-with-stack-label (chart), multi-series-chart-using-order-by (chart), region-display-selector (regionDisplaySelector), single-series-chart-using-order-by-value-asc (chart).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

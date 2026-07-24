@@ -240,6 +240,34 @@ Calling a method the region's widget type doesn't implement throws a clear
 error (`"...is not a function on this widget type"`) instead of silently
 returning `undefined` — that's deliberate, not a bug to work around.
 
+**Region id resolution (ADR-003)**: a region's runtime id is NOT always
+its `.apx` export identifier. Check `ApexRegion.htmlDomId` from the
+parsed AST first — when set, it IS the runtime id, verbatim (confirmed
+live on Chart, Interactive Grid, AND Interactive Report; this was
+originally believed narrower and corrected in place — see
+`docs/quirks/26.1.json` `region-id-not-static-id`). When `htmlDomId` is
+null, the export identifier is usually the runtime id (~93% of the
+Interactive Report/Cards/Faceted Search regions in this project's local
+corpus), but treat that as a fallback, not a guarantee:
+
+```ts
+import { expectRegionsResolve } from '@apx/testkit';
+
+// Resolve per ADR-003 before calling -- the generator does this
+// automatically for interactiveReport/cards/facetedSearch regions.
+const runtimeId = region.htmlDomId ?? region.identifier;
+await expectRegionsResolve(page, [runtimeId]);
+```
+
+`expectRegionsResolve` is a safe pass/fail assertion specifically for
+`interactiveReport`/`cards`/`facetedSearch` region types — confirmed live
+that all three resolve as real `apex.region()` widget regions. Do NOT
+call it against `form`/`staticContent` regions; those are confirmed NOT
+to resolve as widget regions at all, by design. `@apx/testgen` auto-emits
+this check per page for every region of a resolvable type, with an
+explicit comment listing which other region types on that page were
+skipped and why — never a silent omission.
+
 `apex.region(id).call(action)` — the generic action-dispatch API some APEX
 widgets support — was tested against Interactive Report with a dozen
 plausible action names and rejected every one with `"Call not

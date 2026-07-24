@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00002-area.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, area-chart-color-javascript-code-customization, area-chart-color-javascript-code-customization-information, area-chart-legend-javascript-code-customization, area-chart-legend-javascript-code-customization-information, area-chart-line-types, area-chart-line-types-information, area-chart-markers, area-chart-stacked, area-chart-stacked-information, area-chart-y-axis-value-formatting, breadcrumb, region-display-selector
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), area-chart-color-javascript-code-customization (chart), area-chart-color-javascript-code-customization-information (staticContent), area-chart-legend-javascript-code-customization (chart), area-chart-legend-javascript-code-customization-information (staticContent), area-chart-line-types (chart), area-chart-line-types-information (staticContent), area-chart-markers (chart), area-chart-stacked (chart), area-chart-stacked-information (staticContent), area-chart-y-axis-value-formatting (chart), breadcrumb (breadcrumb), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

@@ -28,7 +28,7 @@
  * cards.ts and faceted-search.ts, which extend this same pattern for the
  * additional methods those specific widget types expose).
  */
-import type { Page } from '@playwright/test';
+import { expect, type Page } from '@playwright/test';
 import { recordCoverageTouch } from '../fixtures/coverage.js';
 
 export interface RegionProbe {
@@ -53,6 +53,39 @@ export async function probeRegions(page: Page, ids: readonly string[]): Promise<
       })),
     ids,
   );
+}
+
+/**
+ * Assert that every given region id resolves as a real `apex.region()`
+ * widget region. Unlike `probeRegions` above (diagnostics-only, because
+ * the .apx-identifier-to-runtime-id mapping was an open question for
+ * region types generally), this is a safe pass/fail assertion for
+ * `interactiveReport`/`cards`/`facetedSearch` region types specifically
+ * -- ALL THREE are confirmed live to resolve as widget regions
+ * (region.ts module doc; faceted-search.ts's own "VERIFIED live" note).
+ * Do NOT call this against `form`/`staticContent` regions -- those are
+ * confirmed NOT to resolve as widget regions at all, by design, not a
+ * gap.
+ *
+ * CRITICAL: the `ids` passed in must already be resolved per ADR-003's
+ * layered strategy (`region.htmlDomId ?? region.identifier`) -- do NOT
+ * assume the `.apx` export identifier is always safe to pass directly.
+ * This was originally assumed true for these three region types "in
+ * every app checked so far" and found WRONG: a real interactiveReport
+ * region (sample-charts, export identifier `projects`) resolves at
+ * runtime as `projects_report` (its `advanced { htmlDomId: ... }`
+ * value), confirmed live -- `apex.region('projects')` is `false`,
+ * `apex.region('projects_report')` is `true`. `htmlDomId` is a universal
+ * mechanism across region types, not something gated to Chart/
+ * Interactive Grid -- see ADR-003 and `docs/quirks/26.1.json`
+ * `region-id-not-static-id` for the full correction. The generator
+ * resolves this per-region before calling this function; hand-written
+ * specs must do the same.
+ */
+export async function expectRegionsResolve(page: Page, ids: readonly string[]): Promise<void> {
+  const probes = await probeRegions(page, ids);
+  const unresolved = probes.filter((p) => !p.isWidgetRegion).map((p) => p.id);
+  expect(unresolved, 'regions expected to resolve as apex.region() widget regions but did not').toEqual([]);
 }
 
 /**

@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00009-bar.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, bar-chart-dual-y-axis-with-formatted-labels, bar-chart-series-colors, bar-chart-series-colors-information, bar-chart-series-name-column-mapping, bar-chart-series-name-column-mapping-information, bar-chart-stack-label-stack-category, bar-chart-stack-label-stack-category-information, bar-chart-stacked, bar-chart-stacked-percent, bar-chart-stacked-percent-information, breadcrumb, custom-colors-via-javascript, default-color-palette, region-display-selector, series-level-color-attribute, sql-series-defined-colors
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), bar-chart-dual-y-axis-with-formatted-labels (chart), bar-chart-series-colors (staticContent), bar-chart-series-colors-information (staticContent), bar-chart-series-name-column-mapping (chart), bar-chart-series-name-column-mapping-information (staticContent), bar-chart-stack-label-stack-category (chart), bar-chart-stack-label-stack-category-information (staticContent), bar-chart-stacked (chart), bar-chart-stacked-percent (chart), bar-chart-stacked-percent-information (staticContent), breadcrumb (breadcrumb), custom-colors-via-javascript (chart), default-color-palette (chart), region-display-selector (regionDisplaySelector), series-level-color-attribute (chart), sql-series-defined-colors (chart).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

@@ -61,6 +61,25 @@ export function loadExport(dir: string): Record<string, string> {
 
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
+/**
+ * Region types confirmed live to resolve as `apex.region()` widget
+ * regions (ADR-003) -- `form`/`staticContent` are confirmed NOT to
+ * resolve at all, by design, and every other type either has no runtime
+ * wrapper yet or needs Chart/IG's additional widget-container suffix
+ * (out of scope for this generic "region resolves" assertion).
+ */
+const RESOLVABLE_REGION_TYPES = new Set(['interactiveReport', 'cards', 'facetedSearch']);
+
+/**
+ * ADR-003 layered resolution: htmlDomId (when set) IS the runtime id,
+ * verbatim, for ANY region type -- not just Chart/Interactive Grid.
+ * Falls back to the .apx export identifier otherwise (true for the
+ * large majority of regions, but not a guarantee -- see the ADR).
+ */
+function resolvedRegionId(region: { identifier: string; htmlDomId: string | null }): string {
+  return region.htmlDomId ?? region.identifier;
+}
+
 function specFor(page: ApexPage): string {
   const isPublic = page.raw['security.authentication'] === 'public';
   const alias = page.alias ?? '';
@@ -70,6 +89,9 @@ function specFor(page: ApexPage): string {
   const allItemIds = page.items.map((i) => `'${esc(i.identifier)}'`).join(', ');
   const labeledButtons = page.buttons.filter((b) => b.label);
   const allButtonLabels = labeledButtons.map((b) => `'${esc(b.label!)}'`).join(', ');
+  const resolvableRegions = page.regions.filter((r) => r.type && RESOLVABLE_REGION_TYPES.has(r.type));
+  const skippedRegions = page.regions.filter((r) => !r.type || !RESOLVABLE_REGION_TYPES.has(r.type));
+  const resolvableRegionIds = resolvableRegions.map((r) => `'${esc(resolvedRegionId(r))}'`).join(', ');
   const firstText = visible.find((i) => i.type === 'textField' || i.type === 'textarea');
   const itemProp = firstText ? computeItemPropNames(page).get(firstText.identifier) : undefined;
   const className = pageObjectClassName(page);
@@ -83,8 +105,12 @@ function specFor(page: ApexPage): string {
  * Navigation and item access go through the generated page object
  * (./${poBase}.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: ${page.regions.map((r) => r.identifier).join(', ') || '(none)'}
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.${isPublic ? '' : `
+ * ${resolvableRegions.length > 0
+     ? `Region resolve-check emitted for ${resolvableRegions.length} interactiveReport/cards/facetedSearch region(s) below (ADR-003 htmlDomId-resolved where set).`
+     : 'No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.'}
+ * ${skippedRegions.length > 0
+     ? `Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): ${skippedRegions.map((r) => `${r.identifier} (${r.type ?? 'untyped'})`).join(', ')}.`
+     : ''}${isPublic ? '' : `
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -99,7 +125,7 @@ function specFor(page: ApexPage): string {
  * bug to work around here.`}
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
+import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 ? ', expectRegionsResolve' : ''}, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
 import { ${className} } from './${poBase}.js';${isPublic ? '' : `
 import { APP_BASE } from '../playwright.config.js';`}
 `;
@@ -157,6 +183,14 @@ import { APP_BASE } from '../playwright.config.js';`}
     const po = new ${className}(page);
     await po.goto();
     await expectButtonsPresent(page, [${allButtonLabels}]);
+  });`);
+  }
+
+  if (resolvableRegions.length > 0) {
+    bodyParts.push(`  test('every interactiveReport/cards/facetedSearch region resolves (${resolvableRegions.length} region${resolvableRegions.length === 1 ? '' : 's'})', async ({ page }) => {
+    const po = new ${className}(page);
+    await po.goto();
+    await expectRegionsResolve(page, [${resolvableRegionIds}]);
   });`);
   }
 

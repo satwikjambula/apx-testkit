@@ -6,8 +6,8 @@
  * Navigation and item access go through the generated page object
  * (./p00018-line-with-area.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, custom-tooltip-labels-information, data-labels-line-styles-information, fill-gaps-and-sort-information, line-with-area-chart-custom-tooltip-labels, line-with-area-chart-data-labels-line-styles, line-with-area-chart-fill-gaps-and-sort, line-with-area-chart-stacked-percent-chart, line-with-area-chart-stacked-percent-information, region-display-selector
- * TODO(region-contract): emit region assertions once REGION DISCOVERY report
- * establishes the DOM convention for region static ids.
+ * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
+ * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), custom-tooltip-labels-information (staticContent), data-labels-line-styles-information (staticContent), fill-gaps-and-sort-information (staticContent), line-with-area-chart-custom-tooltip-labels (chart), line-with-area-chart-data-labels-line-styles (chart), line-with-area-chart-fill-gaps-and-sort (chart), line-with-area-chart-stacked-percent-chart (chart), line-with-area-chart-stacked-percent-information (staticContent), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
