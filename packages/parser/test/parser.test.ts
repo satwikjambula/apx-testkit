@@ -179,17 +179,84 @@ describe('typed Dynamic Action support', () => {
       button: null,
       region: null,
       event: null,
+      customEvent: null,
     });
     expect(da.clientSideCondition).toEqual({ type: 'item=value', item: 'P3_JOB', value: 'SALESMAN' });
+  });
+
+  it('projects customEvent when the trigger event is "custom"', () => {
+    // Confirmed live pattern (interactive-grids, sample-calendar):
+    // event: custom / customEvent: <the real event name>.
+    const apxWithCustomEvent = `page 51 (
+  name: Client Validation
+  alias: CLIENT-VALIDATION
+
+  dynamicAction refresh-on-record-edit (
+    name: Refresh on Record Edit
+    execution {
+      sequence: 30
+    }
+    when {
+      selectionType: items
+      items: P51_ITEM
+      event: custom
+      customEvent: apexendrecordedit
+    }
+
+    action native-refresh (
+      action: refresh
+      affectedElements {
+        selectionType: region
+        region: @report
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p00051-client-validation.apx': apxWithCustomEvent });
+    expect(result.warnings).toEqual([]);
+    const [da] = result.ast.pages[0].dynamicActions;
+    expect(da.when.event).toBe('custom');
+    expect(da.when.customEvent).toBe('apexendrecordedit');
   });
 
   it('projects nested actions, including fireWhenEventResultIs', () => {
     const result = parseApp({ 'p00003-edit.apx': apxWithDynamicAction });
     const [da] = result.ast.pages[0].dynamicActions;
-    expect(da.actions.map((a) => ({ id: a.identifier, action: a.action, fire: a.fireWhenEventResultIs }))).toEqual([
-      { id: 'native-disable', action: 'disable', fire: false },
-      { id: 'native-enable', action: 'enable', fire: null },
+    expect(
+      da.actions.map((a) => ({ id: a.identifier, name: a.name, action: a.action, fire: a.fireWhenEventResultIs })),
+    ).toEqual([
+      { id: 'native-disable', name: null, action: 'disable', fire: false },
+      { id: 'native-enable', name: null, action: 'enable', fire: null },
     ]);
+  });
+
+  it('projects an action-level name, distinct from the parent dynamicAction name', () => {
+    // Confirmed real: 56/509 real actions across every export this
+    // project has parsed have their own name.
+    const apxWithActionName = `page 3 (
+  name: Edit
+  alias: EDIT4
+
+  dynamicAction commission-for-salesman-only (
+    name: Commission for Salesman Only
+    when {
+      selectionType: items
+      items: P3_JOB
+    }
+
+    action native-disable (
+      name: Disable Commission Field
+      action: disable
+      affectedElements {
+        selectionType: items
+        items: P3_COMM
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p00003-edit.apx': apxWithActionName });
+    const [da] = result.ast.pages[0].dynamicActions;
+    expect(da.actions[0].name).toBe('Disable Commission Field');
   });
 
   it('reports null clientSideCondition when the DA is unconditional', () => {

@@ -381,9 +381,65 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       shape, consistent with the fix only changing previously-wrong
       behavior).
 
+- [x] **Official grammar reference obtained and cross-checked for the
+      first time**: Oracle's own published APEXlang EBNF
+      (docs.oracle.com/en/database/oracle/apex/26.1/apxln/apexlang.ebnf,
+      11,700+ lines, every component). Fetched the raw file directly via
+      `curl`, not through an AI-summarizing fetch tool -- confirmed the
+      summarized version had HALLUCINATED a `@{component-id}` reference
+      form that doesn't exist anywhere in the real grammar (it misread
+      the EBNF's own `{ X }` = "zero or more X" meta-notation as literal
+      syntax; the real rule is just `<reference> ::= "@" {
+      <reference-character> }`). See CLAUDE.md for the standing
+      instruction to check this reference before extending the parser,
+      and to always fetch it raw.
+      Cross-checked against `dynamicAction` (this project's most recently
+      typed component) and found it fully, precisely documented --
+      confirmed two real gaps in what this project had typed:
+      `when.customEvent` (populated specifically when `event ===
+      'custom'`; confirmed live, 7 real occurrences across 2 exports:
+      `event: custom` / `customEvent: apexendrecordedit` and similar) and
+      `action.name` (a nested action's own optional display name,
+      distinct from the parent dynamicAction's `name`; confirmed live,
+      56/509 real actions across every export this project has parsed).
+      Both added to `ApexDATrigger`/`ApexDAAction` and wired into
+      `apx-diff`, verified against real data (exact counts matched: 7 and
+      56) and regression-guarded with 2 new tests.
+      Also confirmed genuinely NOT in the official grammar, despite being
+      real and live-verified: `ApexRegion.calendarSettings`'s properties
+      (`displayColumn`, `startDateColumn`, `endDateColumn`, `pkColumn`,
+      `showTime`, `dragAndDrop`) -- confirmed absent by direct search
+      (`grep` for each exact property name across the whole 11.7k-line
+      file), not a sampling miss. This is the same "docs can be wrong or
+      incomplete, verify against real exports" lesson this project has
+      hit before (the M0 lesson), now demonstrated against Oracle's OWN
+      published reference, not just simplified doc excerpts -- the
+      official EBNF is authoritative for what it covers, but "covers
+      everything" was never a safe assumption, confirmed by this specific
+      gap.
+      Also confirmed by the official grammar, not yet acted on: comment
+      syntax (`//` line comments, `/* */` block comments) IS real,
+      first-class grammar -- see the "Still open" entry below, now
+      updated from "unconfirmed" to "confirmed real, zero real-world
+      occurrences so far."
+
 ## Still open
 
-- [ ] Comment syntax: none observed anywhere. Assume none until spec says so.
+- [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF
+      (`<comment> ::= "//" { <any-character-except-newline> } <line-end> |
+      "/*" { <any-character> | <nl> } "*/"`), not just an assumption
+      anymore -- but still zero real occurrences across all 13 real
+      exports this project has parsed (the ~40 `//`/`/*` matches found
+      during that check were all false positives: JS/PLSQL comments
+      embedded INSIDE fenced multiline-string code blocks, e.g.
+      `` ```javascript-browser // Update Badge Text ``` ``, which this
+      parser's `tryFence()` already captures correctly as opaque text --
+      not top-level APEXlang comments at all). Not implemented: this
+      project's discipline is to build against real occurrences, not
+      well-specified-but-unencountered ones; revisit if a real export
+      ever actually contains one (the parser would currently emit
+      "Unrecognized line" warnings for it, fail loudly rather than
+      silently misparse).
 - [ ] Quoting/escaping in PROPERTY VALUES specifically: no quoted values
       observed. What happens when a value must contain a leading `[`/`@` or a
       literal ```? Unknown — needs a hostile fixture app. (Quoted, space-

@@ -189,6 +189,44 @@ detail, even though it lives inside `@apx/parser`.
 7. MCP SDK pinned ^1.0.0; re-verify API surface against latest SDK docs
    before npm publish.
 
+## Official grammar reference — check this before guessing at grammar
+
+**https://docs.oracle.com/en/database/oracle/apex/26.1/apxln/** is Oracle's
+own published APEXlang Language Reference, and
+**https://docs.oracle.com/en/database/oracle/apex/26.1/apxln/apexlang.ebnf**
+is the complete, formal EBNF grammar behind it (11,700+ lines, every
+component). Check this FIRST when extending the parser for a new component
+or property, before reverse-engineering from real exports alone — it's the
+authoritative source for what a property is *called* and what values it
+accepts.
+
+**Fetch the raw `.ebnf` file directly (`curl`), not through an
+AI-summarizing fetch tool.** Confirmed live: an AI-summarized fetch
+invented a `@{component-id}` reference form that does not exist anywhere
+in the actual grammar (`grep` on the raw file confirms) -- it misread the
+EBNF's own meta-notation (`{ X }` meaning "zero or more X") as if it were
+literal curly-brace syntax. The real grammar is just
+`<reference> ::= "@" { <reference-character> }` -- i.e. `@` followed by
+reference characters, no braces. A summarizing tool can hallucinate on
+precise, symbol-dense text like a grammar spec even when it's just
+paraphrasing, not omitting -- always cross-check anything load-bearing
+against the raw text. Don't commit the raw file into this
+repo (it's Oracle's own published content, same redistribution caution as
+the sample app exports — see docs/limitations.md) — re-fetch it fresh each
+time, or keep a local scratch copy for the length of a working session.
+
+**This reference is authoritative but not infallible or complete** — same
+discipline as everywhere else in this project. Confirmed example: the
+`dynamicAction` grammar (including `when.customEvent` and
+`action.name`, both added to the typed AST after checking this file) is
+fully and precisely documented. But `ApexRegion.calendarSettings`'s real,
+live-verified properties (`displayColumn`, `startDateColumn`, `pkColumn`,
+`showTime`, `dragAndDrop`, ...) do NOT appear anywhere in this EBNF file at
+all — confirmed by direct search, not a sampling miss. When the official
+reference and real, live-parsed export data disagree or one is silent, the
+real export data wins; note the discrepancy in docs/grammar-assumptions.md
+rather than silently picking one side.
+
 ## Key docs
 - docs/grammar-assumptions.md — THE ledger (verified vs open). Treat as the
   contract; update it in the same PR as any behavior change.

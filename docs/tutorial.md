@@ -553,10 +553,19 @@ for (const da of page.dynamicActions) {
 
 `da.when` is the trigger (`selectionType`, `items`/`button`/`region`,
 `event` — `null` event means APEX's implicit default for that selector
-type, not "no event"). `da.clientSideCondition` is `null` for
-unconditional DAs (confirmed common, not a gap). `da.actions` is the
-ordered list of nested steps, each with `fireWhenEventResultIs` marking
-true- vs. false-action lists.
+type, not "no event"; `customEvent` is populated specifically when
+`event === 'custom'`, e.g. `event: custom` / `customEvent:
+apexendrecordedit`). `da.clientSideCondition` is `null` for unconditional
+DAs (confirmed common, not a gap). `da.actions` is the ordered list of
+nested steps, each with an optional `name` (distinct from the parent
+DA's `name` — confirmed common, ~11% of real actions have one) and
+`fireWhenEventResultIs` marking true- vs. false-action lists.
+
+Every field here was cross-checked against Oracle's own published
+APEXlang EBNF grammar (see CLAUDE.md) — `customEvent` and action-level
+`name` were added specifically because that check surfaced them as real,
+documented fields this project's own live-parsed data confirmed but
+hadn't typed yet.
 
 `apx-diff` (2.10) already diffs this field-by-field, including a nested
 diff of the actions list — see that section for what a changed DA looks

@@ -127,7 +127,11 @@ export interface ApexButton {
  * component-namespaced custom event like
  * `region/interactiveGrid/interactivegridselectionchange`) -- `null`
  * means APEX's implicit default event for this selector type, not "no
- * event."
+ * event." `customEvent` is populated specifically when `event ===
+ * 'custom'` (confirmed live, e.g. `event: custom` / `customEvent:
+ * apexendrecordedit`) -- per Oracle's own published APEXlang grammar
+ * (docs.oracle.com/en/database/oracle/apex/26.1/apxln/apexlang.ebnf),
+ * this is the ONLY case where `customEvent` applies; `null` otherwise.
  */
 export interface ApexDATrigger {
   selectionType: string | null;
@@ -135,6 +139,7 @@ export interface ApexDATrigger {
   button: string | null;
   region: string | null;
   event: string | null;
+  customEvent: string | null;
 }
 
 /**
@@ -152,6 +157,11 @@ export interface ApexDAClientSideCondition {
 
 export interface ApexDAAction {
   identifier: string;
+  /** Optional display name, distinct from `identifier` -- confirmed real
+   * and common (56/509 real actions across every export this project has
+   * parsed have their own `name`, separate from the parent
+   * dynamicAction's `name`). `null` when not set. */
+  name: string | null;
   /** Open string: disable, enable, show, hide, setValue, addClass,
    * removeClass, executeJsCode, executeServerSideCode, redirectThisApp,
    * refresh, alert, confirm, definedByDynamicAction, or a namespaced

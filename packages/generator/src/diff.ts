@@ -138,6 +138,7 @@ function diffButtonFields(a: ApexButton, b: ApexButton): string[] {
 
 function diffDAActionFields(a: ApexDAAction, b: ApexDAAction): string[] {
   const changes: string[] = [];
+  if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
   if (a.action !== b.action) changes.push(`action: ${JSON.stringify(a.action)} -> ${JSON.stringify(b.action)}`);
   if (a.fireWhenEventResultIs !== b.fireWhenEventResultIs) {
     changes.push(`fireWhenEventResultIs: ${a.fireWhenEventResultIs} -> ${b.fireWhenEventResultIs}`);
@@ -154,6 +155,9 @@ function diffDynamicActionFields(a: ApexDynamicAction, b: ApexDynamicAction): st
   }
   if (a.when.event !== b.when.event) {
     changes.push(`when.event: ${JSON.stringify(a.when.event)} -> ${JSON.stringify(b.when.event)}`);
+  }
+  if (a.when.customEvent !== b.when.customEvent) {
+    changes.push(`when.customEvent: ${JSON.stringify(a.when.customEvent)} -> ${JSON.stringify(b.when.customEvent)}`);
   }
   const itemsA = JSON.stringify(a.when.items);
   const itemsB = JSON.stringify(b.when.items);

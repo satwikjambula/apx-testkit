@@ -261,6 +261,7 @@ function projectButton(n: ComponentNode): ApexButton {
 function projectDAAction(n: ComponentNode): ApexDAAction {
   return {
     identifier: n.identifier ?? '(anonymous)',
+    name: str(n.props['name']),
     action: str(n.props['action']),
     fireWhenEventResultIs: bool(n.props['execution.fireWhenEventResultIs']),
     loc: n.loc,
@@ -279,6 +280,7 @@ function projectDynamicAction(n: ComponentNode): ApexDynamicAction {
       button: refName(n.props['when.button']),
       region: refName(n.props['when.region']),
       event: str(n.props['when.event']),
+      customEvent: str(n.props['when.customEvent']),
     },
     clientSideCondition: hasClientSideCondition
       ? {
