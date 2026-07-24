@@ -145,6 +145,8 @@ field + an explicit `UnsupportedComponentError` stub, per ADR-002. See
 - `.ai/checklists/runtime-api.md` — extending an existing wrapper.
 - `.ai/checklists/parser-change.md` — any parser change, including
   bug fixes and reviews of existing fields.
+- `.ai/checklists/new-verification-app.md` — adding a new real Oracle
+  sample app to the verification corpus.
 - `.ai/checklists/release.md` — the full verification pass before any
   commit or release.
 
