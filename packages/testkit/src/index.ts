@@ -30,7 +30,13 @@ export {
   callRegionMethod,
   type RegionProbe,
 } from './components/region.js';
-export { buttonByLabel, clickButton } from './components/button.js';
+export {
+  buttonByLabel,
+  clickButton,
+  buttonsPresent,
+  expectButtonsPresent,
+  type ButtonPresence,
+} from './components/button.js';
 export { ApexCardsRegion, type CardsPageInfo } from './components/cards.js';
 export { ApexFacetsRegion } from './components/faceted-search.js';
 export { ApexInteractiveGridRegion } from './components/interactive-grid.js';

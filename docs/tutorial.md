@@ -186,15 +186,23 @@ located by accessible role + name — the `.apx` `label` field, via
 Playwright's accessibility tree:
 
 ```ts
-import { buttonByLabel, clickButton } from '@apx/testkit';
+import { buttonByLabel, clickButton, expectButtonsPresent } from '@apx/testkit';
 
 await expect(buttonByLabel(page, 'Save')).toBeVisible();
 await clickButton(page, 'Save'); // same as buttonByLabel(page, 'Save').click()
+
+// Non-mutating presence check -- confirmed live against 9 real buttons
+// (Sample Charts, Area page). Auto-generated for every labeled button on
+// every page -- see 2.9.
+await expectButtonsPresent(page, ['Save', 'Cancel']);
 ```
 
 This works for ordinary labeled buttons. It is NOT verified for icon-only
 buttons, or buttons whose accessible name diverges from their visible
-label (heavily template-customized ones).
+label (heavily template-customized ones). `expectButtonsPresent` is
+logically weaker than `clickButton` (existence vs. clickability), so it
+adds a live-verified signal specifically for pages whose buttons are
+declared but never exercised by a click assertion.
 
 ### 2.3 Regions (generic)
 

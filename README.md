@@ -224,7 +224,7 @@ not existing).
 |---|---|---|---|
 | Page (alias/name/title) | ✅ | ✅ `gotoApexPage`/`normalizeTitle` | ✅ load + title |
 | pageItem (text/number/select/date/hidden) | ✅ | ✅ `ApexItem` | ✅ presence + round-trip |
-| Button | ✅ (label/action) | 🚧 accessible-role locator, no verified id convention | ✅ click methods generated |
+| Button | ✅ (label/action) | 🚧 accessible-role locator, no verified id convention; ✅ `expectButtonsPresent()`/`buttonsPresent()` confirmed live against 9 real buttons (Sample Charts, Area page) | ✅ click methods + an auto-generated non-mutating presence assertion per page, for every labeled button |
 | Region (generic) | ✅ (type/name/source) | ✅ `ApexRegion` — confirmed on 2 widget types | ❌ region-id convention still open |
 | Interactive Report | ✅ | 🚧 `ApexRegion` only — search/sort/pagination confirmed private, no public API | ❌ |
 | Cards | ✅ | ✅ `ApexCardsRegion` — `getRecords()`/`getModel()` confirmed broken | ❌ not wired into generator yet |

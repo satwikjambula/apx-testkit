@@ -27,7 +27,7 @@
  * skips cleanly if either is unset. Neither credential is hardcoded here.
  */
 import { expect, test } from '@playwright/test';
-import { ApexChartRegion, ApexRegion, login } from '@apx/testkit';
+import { ApexChartRegion, ApexRegion, expectButtonsPresent, login } from '@apx/testkit';
 
 const BASE =
   'https://g9323cdc071900d-tjta51y2tod5o8ej.adb.us-ashburn-1.oraclecloudapps.com/ords/r/satwik/sample-charts';
@@ -54,6 +54,19 @@ test('ApexRegion.refresh() against a real Chart region (Area page)', async ({ pa
   // that region's `advanced { htmlDomId: area1 }` override.
   const chart = new ApexRegion(page, 'area1');
   await chart.refresh();
+});
+
+test('expectButtonsPresent() against real, labeled .apx buttons (Area page)', async ({ page }) => {
+  await page.getByRole('link', { name: 'Area', exact: true }).click();
+  await page.waitForLoadState('domcontentloaded');
+
+  // Real button labels declared in the Area page's export -- confirmed via
+  // examples/verified-apps/sample-charts/generated/p00002-area.spec.ts,
+  // exactly what @apx/testgen auto-emits for this page's labeled buttons.
+  await expectButtonsPresent(page, [
+    'Curved', 'Horizontal', 'None', 'Centered Segmented', 'Stack', 'Stepped',
+    'Straight', 'Unstack', 'Vertical',
+  ]);
 });
 
 test('ApexChartRegion.getOption()/setOption() against a real Chart region (Pie page)', async ({ page }) => {
