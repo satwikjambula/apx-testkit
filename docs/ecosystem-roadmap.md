@@ -360,6 +360,23 @@ entry above. `sample-calendar` remains the highest-leverage open target.
   chrome) — not a page-content region. No ground truth exists here for
   "Tree region" as the plan envisions it (e.g. a hierarchical data browser).
 
+- **Metadata-driven analysis layer** (workflow discovery, navigation
+  graphs, CRUD detection, dependency graphs, scenario generation, deeper
+  coverage analysis than `apx-coverage`'s current touch-cross-reference).
+  Would consume the semantic AST and produce analysis artifacts, never
+  touching parsing or runtime directly — a genuinely new package
+  (`packages/analysis` or similar), not an extension of `packages/generator`.
+  **No such capability exists in this codebase today** — this entry exists
+  specifically so the idea isn't lost, not because work has started. A
+  standing "Analysis Engineer" agent role was proposed alongside this and
+  deliberately NOT added to `.claude/agents/` for the same reason ADR-004
+  already governs everywhere else in this project: there's nothing yet
+  for an agent to own. Build the capability first, against a real,
+  concrete use case (not a hypothetical one) — the agent, if still
+  useful once something real exists, follows from that, not the other
+  way around. Product Architect (`/product`) is the gate for deciding
+  when a concrete proposal here clears that bar.
+
 ## Sequencing note
 
 Given the current state (M3 engineering-complete, M4 launch-prep done,

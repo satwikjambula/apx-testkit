@@ -1,5 +1,6 @@
 # Checklist: before considering any change "done" / before a release
 
+Release Engineer's domain (`/release`) — the final gate before tagging.
 The full verification pass. Run this before every commit that touches
 `packages/*`, and again, in full, before tagging a release.
 

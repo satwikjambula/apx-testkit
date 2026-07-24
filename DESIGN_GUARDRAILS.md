@@ -75,7 +75,9 @@ line lives in `.ai/ADR/`; this file is the enforceable summary.
 - `.ai/ADR/` — the four decisions this file summarizes, with full context.
 - `.ai/knowledge/` — what each package actually does today.
 - `.ai/checklists/` — step-by-step procedures for common changes.
-- `.claude/agents/` — six role-scoped subagents (Software Architect,
-  Oracle APEX Architect, Compiler/Parser Engineer, Runtime & Test
-  Automation Engineer, QA/Verification Engineer, Documentation & DX
-  Engineer), each reading a subset of the above relevant to their domain.
+- `.claude/agents/` — eight role-scoped subagents, organized by decision
+  authority (Product Architect, Software Architect, Oracle APEX
+  Architect, Compiler/Parser Engineer, Runtime & Test Automation
+  Engineer, QA/Verification Engineer, Documentation & DX Engineer,
+  Release Engineer), each reading a subset of the above relevant to
+  their domain.
