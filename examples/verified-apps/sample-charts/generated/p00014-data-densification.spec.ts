@@ -7,7 +7,9 @@
  * (./p00014-data-densification.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, multi-series-chart-densified-sorted-by-label-desc, multi-series-chart-stacked-with-stack-label, multi-series-chart-using-order-by, region-display-selector, single-series-chart-using-order-by-value-asc
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), multi-series-chart-densified-sorted-by-label-desc (chart), multi-series-chart-stacked-with-stack-label (chart), multi-series-chart-using-order-by (chart), region-display-selector (regionDisplaySelector), single-series-chart-using-order-by-value-asc (chart).
+ * Chart type-check emitted for 1 region(s) with a known runtime id (htmlDomId set).
+ * 3 chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): multi-series-chart-densified-sorted-by-label-desc, multi-series-chart-stacked-with-stack-label, multi-series-chart-using-order-by.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), breadcrumb (breadcrumb), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, ApexChartRegion, normalizeTitle, login } from '@apx/testkit';
 import { DataDensificationPage } from './p00014-data-densification.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -48,5 +50,28 @@ test.describe('page 14: Data Densification [requires auth]', () => {
     const po = new DataDensificationPage(page);
     await po.goto();
     expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Data Densification'));
+  });
+
+  test('every Chart region with a known runtime id resolves a real chart type (1 region)', async ({ page }) => {
+    const po = new DataDensificationPage(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [['bar_1', 'bar']];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
   });
 });

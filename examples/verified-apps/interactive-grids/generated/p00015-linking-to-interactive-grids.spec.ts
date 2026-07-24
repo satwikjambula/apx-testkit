@@ -7,7 +7,8 @@
  * (./p00015-linking-to-interactive-grids.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: breadcrumb, container, interactive-grid, overview-linking-to-interactive-grids, report-linking-examples
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): breadcrumb (breadcrumb), container (staticContent), interactive-grid (interactiveGrid), overview-linking-to-interactive-grids (staticContent), report-linking-examples (list).
+ * 1 Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): interactive-grid.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): breadcrumb (breadcrumb), container (staticContent), overview-linking-to-interactive-grids (staticContent), report-linking-examples (list).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

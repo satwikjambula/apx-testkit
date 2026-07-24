@@ -566,6 +566,13 @@ See `spike/tests/interactive-grid-demo.spec.ts` for the full working
 example, and docs/quirks/26.1.json for both findings with complete
 evidence.
 
+**Auto-generated assertion**: `@apx/testgen` emits a test per page for
+every Interactive Grid region whose `htmlDomId` is set (ADR-003 layer 1)
+— `expect(typeof await ig.getCurrentViewId()).toBe('string')`, confirming
+the region wired up correctly. Regions without `htmlDomId` are listed in
+the generated file's header comment as explicitly skipped, not silently
+omitted — their runtime id is genuinely unconstructible from static data.
+
 ---
 
 ### 2.12 Dynamic Actions (metadata only)
@@ -691,6 +698,20 @@ See `spike/tests/chart-demo.spec.ts` for the full working example, and
 docs/quirks/26.1.json (`chart-region-widget-returns-null`,
 `chart-widget-initialization-race`, `region-id-not-static-id`) for all
 three findings with complete evidence.
+
+**Auto-generated assertion**: `@apx/testgen` emits a test per page for
+every Chart region whose `htmlDomId` is set, waiting for the
+initialization-race precondition automatically and asserting the live
+type resolves to a real, non-empty string. This is deliberately **not**
+an exact-match assertion against the declared `chartSettings.type` —
+confirmed live that APEX's declarative `donut` type reports as JET's
+`pie` at runtime (JET has no separate donut widget type; APEX's donut is
+`pie` + a nonzero `styleDefaults.pieInnerRadius`). Asserting equality
+broadly across all 17 declared type values would have been an unverified
+assumption, not a safe generalization — see docs/quirks/26.1.json
+`chart-declared-type-not-runtime-type` for the full finding, including
+which two values (`pie`, `area`) are confirmed to match their declared
+type directly.
 
 ---
 

@@ -7,7 +7,9 @@
  * (./p00025-combination.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, combination-chart-data-label-positions, combination-chart-information-data-label-positions, combination-chart-information-regular-v-mixed-frequency-time-axis, combination-chart-information-y-axis-value-formatting, combination-chart-regular-v-mixed-frequency-time-axis, combination-chart-y-axis-value-formatting, mixed-frequency-time-axis, region-display-selector, regular-time-axis
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), combination-chart-data-label-positions (chart), combination-chart-information-data-label-positions (staticContent), combination-chart-information-regular-v-mixed-frequency-time-axis (staticContent), combination-chart-information-y-axis-value-formatting (staticContent), combination-chart-regular-v-mixed-frequency-time-axis (staticContent), combination-chart-y-axis-value-formatting (chart), mixed-frequency-time-axis (chart), region-display-selector (regionDisplaySelector), regular-time-axis (chart).
+ * Chart type-check emitted for 2 region(s) with a known runtime id (htmlDomId set).
+ * 2 chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): combination-chart-y-axis-value-formatting, mixed-frequency-time-axis.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), breadcrumb (breadcrumb), combination-chart-information-data-label-positions (staticContent), combination-chart-information-regular-v-mixed-frequency-time-axis (staticContent), combination-chart-information-y-axis-value-formatting (staticContent), combination-chart-regular-v-mixed-frequency-time-axis (staticContent), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, expectButtonsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectButtonsPresent, ApexChartRegion, normalizeTitle, login } from '@apx/testkit';
 import { CombinationPage } from './p00025-combination.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -60,5 +62,28 @@ test.describe('page 25: Combination [requires auth]', () => {
     const po = new CombinationPage(page);
     await po.goto();
     await expectButtonsPresent(page, ['Curved', 'None', 'Centered Segmented', 'Stepped', 'Straight']);
+  });
+
+  test('every Chart region with a known runtime id resolves a real chart type (2 regions)', async ({ page }) => {
+    const po = new CombinationPage(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [['combo1', 'combination'], ['regTime', 'combination']];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
   });
 });

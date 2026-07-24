@@ -7,7 +7,7 @@
  * (./p00005-restaurant.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: restaurant-information, restaurant-items
  * Region resolve-check emitted for 1 interactiveReport/cards/facetedSearch region(s) below (ADR-003 htmlDomId-resolved where set).
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): restaurant-items (themeTemplateComponent/contentRow).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): restaurant-items (themeTemplateComponent/contentRow).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

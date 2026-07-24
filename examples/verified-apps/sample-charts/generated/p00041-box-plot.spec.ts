@@ -7,7 +7,8 @@
  * (./p00041-box-plot.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumbs, grades-custom-q2-q3-colours, grades-mixed-series-types, grades-multi-series, grades-single-series, information, rds, samples-report-data, survey-results, survey-results-normalised-tables, survey-sample-data-time-axis
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumbs (breadcrumb), grades-custom-q2-q3-colours (chart), grades-mixed-series-types (chart), grades-multi-series (chart), grades-single-series (chart), information (staticContent), rds (regionDisplaySelector), samples-report-data (classicReport), survey-results (chart), survey-results-normalised-tables (chart), survey-sample-data-time-axis (chart).
+ * 7 chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): grades-custom-q2-q3-colours, grades-mixed-series-types, grades-multi-series, grades-single-series, survey-results, survey-results-normalised-tables, survey-sample-data-time-axis.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), breadcrumbs (breadcrumb), information (staticContent), rds (regionDisplaySelector), samples-report-data (classicReport).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

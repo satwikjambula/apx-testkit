@@ -7,7 +7,8 @@
  * (./p00047-tasks-per-project.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, tasks-report
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), tasks-report (interactiveGrid).
+ * Interactive Grid view-check emitted for 1 region(s) with a known runtime id (htmlDomId set).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), breadcrumb (breadcrumb).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +23,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, ApexInteractiveGridRegion, normalizeTitle, login } from '@apx/testkit';
 import { TasksPerProjectPage } from './p00047-tasks-per-project.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -48,5 +49,14 @@ test.describe('page 47: Tasks per Project [requires auth]', () => {
     const po = new TasksPerProjectPage(page);
     await po.goto();
     expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Tasks per Project'));
+  });
+
+  test('every Interactive Grid region with a known runtime id resolves a current view (1 region)', async ({ page }) => {
+    const po = new TasksPerProjectPage(page);
+    await po.goto();
+    for (const id of ['tasksRep']) {
+      const ig = new ApexInteractiveGridRegion(page, id);
+      expect(typeof await ig.getCurrentViewId()).toBe('string');
+    }
   });
 });

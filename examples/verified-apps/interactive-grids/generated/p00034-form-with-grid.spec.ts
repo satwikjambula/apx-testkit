@@ -7,7 +7,8 @@
  * (./p00034-form-with-grid.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: breadcrumb, change-control, employees, overview-form-with-grid
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): breadcrumb (breadcrumb), change-control (staticContent), employees (interactiveGrid), overview-form-with-grid (staticContent).
+ * Interactive Grid view-check emitted for 1 region(s) with a known runtime id (htmlDomId set).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): breadcrumb (breadcrumb), change-control (staticContent), overview-form-with-grid (staticContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +23,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, expectButtonsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectButtonsPresent, ApexInteractiveGridRegion, normalizeTitle, login } from '@apx/testkit';
 import { FormWithGridPage } from './p00034-form-with-grid.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -67,5 +68,14 @@ test.describe('page 34: Form with Grid [requires auth]', () => {
     const po = new FormWithGridPage(page);
     await po.goto();
     await expectButtonsPresent(page, ['Cancel', 'Next', 'Previous', 'Apply Changes']);
+  });
+
+  test('every Interactive Grid region with a known runtime id resolves a current view (1 region)', async ({ page }) => {
+    const po = new FormWithGridPage(page);
+    await po.goto();
+    for (const id of ['emp']) {
+      const ig = new ApexInteractiveGridRegion(page, id);
+      expect(typeof await ig.getCurrentViewId()).toBe('string');
+    }
   });
 });

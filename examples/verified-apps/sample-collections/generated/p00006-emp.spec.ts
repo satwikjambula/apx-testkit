@@ -7,7 +7,7 @@
  * (./p00006-emp.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, container, eba-demo-cs-emp-table, eba-demo-cs-emp-table-sql-source, emp-collection, emp-collection-sql-source
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), container (staticContent), eba-demo-cs-emp-table (classicReport), eba-demo-cs-emp-table-sql-source (plugin/sourceDisplay), emp-collection (classicReport), emp-collection-sql-source (plugin/sourceDisplay).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), breadcrumb (breadcrumb), container (staticContent), eba-demo-cs-emp-table (classicReport), eba-demo-cs-emp-table-sql-source (plugin/sourceDisplay), emp-collection (classicReport), emp-collection-sql-source (plugin/sourceDisplay).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

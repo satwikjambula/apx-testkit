@@ -7,7 +7,9 @@
  * (./p00004-pie.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumbs, colors-set-via-js-code, colors-set-via-sql-query, donut-chart-new-declarative-label-option, donut-chart-new-declarative-label-option-information, donut-chart-sorting, donut-chart-sorting-information, donut-chart-v2-labels-outside-slice, master-detail-chart-links, master-detail-chart-links-information, orders-detail-chart, pie-chart, pie-chart-information, pie-chart-series-colors, pie-chart-series-colors-information, products-master-chart, region-display-selector
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumbs (breadcrumb), colors-set-via-js-code (chart), colors-set-via-sql-query (chart), donut-chart-new-declarative-label-option (chart), donut-chart-new-declarative-label-option-information (staticContent), donut-chart-sorting (chart), donut-chart-sorting-information (staticContent), donut-chart-v2-labels-outside-slice (chart), master-detail-chart-links (staticContent), master-detail-chart-links-information (staticContent), orders-detail-chart (chart), pie-chart (chart), pie-chart-information (staticContent), pie-chart-series-colors (staticContent), pie-chart-series-colors-information (staticContent), products-master-chart (chart), region-display-selector (regionDisplaySelector).
+ * Chart type-check emitted for 2 region(s) with a known runtime id (htmlDomId set).
+ * 6 chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): colors-set-via-js-code, colors-set-via-sql-query, donut-chart-new-declarative-label-option, donut-chart-v2-labels-outside-slice, orders-detail-chart, products-master-chart.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), breadcrumbs (breadcrumb), donut-chart-new-declarative-label-option-information (staticContent), donut-chart-sorting-information (staticContent), master-detail-chart-links (staticContent), master-detail-chart-links-information (staticContent), pie-chart-information (staticContent), pie-chart-series-colors (staticContent), pie-chart-series-colors-information (staticContent), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, expectButtonsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectButtonsPresent, ApexChartRegion, normalizeTitle, login } from '@apx/testkit';
 import { PiePage } from './p00004-pie.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -60,5 +62,28 @@ test.describe('page 4: Pie [requires auth]', () => {
     const po = new PiePage(page);
     await po.goto();
     await expectButtonsPresent(page, ['Ascending', 'Decrease Legend Size', 'Descending', 'Increase Legend Size']);
+  });
+
+  test('every Chart region with a known runtime id resolves a real chart type (2 regions)', async ({ page }) => {
+    const po = new PiePage(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [['donut1', 'donut'], ['pie1', 'pie']];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
   });
 });

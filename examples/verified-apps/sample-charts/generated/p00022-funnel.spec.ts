@@ -7,7 +7,8 @@
  * (./p00022-funnel.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, breadcrumb, funnel-3d-effect, funnel-multi-select-selection-mode, funnel-multi-select-selection-mode-chart-information, funnel-target-value, funnel-target-value-chart-information, region-display-selector
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), breadcrumb (breadcrumb), funnel-3d-effect (chart), funnel-multi-select-selection-mode (chart), funnel-multi-select-selection-mode-chart-information (staticContent), funnel-target-value (chart), funnel-target-value-chart-information (staticContent), region-display-selector (regionDisplaySelector).
+ * Chart type-check emitted for 3 region(s) with a known runtime id (htmlDomId set).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), breadcrumb (breadcrumb), funnel-multi-select-selection-mode-chart-information (staticContent), funnel-target-value-chart-information (staticContent), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +23,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, ApexChartRegion, normalizeTitle, login } from '@apx/testkit';
 import { FunnelPage } from './p00022-funnel.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -54,5 +55,28 @@ test.describe('page 22: Funnel [requires auth]', () => {
     const po = new FunnelPage(page);
     await po.goto();
     await expectItemsPresent(page, ['P22_SERIES', 'P22_SERIES_2']);
+  });
+
+  test('every Chart region with a known runtime id resolves a real chart type (3 regions)', async ({ page }) => {
+    const po = new FunnelPage(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [['3DfunnelTarget', 'funnel'], ['funnel', 'funnel'], ['funnelTarget', 'funnel']];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
   });
 });

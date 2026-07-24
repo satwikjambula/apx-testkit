@@ -134,6 +134,17 @@
       "status": "confirmed, workaround verified",
       "rootCauseDiagnosed": true,
       "source": "packages/testkit/src/components/chart.ts, spike/tests/chart-demo.spec.ts"
+    },
+    {
+      "id": "chart-declared-type-not-runtime-type",
+      "component": "Chart (ApexRegion.chartSettings.type vs. live ojChart('option', 'type'))",
+      "issue": "The chart type declared in the .apx export (`chart { type: ... }`, typed as `ApexRegion.chartSettings.type`) does not always equal what the live JET widget reports via `ojChart('option', 'type')`. Found while auto-generating a Chart type-check assertion for @apx/testgen: a region declaring `chart { type: donut }` (sample-charts, region `donut-chart-sorting`, runtime id `donut1` via htmlDomId) reports `getOption('type') === 'pie'` live, NOT 'donut'. Root cause: Oracle JET's ojChart widget has no separate 'donut' type at all -- APEX's declarative 'donut' is JET's 'pie' type plus a nonzero `styleDefaults.pieInnerRadius`, confirmed present live. This is a real, deliberate APEX-level abstraction over a narrower JET type vocabulary, not a bug -- but it means asserting live-type-equals-declared-type broadly, across all 17 declared enum values, would be an unverified assumption, not a safe generalization.",
+      "evidence": "Live: region 'donut-chart-sorting' declares `chart { type: donut }` in its .apx source (confirmed by direct grep of the raw export). Live: `apex.region('donut1').widget().ojChart('option', 'type')` returns 'pie', not 'donut'. Live: the same widget's full `option()` config has `styleDefaults.pieInnerRadius` truthy, confirming the donut visual is achieved via a pie-chart style property, not a distinct chart type. Separately confirmed NOT aliased: 'pie' (region 'pie-chart', runtime id 'pie1') and 'area' (region declaring `chart { type: area }` implicitly via omission default, runtime id 'area1') both report their declared type verbatim.",
+      "reproducedAgainst": "Sample Charts gallery app (Pie page, static ids 'donut1' and 'pie1'; Area page, static id 'area1')",
+      "workaround": "@apx/testgen's auto-generated Chart assertion checks that the live type resolves to a real, non-empty string (proves the widget wired up correctly) -- it does NOT assert equality against the declared chartSettings.type, specifically because of this finding. If you need to assert a SPECIFIC declared type live, confirm the mapping for that exact type value first (only 'pie' and 'area' are confirmed direct matches so far; 'donut' is confirmed to map to 'pie'; the other 14 enum values -- boxPlot, bubble, combination, statusMeterGauge, funnel, gantt, line, lineWithArea, polar, pyramid, radar, range, scatter, stock -- are unconfirmed either way).",
+      "status": "confirmed for one alias (donut->pie) and two direct matches (pie, area); the remaining 14 declared type values are unconfirmed",
+      "rootCauseDiagnosed": true,
+      "source": "packages/generator/src/lib.ts (Chart auto-assertion), spike/tests/chart-demo.spec.ts, packages/parser/src/ast.ts (ApexChartSettings)"
     }
   ]
 }

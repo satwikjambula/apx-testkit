@@ -7,7 +7,9 @@
  * (./p00030-workflow-dashboard.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: active-workflows, activities, activities-2, average-completion-time, breadcrumb, details, faulted-workflows, overview, overview-2, overview-3, performance, region-display-selector, workflows-by-state
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): active-workflows (staticContent), activities (chart), activities-2 (chart), average-completion-time (chart), breadcrumb (breadcrumb), details (chart), faulted-workflows (staticContent), overview (chart), overview-2 (chart), overview-3 (chart), performance (staticContent), region-display-selector (regionDisplaySelector), workflows-by-state (staticContent).
+ * Chart type-check emitted for 4 region(s) with a known runtime id (htmlDomId set).
+ * 3 chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): overview, overview-2, overview-3.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): active-workflows (staticContent), breadcrumb (breadcrumb), faulted-workflows (staticContent), performance (staticContent), region-display-selector (regionDisplaySelector), workflows-by-state (staticContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, ApexChartRegion, normalizeTitle, login } from '@apx/testkit';
 import { WorkflowDashboardPage } from './p00030-workflow-dashboard.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -54,5 +56,28 @@ test.describe('page 30: Workflow Dashboard [requires auth]', () => {
     const po = new WorkflowDashboardPage(page);
     await po.goto();
     await expectItemsPresent(page, ['P30_ACTIVE_DEF_NAME', 'P30_FAULT_DEF_NAME', 'P30_STATE', 'P30_TIME_UNIT']);
+  });
+
+  test('every Chart region with a known runtime id resolves a real chart type (4 regions)', async ({ page }) => {
+    const po = new WorkflowDashboardPage(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [['active-workload-details', 'bar'], ['fault-workload-details', 'bar'], ['performance-chart', 'bar'], ['workflow-state-details', 'bar']];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
   });
 });

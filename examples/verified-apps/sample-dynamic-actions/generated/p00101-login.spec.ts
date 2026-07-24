@@ -7,7 +7,7 @@
  * (./p00101-login.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: sample-dynamic-actions
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): sample-dynamic-actions (staticContent).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): sample-dynamic-actions (staticContent).
  */
 import { expect, test } from '@playwright/test';
 import { expectItemsPresent, expectButtonsPresent, normalizeTitle } from '@apx/testkit';

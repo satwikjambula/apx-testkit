@@ -7,7 +7,7 @@
  * (./p00004-home.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: categories, credits, delivery-free, favorites, info, popular-near-you, premium, promotionals, today-s-offers
  * Region resolve-check emitted for 5 interactiveReport/cards/facetedSearch region(s) below (ADR-003 htmlDomId-resolved where set).
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): credits (staticContent), info (staticContent), premium (staticContent), promotionals (staticContent).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): credits (staticContent), info (staticContent), premium (staticContent), promotionals (staticContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

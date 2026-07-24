@@ -7,7 +7,6 @@
  * (./p09000-get-image.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: (none)
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * 
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

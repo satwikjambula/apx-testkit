@@ -7,7 +7,7 @@
  * (./p00025-prepare-custom-data-1.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, buttons, loaded-file, progress, rds, upload-a-file, upload-file
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), buttons (staticContent), loaded-file (staticContent), progress (list), rds (regionDisplaySelector), upload-a-file (staticContent), upload-file (staticContent).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), buttons (staticContent), loaded-file (staticContent), progress (list), rds (regionDisplaySelector), upload-a-file (staticContent), upload-file (staticContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

@@ -90,8 +90,26 @@ function specFor(page: ApexPage): string {
   const labeledButtons = page.buttons.filter((b) => b.label);
   const allButtonLabels = labeledButtons.map((b) => `'${esc(b.label!)}'`).join(', ');
   const resolvableRegions = page.regions.filter((r) => r.type && RESOLVABLE_REGION_TYPES.has(r.type));
-  const skippedRegions = page.regions.filter((r) => !r.type || !RESOLVABLE_REGION_TYPES.has(r.type));
   const resolvableRegionIds = resolvableRegions.map((r) => `'${esc(resolvedRegionId(r))}'`).join(', ');
+
+  // Chart/Interactive Grid: only auto-wireable when htmlDomId predicts the
+  // runtime id (ADR-003 layer 1) -- without it, the runtime id is an
+  // APEX-internal auto-generated id with no field anywhere in the static
+  // export, genuinely unconstructible (layer 3). Never guess.
+  const wiredChartRegions = page.regions.filter((r) => r.type === 'chart' && r.htmlDomId && r.chartSettings);
+  const unwiredChartRegions = page.regions.filter((r) => r.type === 'chart' && !(r.htmlDomId && r.chartSettings));
+  const wiredIgRegions = page.regions.filter((r) => r.type === 'interactiveGrid' && r.htmlDomId);
+  const unwiredIgRegions = page.regions.filter((r) => r.type === 'interactiveGrid' && !r.htmlDomId);
+
+  const skippedRegions = page.regions.filter(
+    (r) =>
+      !r.type ||
+      (!RESOLVABLE_REGION_TYPES.has(r.type) &&
+        !wiredChartRegions.includes(r) &&
+        !unwiredChartRegions.includes(r) &&
+        !wiredIgRegions.includes(r) &&
+        !unwiredIgRegions.includes(r)),
+  );
   const firstText = visible.find((i) => i.type === 'textField' || i.type === 'textarea');
   const itemProp = firstText ? computeItemPropNames(page).get(firstText.identifier) : undefined;
   const className = pageObjectClassName(page);
@@ -105,12 +123,28 @@ function specFor(page: ApexPage): string {
  * Navigation and item access go through the generated page object
  * (./${poBase}.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: ${page.regions.map((r) => r.identifier).join(', ') || '(none)'}
- * ${resolvableRegions.length > 0
-     ? `Region resolve-check emitted for ${resolvableRegions.length} interactiveReport/cards/facetedSearch region(s) below (ADR-003 htmlDomId-resolved where set).`
-     : 'No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.'}
- * ${skippedRegions.length > 0
-     ? `Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): ${skippedRegions.map((r) => `${r.identifier} (${r.type ?? 'untyped'})`).join(', ')}.`
-     : ''}${isPublic ? '' : `
+${[
+   resolvableRegions.length > 0
+     ? ` * Region resolve-check emitted for ${resolvableRegions.length} interactiveReport/cards/facetedSearch region(s) below (ADR-003 htmlDomId-resolved where set).`
+     : ' * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.',
+   wiredChartRegions.length > 0
+     ? ` * Chart type-check emitted for ${wiredChartRegions.length} region(s) with a known runtime id (htmlDomId set).`
+     : null,
+   unwiredChartRegions.length > 0
+     ? ` * ${unwiredChartRegions.length} chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredChartRegions.map((r) => r.identifier).join(', ')}.`
+     : null,
+   wiredIgRegions.length > 0
+     ? ` * Interactive Grid view-check emitted for ${wiredIgRegions.length} region(s) with a known runtime id (htmlDomId set).`
+     : null,
+   unwiredIgRegions.length > 0
+     ? ` * ${unwiredIgRegions.length} Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredIgRegions.map((r) => r.identifier).join(', ')}.`
+     : null,
+   skippedRegions.length > 0
+     ? ` * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): ${skippedRegions.map((r) => `${r.identifier} (${r.type ?? 'untyped'})`).join(', ')}.`
+     : null,
+ ]
+   .filter((line): line is string => line !== null)
+   .join('\n')}${isPublic ? '' : `
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -125,7 +159,7 @@ function specFor(page: ApexPage): string {
  * bug to work around here.`}
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 ? ', expectRegionsResolve' : ''}, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
+import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 ? ', expectRegionsResolve' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
 import { ${className} } from './${poBase}.js';${isPublic ? '' : `
 import { APP_BASE } from '../playwright.config.js';`}
 `;
@@ -191,6 +225,56 @@ import { APP_BASE } from '../playwright.config.js';`}
     const po = new ${className}(page);
     await po.goto();
     await expectRegionsResolve(page, [${resolvableRegionIds}]);
+  });`);
+  }
+
+  if (wiredChartRegions.length > 0) {
+    // NOT an exact-match assertion against the declared chartSettings.type
+    // -- confirmed live that APEX's declarative chart type does not always
+    // equal what the underlying JET widget reports: a region declaring
+    // `chart { type: donut }` reports `getOption('type') === 'pie'` at
+    // runtime (JET has no separate "donut" type; APEX's donut is JET's
+    // pie + styleDefaults.pieInnerRadius). `area`/`pie` were separately
+    // confirmed to match their declared type directly, but that's not
+    // exhaustive across all 17 declared type values -- asserting equality
+    // broadly would assume more than verified (ADR-004). See
+    // docs/quirks/26.1.json `chart-declared-type-not-runtime-type`.
+    const chartIdsWithDeclaredType = wiredChartRegions
+      .map((r) => `['${esc(resolvedRegionId(r))}', '${esc(r.chartSettings!.type)}']`)
+      .join(', ');
+    bodyParts.push(`  test('every Chart region with a known runtime id resolves a real chart type (${wiredChartRegions.length} region${wiredChartRegions.length === 1 ? '' : 's'})', async ({ page }) => {
+    const po = new ${className}(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [${chartIdsWithDeclaredType}];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
+  });`);
+  }
+
+  if (wiredIgRegions.length > 0) {
+    const igIds = wiredIgRegions.map((r) => `'${esc(resolvedRegionId(r))}'`).join(', ');
+    bodyParts.push(`  test('every Interactive Grid region with a known runtime id resolves a current view (${wiredIgRegions.length} region${wiredIgRegions.length === 1 ? '' : 's'})', async ({ page }) => {
+    const po = new ${className}(page);
+    await po.goto();
+    for (const id of [${igIds}]) {
+      const ig = new ApexInteractiveGridRegion(page, id);
+      expect(typeof await ig.getCurrentViewId()).toBe('string');
+    }
   });`);
   }
 

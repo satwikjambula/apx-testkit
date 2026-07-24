@@ -7,7 +7,9 @@
  * (./p00033-stacked.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: breadcrumb, comments, milestones, overview-stacked, projects, region-display-selector, tasks
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): breadcrumb (breadcrumb), comments (interactiveGrid), milestones (interactiveGrid), overview-stacked (staticContent), projects (interactiveGrid), region-display-selector (regionDisplaySelector), tasks (interactiveGrid).
+ * Interactive Grid view-check emitted for 3 region(s) with a known runtime id (htmlDomId set).
+ * 1 Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): comments.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): breadcrumb (breadcrumb), overview-stacked (staticContent), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, expectButtonsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectButtonsPresent, ApexInteractiveGridRegion, normalizeTitle, login } from '@apx/testkit';
 import { StackedPage } from './p00033-stacked.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -54,5 +56,14 @@ test.describe('page 33: Stacked [requires auth]', () => {
     const po = new StackedPage(page);
     await po.goto();
     await expectButtonsPresent(page, ['Calendar', 'Save']);
+  });
+
+  test('every Interactive Grid region with a known runtime id resolves a current view (3 regions)', async ({ page }) => {
+    const po = new StackedPage(page);
+    await po.goto();
+    for (const id of ['milestones', 'projects', 'tasks']) {
+      const ig = new ApexInteractiveGridRegion(page, id);
+      expect(typeof await ig.getCurrentViewId()).toBe('string');
+    }
   });
 });

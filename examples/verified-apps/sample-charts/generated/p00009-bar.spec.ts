@@ -7,7 +7,9 @@
  * (./p00009-bar.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, bar-chart-dual-y-axis-with-formatted-labels, bar-chart-series-colors, bar-chart-series-colors-information, bar-chart-series-name-column-mapping, bar-chart-series-name-column-mapping-information, bar-chart-stack-label-stack-category, bar-chart-stack-label-stack-category-information, bar-chart-stacked, bar-chart-stacked-percent, bar-chart-stacked-percent-information, breadcrumb, custom-colors-via-javascript, default-color-palette, region-display-selector, series-level-color-attribute, sql-series-defined-colors
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), bar-chart-dual-y-axis-with-formatted-labels (chart), bar-chart-series-colors (staticContent), bar-chart-series-colors-information (staticContent), bar-chart-series-name-column-mapping (chart), bar-chart-series-name-column-mapping-information (staticContent), bar-chart-stack-label-stack-category (chart), bar-chart-stack-label-stack-category-information (staticContent), bar-chart-stacked (chart), bar-chart-stacked-percent (chart), bar-chart-stacked-percent-information (staticContent), breadcrumb (breadcrumb), custom-colors-via-javascript (chart), default-color-palette (chart), region-display-selector (regionDisplaySelector), series-level-color-attribute (chart), sql-series-defined-colors (chart).
+ * Chart type-check emitted for 3 region(s) with a known runtime id (htmlDomId set).
+ * 6 chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): bar-chart-series-name-column-mapping, bar-chart-stacked, bar-chart-stacked-percent, custom-colors-via-javascript, series-level-color-attribute, sql-series-defined-colors.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), bar-chart-series-colors (staticContent), bar-chart-series-colors-information (staticContent), bar-chart-series-name-column-mapping-information (staticContent), bar-chart-stack-label-stack-category-information (staticContent), bar-chart-stacked-percent-information (staticContent), breadcrumb (breadcrumb), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, expectButtonsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectButtonsPresent, ApexChartRegion, normalizeTitle, login } from '@apx/testkit';
 import { BarPage } from './p00009-bar.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -54,5 +56,28 @@ test.describe('page 9: Bar [requires auth]', () => {
     const po = new BarPage(page);
     await po.goto();
     await expectButtonsPresent(page, ['Horizontal', 'Stack', 'Unstack', 'Vertical']);
+  });
+
+  test('every Chart region with a known runtime id resolves a real chart type (3 regions)', async ({ page }) => {
+    const po = new BarPage(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [['dualChart', 'bar'], ['stackCategoryChart', 'bar'], ['bar_1', 'bar']];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
   });
 });

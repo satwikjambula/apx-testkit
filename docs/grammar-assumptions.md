@@ -648,6 +648,71 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         all 13 real exports; determinism reconfirmed (regenerate twice,
         byte-identical).
 
+- [x] **Chart/Interactive Grid auto-wiring (item 3/3 of the auto-assertions
+      scope) + two real bugs found and fixed along the way.**
+      `@apx/testgen` now emits, per page, a test per Chart/Interactive
+      Grid region whose `htmlDomId` is set (ADR-003 layer 1): Chart gets a
+      live type-resolution check; Interactive Grid gets a
+      `getCurrentViewId()` check. Regions without `htmlDomId` are listed
+      in the generated file's header comment as explicitly skipped (ADR-003
+      layer 3 -- genuinely unconstructible from static data), never a
+      silent omission.
+      - **Real bug #1, found while starting this item**: CI has been
+        failing on every push since a prior commit (`d1b5702`, before this
+        session) renamed the generator's test fixture from `mini-export`
+        to `reference-fixtures` without updating
+        `.github/workflows/ci.yml`, which still referenced the old path.
+        Confirmed via `gh run list` (last 5 runs all "failure") and the
+        failure log ("Export directory not found"). This means the CI
+        badge added to README earlier this session was accurately
+        showing red. Fixed by updating the path; verified by running
+        every CI step locally end-to-end.
+      - **Real bug #2**: `coverage.ts`'s `summarizeRegions()` matched a
+        recorded region touch only against the `.apx` export identifier,
+        never `region.htmlDomId`. Per ADR-003, `recordCoverageTouch`
+        logs the RUNTIME id (`htmlDomId ?? identifier`), so any region
+        with an `htmlDomId` override was silently under-reported as
+        untouched even when genuinely exercised -- confirmed on real
+        Chart, Interactive Grid, AND Interactive Report regions this
+        session (three region types, not the two originally suspected).
+        Fixed by matching against `r.htmlDomId ?? r.identifier` while
+        still displaying the export identifier in the report. Verified
+        against the REAL touch logs captured earlier this session
+        (`spike/tests/chart-demo.spec.ts`,
+        `interactive-grid-demo.spec.ts`) -- previously-"untouched"
+        regions now correctly show touched. `@apx/testgen` never had a
+        test runner before this; added `vitest` (matching parser/testkit's
+        version) and 5 regression tests, wired into CI as its own step.
+      - **Real finding #3, discovered while building the Chart
+        auto-assertion**: APEX's declarative chart type does NOT always
+        equal the live JET widget's reported type. A region declaring
+        `chart { type: donut }` (`sample-charts`, `donut-chart-sorting`,
+        runtime id `donut1` via `htmlDomId`) reports
+        `getOption('type') === 'pie'` live, confirmed directly. Root
+        cause, also confirmed live: Oracle JET's `ojChart` widget has no
+        separate "donut" type at all -- APEX's donut is JET's `pie` type
+        plus a nonzero `styleDefaults.pieInnerRadius`. `pie` and `area`
+        were separately confirmed to report their declared type
+        verbatim, but that's not exhaustive across the 17 declared enum
+        values. Consequence: the auto-generated Chart assertion checks
+        that the live type resolves to a real, non-empty string --
+        deliberately NOT an exact-match assertion against the declared
+        `chartSettings.type`, since that would have asserted more than
+        verified (ADR-004). Documented in `docs/quirks/26.1.json`
+        `chart-declared-type-not-runtime-type`.
+      - Live-verified: `spike/tests/chart-demo.spec.ts` gained two new
+        tests (the auto-generated pattern replicated exactly, and a
+        dedicated correction test proving the donut→pie mapping plus
+        `styleDefaults.pieInnerRadius`), both passing. Interactive Grid's
+        `getCurrentViewId()` auto-generated pattern was already covered
+        by the pre-existing `interactive-grid-demo.spec.ts` live spec --
+        no new test needed there.
+      - Regenerated `examples/employee-page` and all 13
+        `examples/verified-apps/` outputs; full test suite green
+        (parser 29, testkit 5, generator 5); spike typechecks clean;
+        determinism reconfirmed; zero warnings across all 13 real
+        exports.
+
 ## Still open
 
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF

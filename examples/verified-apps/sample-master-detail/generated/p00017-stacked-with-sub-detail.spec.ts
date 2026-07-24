@@ -7,7 +7,9 @@
  * (./p00017-stacked-with-sub-detail.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: breadcrumb, comments, links, milestones, overview-stacked-with-sub-detail, project-details, region-display-selector, tasks, tasks-2, to-dos
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): breadcrumb (breadcrumb), comments (interactiveGrid), links (interactiveGrid), milestones (interactiveGrid), overview-stacked-with-sub-detail (staticContent), project-details (interactiveGrid), region-display-selector (regionDisplaySelector), tasks (staticContent), tasks-2 (interactiveGrid), to-dos (interactiveGrid).
+ * Interactive Grid view-check emitted for 3 region(s) with a known runtime id (htmlDomId set).
+ * 3 Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): comments, links, to-dos.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): breadcrumb (breadcrumb), overview-stacked-with-sub-detail (staticContent), region-display-selector (regionDisplaySelector), tasks (staticContent).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, expectButtonsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectButtonsPresent, ApexInteractiveGridRegion, normalizeTitle, login } from '@apx/testkit';
 import { StackedWithSubDetailPage } from './p00017-stacked-with-sub-detail.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -54,5 +56,14 @@ test.describe('page 17: Stacked with Sub Detail [requires auth]', () => {
     const po = new StackedWithSubDetailPage(page);
     await po.goto();
     await expectButtonsPresent(page, ['Save']);
+  });
+
+  test('every Interactive Grid region with a known runtime id resolves a current view (3 regions)', async ({ page }) => {
+    const po = new StackedWithSubDetailPage(page);
+    await po.goto();
+    for (const id of ['Milestones', 'Projects', 'Tasks']) {
+      const ig = new ApexInteractiveGridRegion(page, id);
+      expect(typeof await ig.getCurrentViewId()).toBe('string');
+    }
   });
 });

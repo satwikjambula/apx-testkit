@@ -7,7 +7,8 @@
  * (./p00049-two-page-master-detail-detail.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: audit-details, breadcrumb, button-bar, comments, milestones, project-details, project-details-2, tasks
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): audit-details (staticContent), breadcrumb (breadcrumb), button-bar (staticContent), comments (classicReport), milestones (interactiveGrid), project-details (regionDisplaySelector), project-details-2 (form), tasks (interactiveGrid).
+ * 2 Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): milestones, tasks.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): audit-details (staticContent), breadcrumb (breadcrumb), button-bar (staticContent), comments (classicReport), project-details (regionDisplaySelector), project-details-2 (form).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

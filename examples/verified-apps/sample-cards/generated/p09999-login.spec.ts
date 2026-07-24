@@ -7,7 +7,7 @@
  * (./p09999-login.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: language-selector, sample-cards
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): language-selector (plSqlDynamicContent), sample-cards (staticContent).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): language-selector (plSqlDynamicContent), sample-cards (staticContent).
  */
 import { expect, test } from '@playwright/test';
 import { expectItemsPresent, expectButtonsPresent, normalizeTitle } from '@apx/testkit';

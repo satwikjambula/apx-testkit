@@ -99,3 +99,61 @@ test('ApexChartRegion.getOption()/setOption() against a real Chart region (Pie p
   // leave it as found for the next run/person.
   await chart.setOption('selectionMode', before ?? 'single');
 });
+
+test('auto-generated Chart type-check pattern, exactly as @apx/testgen emits it (Pie page, both chart regions)', async ({ page }) => {
+  await page.getByRole('link', { name: 'Pie', exact: true }).click();
+  await page.waitForLoadState('domcontentloaded');
+
+  // Exactly what examples/verified-apps/sample-charts/generated/
+  // p00004-pie.spec.ts's auto-generated Chart test does: resolve each
+  // wired region's htmlDomId, wait for ojChart readiness, confirm the
+  // live type is a real, non-empty string -- NOT an exact-match assertion
+  // against the declared chartSettings.type (see below for why).
+  const charts: Array<[string, string]> = [
+    ['donut1', 'donut'],
+    ['pie1', 'pie'],
+  ];
+  for (const [id] of charts) {
+    await page.waitForFunction((regionId) => {
+      const region = (window as any).apex?.region?.(regionId);
+      return typeof region?.widget?.()?.ojChart === 'function';
+    }, id);
+    const chart = new ApexChartRegion(page, id);
+    const liveType = await chart.getOption('type');
+    expect(typeof liveType).toBe('string');
+    expect(liveType).not.toBe('');
+  }
+});
+
+test('CORRECTION: declared chart type does NOT always equal the live JET type (donut declares "donut", reports "pie")', async ({ page }) => {
+  await page.getByRole('link', { name: 'Pie', exact: true }).click();
+  await page.waitForLoadState('domcontentloaded');
+
+  // Real, confirmed finding: this region's .apx export declares
+  // `chart { type: donut }`, but JET has no separate "donut" widget type
+  // -- APEX's donut is JET's "pie" type plus
+  // styleDefaults.pieInnerRadius (confirmed present and nonzero below).
+  // This is why the auto-generated Chart assertion (above) checks for a
+  // non-empty type string, not equality against the declared value --
+  // asserting equality here would have been a real, live-contradicted
+  // assumption, not a safe generalization. See docs/quirks/26.1.json
+  // `chart-declared-type-not-runtime-type`.
+  await page.waitForFunction(() => {
+    const region = (window as any).apex?.region?.('donut1');
+    return typeof region?.widget?.()?.ojChart === 'function';
+  });
+  const donut = new ApexChartRegion(page, 'donut1');
+  expect(await donut.getOption('type')).toBe('pie');
+  const fullConfig = (await donut.getOption()) as Record<string, unknown>;
+  const styleDefaults = fullConfig.styleDefaults as Record<string, unknown> | undefined;
+  expect(styleDefaults?.pieInnerRadius).toBeTruthy();
+
+  // Separately confirmed: NOT every declared type is aliased -- 'pie' and
+  // 'area' both report their declared type verbatim.
+  await page.waitForFunction(() => {
+    const region = (window as any).apex?.region?.('pie1');
+    return typeof region?.widget?.()?.ojChart === 'function';
+  });
+  const pie = new ApexChartRegion(page, 'pie1');
+  expect(await pie.getOption('type')).toBe('pie');
+});

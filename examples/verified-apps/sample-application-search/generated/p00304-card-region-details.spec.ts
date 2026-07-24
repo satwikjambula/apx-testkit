@@ -7,7 +7,7 @@
  * (./p00304-card-region-details.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: buttons, card-region-details-customer, card-region-details-product, card-region-details-store
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): buttons (staticContent), card-region-details-customer (form), card-region-details-product (form), card-region-details-store (form).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): buttons (staticContent), card-region-details-customer (form), card-region-details-product (form), card-region-details-store (form).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,

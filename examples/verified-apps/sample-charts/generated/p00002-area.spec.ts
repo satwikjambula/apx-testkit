@@ -7,7 +7,9 @@
  * (./p00002-area.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-page, area-chart-color-javascript-code-customization, area-chart-color-javascript-code-customization-information, area-chart-legend-javascript-code-customization, area-chart-legend-javascript-code-customization-information, area-chart-line-types, area-chart-line-types-information, area-chart-markers, area-chart-stacked, area-chart-stacked-information, area-chart-y-axis-value-formatting, breadcrumb, region-display-selector
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-page (staticContent), area-chart-color-javascript-code-customization (chart), area-chart-color-javascript-code-customization-information (staticContent), area-chart-legend-javascript-code-customization (chart), area-chart-legend-javascript-code-customization-information (staticContent), area-chart-line-types (chart), area-chart-line-types-information (staticContent), area-chart-markers (chart), area-chart-stacked (chart), area-chart-stacked-information (staticContent), area-chart-y-axis-value-formatting (chart), breadcrumb (breadcrumb), region-display-selector (regionDisplaySelector).
+ * Chart type-check emitted for 3 region(s) with a known runtime id (htmlDomId set).
+ * 3 chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): area-chart-legend-javascript-code-customization, area-chart-markers, area-chart-y-axis-value-formatting.
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-page (staticContent), area-chart-color-javascript-code-customization-information (staticContent), area-chart-legend-javascript-code-customization-information (staticContent), area-chart-line-types-information (staticContent), area-chart-stacked-information (staticContent), breadcrumb (breadcrumb), region-display-selector (regionDisplaySelector).
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -22,7 +24,7 @@
  * bug to work around here.
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent, expectButtonsPresent, normalizeTitle, login } from '@apx/testkit';
+import { expectItemsPresent, expectButtonsPresent, ApexChartRegion, normalizeTitle, login } from '@apx/testkit';
 import { AreaPage } from './p00002-area.page.js';
 import { APP_BASE } from '../playwright.config.js';
 
@@ -54,5 +56,28 @@ test.describe('page 2: Area [requires auth]', () => {
     const po = new AreaPage(page);
     await po.goto();
     await expectButtonsPresent(page, ['Curved', 'Horizontal', 'None', 'Centered Segmented', 'Stack', 'Stepped', 'Straight', 'Unstack', 'Vertical']);
+  });
+
+  test('every Chart region with a known runtime id resolves a real chart type (3 regions)', async ({ page }) => {
+    const po = new AreaPage(page);
+    await po.goto();
+    // [runtime id, declared chartSettings.type] -- the declared type is
+    // NOT asserted for equality (confirmed NOT always the same as the
+    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // docs/quirks/26.1.json). Kept here for context only.
+    const charts: Array<[string, string]> = [['area_js', 'area'], ['area2', 'area'], ['area1', 'area']];
+    for (const [id] of charts) {
+      // JET chart widgets attach ojChart asynchronously -- wait for the
+      // actual precondition (see ApexChartRegion's module doc) rather
+      // than a fixed delay.
+      await page.waitForFunction((regionId) => {
+        const region = (window as any).apex?.region?.(regionId);
+        return typeof region?.widget?.()?.ojChart === 'function';
+      }, id);
+      const chart = new ApexChartRegion(page, id);
+      const liveType = await chart.getOption('type');
+      expect(typeof liveType).toBe('string');
+      expect(liveType).not.toBe('');
+    }
   });
 });

@@ -7,7 +7,7 @@
  * (./p00014-more-information.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: approvals-and-tasks-features, breadcrumb, more-information, sample-application, using-the-sample, workflow-features
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): approvals-and-tasks-features (plugin/markdownRegion), breadcrumb (breadcrumb), more-information (staticContent), sample-application (plugin/markdownRegion), using-the-sample (plugin/markdownRegion), workflow-features (plugin/markdownRegion).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): approvals-and-tasks-features (plugin/markdownRegion), breadcrumb (breadcrumb), more-information (staticContent), sample-application (plugin/markdownRegion), using-the-sample (plugin/markdownRegion), workflow-features (plugin/markdownRegion).
  */
 import { expect, test } from '@playwright/test';
 import { expectItemsPresent, normalizeTitle } from '@apx/testkit';

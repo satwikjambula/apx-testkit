@@ -7,7 +7,7 @@
  * (./p00002-discover.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: background-image, discover-image, discover-text
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): background-image (staticContent), discover-image (staticContent), discover-text (staticContent).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): background-image (staticContent), discover-image (staticContent), discover-text (staticContent).
  */
 import { expect, test } from '@playwright/test';
 import { expectItemsPresent, expectButtonsPresent, normalizeTitle } from '@apx/testkit';

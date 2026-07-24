@@ -7,7 +7,7 @@
  * (./p00001-home.page.js), not raw testkit calls, so both stay in sync.
  * Regions present in metadata: about-this-application, image-support-for-rich-text-editor, implementation
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
- * Region types NOT covered by an auto-generated assertion (no verified DOM convention, or a runtime id genuinely unconstructible from static data -- see docs/grammar-assumptions.md "Still open" and ADR-003): about-this-application (dynamicContent), image-support-for-rich-text-editor (staticContent), implementation (dynamicContent).
+ * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): about-this-application (dynamicContent), image-support-for-rich-text-editor (staticContent), implementation (dynamicContent).
  */
 import { expect, test } from '@playwright/test';
 import { expectItemsPresent, normalizeTitle } from '@apx/testkit';
