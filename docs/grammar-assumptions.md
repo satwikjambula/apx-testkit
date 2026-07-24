@@ -517,6 +517,92 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         earlier but never wired into the differ -- a real gap this pass
         also closed).
 
+- [x] **Re-verification pass, `apextogo`, 2026-07-24** -- a fresh copy of
+      this app's export zip was supplied and re-parsed independently of
+      the existing corpus entry (not a first-time addition; `apextogo` was
+      already one of the 13 real local exports). Findings:
+      - The freshly-unzipped export is **byte-identical** to the
+        already-held local copy (`diff -rq` across every file: zero
+        differences). This is the same export data as before, not updated
+        or re-exported Oracle content -- so no region/DA/item counts could
+        plausibly have changed, and none did.
+      - Zero-warnings parse confirmed again: 28 files loaded
+        (`application.apx`, `page-groups.apx`, 18 `pages/*.apx`, 8
+        `shared-components/*.apx`), `parseApp()` warnings array empty.
+      - **Region count correction to the task framing**: this app has
+        **54 regions** across 18 pages, not 14 -- the "14" that
+        exists in `docs/component-coverage-matrix.md` for `apextogo` is
+        the **Dynamic Actions** count (confirmed exactly: 14 parsed
+        `dynamicActions` this pass, matching that table's Dynamic Actions
+        section precisely). The coverage matrix has never claimed a
+        14-region figure for this app; there is no per-app region-count
+        row in that doc at all, only aggregate app-count ratios. Flagging
+        this so the "14 regions" framing isn't repeated as fact elsewhere.
+      - Region types confirmed present (by count): `staticContent` (32),
+        `themeTemplateComponent/contentRow` (7), `cards` (9),
+        `classicReport` (3), `regionDisplaySelector` (1), `map` (1),
+        `list` (1). No `chart` and no `interactiveGrid` regions exist in
+        this app at all -- confirmed by exhaustive type enumeration, not a
+        sampling gap. All seven types were already accounted for in
+        `docs/component-coverage-matrix.md` (individually or under the
+        `themeTemplateComponent/*` aggregate bucket); nothing new to add
+        to that table.
+      - `map` region reconfirmed present (`MY-ADDRESS` page, region
+        `location-map`) -- re-confirms the existing `MapRegion` stub
+        reason in `packages/testkit/src/components/unsupported.ts`
+        ("confirmed present in real exports (apextogo,
+        sample-application-search)"); still zero live ground truth, no
+        change to that stub's status.
+      - **`advanced { htmlDomId: ... }` cross-check (ADR-003), as
+        specifically requested**: `apextogo` has **zero** Chart or
+        Interactive Grid regions, so it does NOT provide a third
+        real-app data point for the Chart/IG runtime-id-prediction claim
+        that ADR-003 documents -- that claim remains confirmed on exactly
+        two apps/widget types (Sample Charts, Sample Interactive Grids),
+        unchanged by this pass. What this app DOES show: `htmlDomId` is
+        set on 4 of its 54 regions, and none of them is Chart or IG --
+        literal evidence:
+        `pages/p00000-global-page.apx`: `region search (type:
+        staticContent ...) advanced { htmlDomId: SearchDialog }` and
+        `region search-restaurants (type: themeTemplateComponent/
+        contentRow ...) advanced { htmlDomId: SearchRestaurants }`;
+        `pages/p00008-cart.apx`: `region cart (type:
+        themeTemplateComponent/contentRow ...) advanced { htmlDomId:
+        CartRegion }` and `region total (type: classicReport ...)
+        advanced { htmlDomId: CartTotal }`. This confirms `htmlDomId` is a
+        genuinely generic `region-advanced-property` used across region
+        types in real exports, consistent with its EBNF production not
+        being Chart/IG-specific -- but it is NOT new evidence for the
+        runtime-id-prediction mechanism itself, since that mechanism was
+        only ever confirmed (and only claimed) for Chart (`_jet`) and IG
+        (`_ig`) widget containers; no live instance of `apextogo` exists
+        to check what, if anything, `htmlDomId` predicts for
+        `staticContent`/`themeTemplateComponent`/`classicReport` regions.
+        Left as an open question, not assumed to generalize.
+      - Determinism reconfirmed for this app specifically: `parseApp()`
+        run twice produced byte-identical JSON (`shasum -a 256` match);
+        `apx-testgen` run twice into separate output directories produced
+        byte-identical generated files (`diff -rq`: zero differences,
+        "Generated 17 page object(s) + spec(s) (13 marked skip: auth
+        required)" both times); `apx-diff` self-diff
+        (`apextogo` against itself) reported "0 added, 0 removed, 0
+        changed, 17 unchanged."
+      - Full regression sweep re-run: all four packages build clean,
+        `npm test` green (29 parser tests + 5 testkit tests, plus 5
+        integration tests correctly skipped -- gated on the separate
+        UX Pattern Catalog ground-truth path, unrelated to this app),
+        `spike/` typechecks clean, `examples/employee-page` regenerates
+        byte-identical to the committed fixture, and all 13 real local
+        exports (this fresh `apextogo` plus the other 12 held locally)
+        parse with zero warnings, zero total.
+      - Net result: no repo documentation needed a factual correction --
+        `docs/component-coverage-matrix.md` and
+        `.ai/knowledge/verification.md` already correctly describe this
+        app (static-only, no live access, region types already tabulated)
+        and were left unchanged. This entry exists per this project's own
+        rule that a clean, uneventful re-parse is still evidence worth
+        recording, not nothing.
+
 ## Still open
 
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF
