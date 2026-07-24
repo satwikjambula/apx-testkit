@@ -189,16 +189,29 @@ detail, even though it lives inside `@apx/parser`.
 7. MCP SDK pinned ^1.0.0; re-verify API surface against latest SDK docs
    before npm publish.
 
-## Official grammar reference — check this before guessing at grammar
+## Official grammar reference — check this EVERY time, not a spot-check
 
 **https://docs.oracle.com/en/database/oracle/apex/26.1/apxln/** is Oracle's
 own published APEXlang Language Reference, and
 **https://docs.oracle.com/en/database/oracle/apex/26.1/apxln/apexlang.ebnf**
 is the complete, formal EBNF grammar behind it (11,700+ lines, every
-component). Check this FIRST when extending the parser for a new component
-or property, before reverse-engineering from real exports alone — it's the
-authoritative source for what a property is *called* and what values it
-accepts.
+component). It's the authoritative source for what a property is *called*
+and what values it accepts.
+
+**This applies to every parser change, not just new components** —
+building a new typed field, extending an existing one, or reviewing an
+existing one for a bug all require checking the relevant production(s) in
+this file first. A prior pass here checked `dynamicAction`/`calendar`
+alone because those happened to be freshest in context, not because
+everything else was already covered — that was a real gap, not a
+deliberate scope decision, and it took a direct follow-up to catch it. A
+later full pass against `page`/`region`/`page-item`/`button` found a real
+bug (`region.source.sql` reading the wrong raw key — see
+docs/grammar-assumptions.md) that a narrower check would have missed
+entirely. Check the specific component(s) actually relevant to what's
+being touched — not necessarily all 40+ every time — but check them
+completely (every direct property AND every group in that component's
+production), not just the properties already assumed to matter.
 
 **Fetch the raw `.ebnf` file directly (`curl`), not through an
 AI-summarizing fetch tool.** Confirmed live: an AI-summarized fetch

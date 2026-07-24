@@ -233,6 +233,17 @@ function stringArray(v: RawValue | undefined): string[] | null {
   if (typeof v === 'string') return [v];
   return null;
 }
+/** Properties typed `<multiline-string>` in the grammar (e.g. `sqlQuery`) --
+ * confirmed live to appear BOTH as a fenced block (tryFence()'s `{ lang,
+ * code }` shape) AND as a bare single-line string, despite the grammar
+ * typing them as multiline-string only. Handles both. */
+function multilineText(v: RawValue | undefined): string | null {
+  if (typeof v === 'string' && v !== '') return v;
+  if (v && typeof v === 'object' && !Array.isArray(v) && !('ref' in v) && typeof (v as { code?: unknown }).code === 'string') {
+    return (v as { code: string }).code;
+  }
+  return null;
+}
 
 const ITEM_TYPES = new Set(['pageItem', 'item']);
 
@@ -314,7 +325,7 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
           ? {
               location: str(r.props['source.location']),
               tableName: str(r.props['source.tableName']),
-              sql: str(r.props['source.sql']),
+              sql: multilineText(r.props['source.sqlQuery']),
             }
           : null,
         calendarSettings:

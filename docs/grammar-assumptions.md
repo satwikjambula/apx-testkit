@@ -423,6 +423,61 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       updated from "unconfirmed" to "confirmed real, zero real-world
       occurrences so far."
 
+- [x] **Full audit of every currently-typed AST field against the
+      official EBNF** (prompted directly: the first pass above only
+      checked `dynamicAction`/calendar because those were freshest, not
+      for any principled reason -- this pass covers everything else).
+      Checked `<page>`, `<region>`, `<page-item>`, `<button>` productions
+      in full, not just keyword grep:
+      - `ApexPage.alias`/`name`/`title` -- exact match, all three are
+        `<page-direct-property>` string-like values.
+      - `ApexItem.label`/`required`/`sourceColumn` -- exact match:
+        `label.label`, `validation.valueRequired`, `source.column`.
+      - `ApexButton.label` -- exact match, a direct property (not
+        grouped). `ApexButton.action` -- confirmed correct
+        (`behavior.action`, enum: submitPage/triggerAction/
+        redirectThisApp/redirectOtherApp/redirectUrl/
+        definedByDynamicAction/resetPage/nextPage/previousPage) --
+        this project's fallback to a bare top-level `action` property
+        (`?? str(n.props['action'])`) is confirmed to never fire in any
+        real export (grep across all 13 -- zero bare top-level `action:`
+        on any button), harmless extra leniency, not a bug.
+      - `ITEM_TYPES = new Set(['pageItem', 'item'])` -- the official
+        grammar names the component ONLY `pageItem`; there is no
+        standalone `item` production anywhere in the 11,700-line file.
+        Confirms the pre-existing note ("docs example was simplified")
+        as definitively correct: accepting bare `item` is harmless,
+        defensive leniency for a form that has never once appeared in
+        real data, not a hedge against something real.
+      - **`ApexRegion.source.sql` -- REAL BUG FOUND AND FIXED.** The
+        parser read `source.sql`, but the grammar's actual property name
+        is `sqlQuery` (`region-source-property ::= "sqlQuery" ":" <ws>
+        <multiline-string> ...`) -- meaning `region.source.sql` was
+        silently `null` for EVERY SQL-backed region, always, since this
+        field was first added. The committed test fixture (a table-based
+        form) never exercises `sqlQuery` at all, which is exactly why
+        this went unnoticed -- confirmed zero downstream consumers ever
+        relied on it either (grepped the whole codebase), so the
+        practical impact was zero, but the field itself has never worked.
+        Also confirmed live: `sqlQuery` appears BOTH as a bare
+        single-line string AND as a fenced multiline block, despite the
+        grammar typing it as `<multiline-string>` only -- fixed with a
+        new `multilineText()` helper that handles both shapes. Verified
+        against real data: 245 of 1069 real regions with a `source` block
+        now correctly get `sql` populated (previously 0, always).
+        Regression-guarded with 2 new tests (fenced and bare-inline
+        shapes). Zero regressions: all 13 real exports still
+        parse/generate cleanly, committed `examples/employee-page` output
+        byte-identical (that fixture is table-based, never touches this
+        path either way).
+      - `<region-group-block>`'s full list of ~55 named sub-groups was
+        checked structurally (not just grepped for property names) for
+        anything calendar-related -- confirmed NONE exists. This
+        reconfirms, more rigorously than the earlier keyword-grep pass,
+        that `ApexRegion.calendarSettings`'s real properties genuinely
+        have no home anywhere in the official grammar, not just under an
+        unexpected name.
+
 ## Still open
 
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF

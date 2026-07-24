@@ -402,3 +402,58 @@ describe('multi-line array parsing (bug: first element dropped)', () => {
     expect(region.raw['appearance.templateOptions']).toEqual(['#DEFAULT#', 't-Region--noPadding']);
   });
 });
+
+describe('region.source.sql (bug: read the wrong raw key)', () => {
+  // Reproduces a real bug found by cross-checking against Oracle's
+  // official EBNF: the SQL source property is named `sqlQuery`, not
+  // `sql` -- the parser was reading `source.sql` (which never exists in
+  // any real export) instead of `source.sqlQuery`, so region.source.sql
+  // was silently `null` for every SQL-backed region, always, since this
+  // field was first added. Confirmed live: only the committed test
+  // fixture (a table-based form, which never populates `sqlQuery` at
+  // all) happened to never exercise this path, which is why it went
+  // unnoticed. Also confirmed live: `sqlQuery` appears BOTH as a bare
+  // single-line value AND as a fenced multiline block -- despite the
+  // grammar typing it as `<multiline-string>` only -- so the fix must
+  // handle both shapes.
+  it('reads a fenced multiline sqlQuery', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: classicReport
+    source {
+      location: localDatabase
+      type: sqlQuery
+      sqlQuery:
+        \`\`\`sql
+        select empno, ename from emp
+        \`\`\`
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.source?.sql).toBe('select empno, ename from emp');
+  });
+
+  it('reads a bare single-line sqlQuery', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: classicReport
+    source {
+      location: localDatabase
+      type: sqlQuery
+      sqlQuery: select empno, ename from emp
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.source?.sql).toBe('select empno, ename from emp');
+  });
+});
