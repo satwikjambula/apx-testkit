@@ -1,0 +1,254 @@
+=== sample-charts coverage ===
+Coverage report
+  export:    /private/tmp/claude-501/-Users-aarna-Downloads-healroots-build-6/26047d41-fdf0-4c02-8ce8-647fef0c20c5/scratchpad/sample-apps/sample-charts
+  touch log: /tmp/coverage-charts.jsonl (7 touches recorded)
+
+page 1: Sample Charts (HOME)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: about-sample-charts, example-charts, footer, sample-charts
+  buttons: 0/0 (n/a)
+
+page 2: Area (AREA)
+  items:   0/0 (n/a)
+  regions: 0/13 (0%) -- untouched: about-this-page, area-chart-color-javascript-code-customization, area-chart-color-javascript-code-customization-information, area-chart-legend-javascript-code-customization, area-chart-legend-javascript-code-customization-information, area-chart-line-types, area-chart-line-types-information, area-chart-markers, area-chart-stacked, area-chart-stacked-information, area-chart-y-axis-value-formatting, breadcrumb, region-display-selector
+  buttons: 0/9 (0%) -- untouched: Curved, Horizontal, None, Centered Segmented, Stack, Stepped, Straight, Unstack, Vertical
+
+page 3: Gantt (GANTT)
+  items:   0/4 (0%) -- untouched: P3_END_DATE, P3_MAX_END_DATE, P3_MIN_START_DATE, P3_START_DATE
+  regions: 0/10 (0%) -- untouched: about-this-page, breadcrumbs, gantt-chart, gantt-controls, multiple-tasks-information, multiple-tasks-per-row, region-display-selector, single-task-information, single-task-per-row-reference-object-via-javascript-code, tasks-per-employee-not-hierarchical
+  buttons: 0/1 (0%) -- untouched: Go
+
+page 4: Pie (PIE)
+  items:   0/2 (0%) -- untouched: P4_PRODUCT_ID, P4_PRODUCT_NAME
+  regions: 0/18 (0%) -- untouched: about-this-page, breadcrumbs, colors-set-via-js-code, colors-set-via-sql-query, donut-chart-new-declarative-label-option, donut-chart-new-declarative-label-option-information, donut-chart-sorting, donut-chart-sorting-information, donut-chart-v2-labels-outside-slice, master-detail-chart-links, master-detail-chart-links-information, orders-detail-chart, pie-chart, pie-chart-information, pie-chart-series-colors, pie-chart-series-colors-information, products-master-chart, region-display-selector
+  buttons: 0/4 (0%) -- untouched: Ascending, Decrease Legend Size, Descending, Increase Legend Size
+
+page 5: Status Meter Gauge (STATUS-METER-GAUGE)
+  items:   0/0 (n/a)
+  regions: 0/45 (0%) -- untouched: about-this-page, breadcrumbs, circular, horizontal, indicator-size, indicator-size-2, indicator-size-3, indicator-size-information, indicator-size-information-2, inner-radius, inner-radius-information, label-and-value, label-and-value-2, label-and-value-information, number-formatting, number-formatting-2, number-formatting-3, number-formatting-information, number-formatting-information-2, percent-formatting, percent-formatting-2, percent-formatting-information, plot-area-and-indicator-size, plot-area-and-indicator-size-2, plot-area-and-indicator-size-information, region-display-selector, start-angle-and-angle-extent, start-angle-and-angle-extent-information, thresholds, thresholds-2, thresholds-current-threshold-only, thresholds-current-threshold-only-2, thresholds-current-threshold-only-information, thresholds-information, thresholds-information-2, thresholds-on-indicator, thresholds-on-indicator-2, thresholds-on-indicator-information, thresholds-using-custom-tooltip, value-and-label-information, value-and-label-positioned-in-center, value-information, value-position, value-position-2, vertical
+  buttons: 0/0 (n/a)
+
+page 6: Dashboard (DASHBOARD)
+  items:   0/0 (n/a)
+  regions: 0/7 (0%) -- untouched: about-this-page, badge-list-circular, breadcrumb, orders, project-task-status, task-costings, task-costs
+  buttons: 0/0 (n/a)
+
+page 7: Stock (STOCK)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: about-this-page, breadcrumb, dummy-corp-stock-chart, information
+  buttons: 0/0 (n/a)
+
+page 8: Scatter (SCATTER)
+  items:   0/2 (0%) -- untouched: P8_Y_MAX, P8_Y_MIN
+  regions: 0/7 (0%) -- untouched: about-this-page, breadcrumb, new, scatter-dynamic-y-axis-min-max-information, scatter-dynamic-y-axis-min-max-via-javascript-code, scatter-percent-format, scatter-percent-format-information
+  buttons: 0/1 (0%) -- untouched: Set
+
+page 9: Bar (BAR)
+  items:   0/0 (n/a)
+  regions: 0/17 (0%) -- untouched: about-this-page, bar-chart-dual-y-axis-with-formatted-labels, bar-chart-series-colors, bar-chart-series-colors-information, bar-chart-series-name-column-mapping, bar-chart-series-name-column-mapping-information, bar-chart-stack-label-stack-category, bar-chart-stack-label-stack-category-information, bar-chart-stacked, bar-chart-stacked-percent, bar-chart-stacked-percent-information, breadcrumb, custom-colors-via-javascript, default-color-palette, region-display-selector, series-level-color-attribute, sql-series-defined-colors
+  buttons: 0/4 (0%) -- untouched: Horizontal, Stack, Unstack, Vertical
+
+page 10: Application Theme Style (APPLICATION-THEME-STYLE)
+  items:   0/1 (0%) -- untouched: P10_DESKTOP_THEME_STYLE_ID
+  regions: 0/4 (0%) -- untouched: about-this-page, breadcrumb, items, set-user-interface-theme-style
+  buttons: 0/2 (0%) -- untouched: Cancel, Apply Changes
+
+page 11: Bubble (BUBBLE)
+  items:   0/1 (0%) -- untouched: P11_POINT
+  regions: 0/6 (0%) -- untouched: about-this-page, breadcrumb, bubble, filter, information, region-display-selector
+  buttons: 0/0 (n/a)
+
+page 12: Help (HELP)
+  items:   0/0 (n/a)
+  regions: 0/6 (0%) -- untouched: about-this-application, app-name, features, help, help-container, quick-start
+  buttons: 0/0 (n/a)
+
+page 13: Interactive Report (INTERACTIVE-REPORT)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: about-this-page, breadcrumb, projects, sql-source
+  buttons: 0/1 (0%) -- untouched: Reset
+
+page 14: Data Densification (DATA-DENSIFICATION)
+  items:   0/0 (n/a)
+  regions: 0/7 (0%) -- untouched: about-this-page, breadcrumb, multi-series-chart-densified-sorted-by-label-desc, multi-series-chart-stacked-with-stack-label, multi-series-chart-using-order-by, region-display-selector, single-series-chart-using-order-by-value-asc
+  buttons: 0/0 (n/a)
+
+page 15: Line (LINE)
+  items:   0/0 (n/a)
+  regions: 0/13 (0%) -- untouched: about-this-page, breadcrumb, line-chart-data-labels-line-styles, line-chart-data-labels-line-styles-information, line-chart-declarative-font-formatting, line-chart-declarative-font-formatting-information, line-chart-reference-object-via-javascript-customizations, line-chart-reference-object-via-javascript-information, line-chart-show-hide-labels-via-dynamic-action, line-chart-show-hide-labels-via-dynamic-action-information, line-chart-time-axis, line-chart-time-axis-information, region-display-selector
+  buttons: 0/10 (0%) -- untouched: Area, Bar, Combo, Hide Labels, Horizontal, Line, Line with Area, Reset Zoom, Show Labels, Vertical
+
+page 17: Administration (ADMINISTRATION)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: administration, breadcrumb
+  buttons: 0/0 (n/a)
+
+page 18: Line with Area (LINE-WITH-AREA)
+  items:   0/0 (n/a)
+  regions: 0/11 (0%) -- untouched: about-this-page, breadcrumb, custom-tooltip-labels-information, data-labels-line-styles-information, fill-gaps-and-sort-information, line-with-area-chart-custom-tooltip-labels, line-with-area-chart-data-labels-line-styles, line-with-area-chart-fill-gaps-and-sort, line-with-area-chart-stacked-percent-chart, line-with-area-chart-stacked-percent-information, region-display-selector
+  buttons: 0/2 (0%) -- untouched: Horizontal, Vertical
+
+page 19: Polar (POLAR)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: about-this-page, breadcrumb, information, polar
+  buttons: 0/0 (n/a)
+
+page 20: Pareto Chart (PARETO-CHART)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: about-this-page, pareto-chart, pareto-chart-information
+  buttons: 0/0 (n/a)
+
+page 21: Radar (RADAR)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: about-this-page, breadcrumb, information, radar
+  buttons: 0/0 (n/a)
+
+page 22: Funnel (FUNNEL)
+  items:   0/2 (0%) -- untouched: P22_SERIES, P22_SERIES_2
+  regions: 0/8 (0%) -- untouched: about-this-page, breadcrumb, funnel-3d-effect, funnel-multi-select-selection-mode, funnel-multi-select-selection-mode-chart-information, funnel-target-value, funnel-target-value-chart-information, region-display-selector
+  buttons: 0/0 (n/a)
+
+page 23: Range (RANGE)
+  items:   0/0 (n/a)
+  regions: 0/7 (0%) -- untouched: about-this-page, breadcrumb, information-area-range, information-bar-range, range-area-range, range-bar-range, region-display-selector
+  buttons: 0/4 (0%) -- untouched: Horizontal, Horizontal, Vertical, Vertical
+
+page 24: Dashboard - Pies (DASHBOARD-PIES)
+  items:   0/0 (n/a)
+  regions: 0/7 (0%) -- untouched: about-this-page, breadcrumb, employee-commissions, employee-salaries, information, tasks, tasks-sorted
+  buttons: 0/0 (n/a)
+
+page 25: Combination (COMBINATION)
+  items:   0/1 (0%) -- untouched: P25_SKIP_GAP
+  regions: 0/11 (0%) -- untouched: about-this-page, breadcrumb, combination-chart-data-label-positions, combination-chart-information-data-label-positions, combination-chart-information-regular-v-mixed-frequency-time-axis, combination-chart-information-y-axis-value-formatting, combination-chart-regular-v-mixed-frequency-time-axis, combination-chart-y-axis-value-formatting, mixed-frequency-time-axis, region-display-selector, regular-time-axis
+  buttons: 0/5 (0%) -- untouched: Curved, None, Centered Segmented, Stepped, Straight
+
+page 26: Oracle JET ojLegend Plug-in (ORACLE-JET-OJLEGEND-PLUG-IN)
+  items:   0/0 (n/a)
+  regions: 0/8 (0%) -- untouched: about-this-page, breadcrumb, information, legend, oracle-jet-legend-component-as-a-plug-in, order-total-per-customer, orders-by-date, orders-by-product
+  buttons: 0/0 (n/a)
+
+page 27: Manage Sample Data (MANAGE-SAMPLE-DATA)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, buttons, manage-sample-application
+  buttons: 0/2 (0%) -- untouched: Cancel, Reset Data
+
+page 28: Reference (REFERENCE)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: reference, reference-2
+  buttons: 0/0 (n/a)
+
+page 29: Employees  Report (EMPLOYEES-REPORT)
+  items:   0/1 (0%) -- untouched: P29_DEPTNO
+  regions: 0/3 (0%) -- untouched: about-this-page, breadcrumb, employees-report
+  buttons: 0/0 (n/a)
+
+page 30: JavaScript Code Customizations (JAVASCRIPT-CODE-CUSTOMIZATIONS)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 31: Dynamic Actions (DYNAMIC-ACTIONS)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 32: Series Color (SERIES-COLOR)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 33: Y2 Axis (Y2-AXIS)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 34: JET Plug-in Component (JET-PLUG-IN-COMPONENT)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 35: Time Axis (TIME-AXIS)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 36: Zoom & Scroll (ZOOM-SCROLL)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 37: Customizing Data Labels (CUSTOMIZING-DATA-LABELS)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 38: Formatting Values (FORMATTING-VALUES)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 39: 3D Effect (3D-EFFECT)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 40: Data Densification (DATA-DENSIFICATION2)
+  items:   0/0 (n/a)
+  regions: 0/1 (0%) -- untouched: reference
+  buttons: 0/0 (n/a)
+
+page 41: Box Plot (BOX-PLOT)
+  items:   0/0 (n/a)
+  regions: 0/12 (0%) -- untouched: about-this-page, breadcrumbs, grades-custom-q2-q3-colours, grades-mixed-series-types, grades-multi-series, grades-single-series, information, rds, samples-report-data, survey-results, survey-results-normalised-tables, survey-sample-data-time-axis
+  buttons: 0/0 (n/a)
+
+page 42: Sorting (SORTING)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 43: Pyramid (PYRAMID)
+  items:   0/0 (n/a)
+  regions: 0/5 (0%) -- untouched: about-this-page, breadcrumb, pyramid-chart, pyramid-chart-information, region-display-selector
+  buttons: 0/2 (0%) -- untouched: 2D, 3D
+
+page 44: Stack Grouping (STACK-GROUPING)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 45: Declarative Font Formatting (DECLARATIVE-FONT-FORMATTING)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 46: Event Drops (EVENT-DROPS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: about-this-page, event-drops-chart-sales, event-drops-chart-sales-information
+  buttons: 0/0 (n/a)
+
+page 47: Tasks per Project (TASKS-PER-PROJECT)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: about-this-page, breadcrumb, tasks-report
+  buttons: 0/0 (n/a)
+
+page 48: Customizing Tooltip Labels (CUSTOMIZING-TOOLTIP-LABELS)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 49: Chart Links (CHART-LINKS)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: breadcrumb, reference
+  buttons: 0/0 (n/a)
+
+page 101: Login (LOGIN)
+  items:   0/2 (0%) -- untouched: P101_PASSWORD, P101_USERNAME
+  regions: 0/1 (0%) -- untouched: sample-charts
+  buttons: 0/1 (0%) -- untouched: Sign In
+
+Overall
+  items:   0/16 (0%) -- untouched: P3_END_DATE, P3_MAX_END_DATE, P3_MIN_START_DATE, P3_START_DATE, P4_PRODUCT_ID, P4_PRODUCT_NAME, P8_Y_MAX, P8_Y_MIN, P10_DESKTOP_THEME_STYLE_ID, P11_POINT, P22_SERIES, P22_SERIES_2, P25_SKIP_GAP, P29_DEPTNO, P101_PASSWORD, P101_USERNAME
+  regions: 0/293 (0%) -- untouched: about-sample-charts, example-charts, footer, sample-charts, about-this-page, area-chart-color-javascript-code-customization, area-chart-color-javascript-code-customization-information, area-chart-legend-javascript-code-customization, area-chart-legend-javascript-code-customization-information, area-chart-line-types, area-chart-line-types-information, area-chart-markers, area-chart-stacked, area-chart-stacked-information, area-chart-y-axis-value-formatting, breadcrumb, region-display-selector, about-this-page, breadcrumbs, gantt-chart, gantt-controls, multiple-tasks-information, multiple-tasks-per-row, region-display-selector, single-task-information, single-task-per-row-reference-object-via-javascript-code, tasks-per-employee-not-hierarchical, about-this-page, breadcrumbs, colors-set-via-js-code, colors-set-via-sql-query, donut-chart-new-declarative-label-option, donut-chart-new-declarative-label-option-information, donut-chart-sorting, donut-chart-sorting-information, donut-chart-v2-labels-outside-slice, master-detail-chart-links, master-detail-chart-links-information, orders-detail-chart, pie-chart, pie-chart-information, pie-chart-series-colors, pie-chart-series-colors-information, products-master-chart, region-display-selector, about-this-page, breadcrumbs, circular, horizontal, indicator-size, indicator-size-2, indicator-size-3, indicator-size-information, indicator-size-information-2, inner-radius, inner-radius-information, label-and-value, label-and-value-2, label-and-value-information, number-formatting, number-formatting-2, number-formatting-3, number-formatting-information, number-formatting-information-2, percent-formatting, percent-formatting-2, percent-formatting-information, plot-area-and-indicator-size, plot-area-and-indicator-size-2, plot-area-and-indicator-size-information, region-display-selector, start-angle-and-angle-extent, start-angle-and-angle-extent-information, thresholds, thresholds-2, thresholds-current-threshold-only, thresholds-current-threshold-only-2, thresholds-current-threshold-only-information, thresholds-information, thresholds-information-2, thresholds-on-indicator, thresholds-on-indicator-2, thresholds-on-indicator-information, thresholds-using-custom-tooltip, value-and-label-information, value-and-label-positioned-in-center, value-information, value-position, value-position-2, vertical, about-this-page, badge-list-circular, breadcrumb, orders, project-task-status, task-costings, task-costs, about-this-page, breadcrumb, dummy-corp-stock-chart, information, about-this-page, breadcrumb, new, scatter-dynamic-y-axis-min-max-information, scatter-dynamic-y-axis-min-max-via-javascript-code, scatter-percent-format, scatter-percent-format-information, about-this-page, bar-chart-dual-y-axis-with-formatted-labels, bar-chart-series-colors, bar-chart-series-colors-information, bar-chart-series-name-column-mapping, bar-chart-series-name-column-mapping-information, bar-chart-stack-label-stack-category, bar-chart-stack-label-stack-category-information, bar-chart-stacked, bar-chart-stacked-percent, bar-chart-stacked-percent-information, breadcrumb, custom-colors-via-javascript, default-color-palette, region-display-selector, series-level-color-attribute, sql-series-defined-colors, about-this-page, breadcrumb, items, set-user-interface-theme-style, about-this-page, breadcrumb, bubble, filter, information, region-display-selector, about-this-application, app-name, features, help, help-container, quick-start, about-this-page, breadcrumb, projects, sql-source, about-this-page, breadcrumb, multi-series-chart-densified-sorted-by-label-desc, multi-series-chart-stacked-with-stack-label, multi-series-chart-using-order-by, region-display-selector, single-series-chart-using-order-by-value-asc, about-this-page, breadcrumb, line-chart-data-labels-line-styles, line-chart-data-labels-line-styles-information, line-chart-declarative-font-formatting, line-chart-declarative-font-formatting-information, line-chart-reference-object-via-javascript-customizations, line-chart-reference-object-via-javascript-information, line-chart-show-hide-labels-via-dynamic-action, line-chart-show-hide-labels-via-dynamic-action-information, line-chart-time-axis, line-chart-time-axis-information, region-display-selector, administration, breadcrumb, about-this-page, breadcrumb, custom-tooltip-labels-information, data-labels-line-styles-information, fill-gaps-and-sort-information, line-with-area-chart-custom-tooltip-labels, line-with-area-chart-data-labels-line-styles, line-with-area-chart-fill-gaps-and-sort, line-with-area-chart-stacked-percent-chart, line-with-area-chart-stacked-percent-information, region-display-selector, about-this-page, breadcrumb, information, polar, about-this-page, pareto-chart, pareto-chart-information, about-this-page, breadcrumb, information, radar, about-this-page, breadcrumb, funnel-3d-effect, funnel-multi-select-selection-mode, funnel-multi-select-selection-mode-chart-information, funnel-target-value, funnel-target-value-chart-information, region-display-selector, about-this-page, breadcrumb, information-area-range, information-bar-range, range-area-range, range-bar-range, region-display-selector, about-this-page, breadcrumb, employee-commissions, employee-salaries, information, tasks, tasks-sorted, about-this-page, breadcrumb, combination-chart-data-label-positions, combination-chart-information-data-label-positions, combination-chart-information-regular-v-mixed-frequency-time-axis, combination-chart-information-y-axis-value-formatting, combination-chart-regular-v-mixed-frequency-time-axis, combination-chart-y-axis-value-formatting, mixed-frequency-time-axis, region-display-selector, regular-time-axis, about-this-page, breadcrumb, information, legend, oracle-jet-legend-component-as-a-plug-in, order-total-per-customer, orders-by-date, orders-by-product, breadcrumb, buttons, manage-sample-application, reference, reference-2, about-this-page, breadcrumb, employees-report, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, breadcrumb, reference, reference, about-this-page, breadcrumbs, grades-custom-q2-q3-colours, grades-mixed-series-types, grades-multi-series, grades-single-series, information, rds, samples-report-data, survey-results, survey-results-normalised-tables, survey-sample-data-time-axis, breadcrumb, reference, about-this-page, breadcrumb, pyramid-chart, pyramid-chart-information, region-display-selector, breadcrumb, reference, breadcrumb, reference, about-this-page, event-drops-chart-sales, event-drops-chart-sales-information, about-this-page, breadcrumb, tasks-report, breadcrumb, reference, breadcrumb, reference, sample-charts
+  buttons: 0/48 (0%) -- untouched: Curved, Horizontal, None, Centered Segmented, Stack, Stepped, Straight, Unstack, Vertical, Go, Ascending, Decrease Legend Size, Descending, Increase Legend Size, Set, Horizontal, Stack, Unstack, Vertical, Cancel, Apply Changes, Reset, Area, Bar, Combo, Hide Labels, Horizontal, Line, Line with Area, Reset Zoom, Show Labels, Vertical, Horizontal, Vertical, Horizontal, Horizontal, Vertical, Vertical, Curved, None, Centered Segmented, Stepped, Straight, Cancel, Reset Data, 2D, 3D, Sign In

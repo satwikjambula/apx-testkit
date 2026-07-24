@@ -1,0 +1,254 @@
+=== interactive-grids coverage ===
+Coverage report
+  export:    /private/tmp/claude-501/-Users-aarna-Downloads-healroots-build-6/26047d41-fdf0-4c02-8ce8-647fef0c20c5/scratchpad/sample-apps/interactive-grids
+  touch log: /tmp/coverage-ig.jsonl (5 touches recorded)
+
+page 1: Home (HOME)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: about-this-application, app-name, interactive-grid-examples, oracle-apex-communities-and-resources
+  buttons: 0/1 (0%) -- untouched: Next
+
+page 2: Progressive Scroll (PROGRESSIVE-SCROLL)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-progressive-scroll-paging, progressive-scroll
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 3: Basic Reporting (BASIC-REPORTING)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: basic-read-only, basic-reporting, overview-basic-reporting
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 4: Column Groups (COLUMN-GROUPS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, column-groups, overview-column-groups
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 5: Add Toolbar Button (ADD-TOOLBAR-BUTTON)
+  items:   0/1 (0%) -- untouched: P5_CREATE_URL
+  regions: 0/3 (0%) -- untouched: add-toolbar-button, breadcrumb, overview-add-toolbar-button
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 6: Row Header (ROW-HEADER)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-row-header, row-header
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 7: Sequence Row Header (SEQUENCE-ROW-HEADER)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-sequence-row-header, sequence-row-header
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 8: Multiple Selection (MULTIPLE-SELECTION)
+  items:   0/1 (0%) -- untouched: P8_SELECTED
+  regions: 0/4 (0%) -- untouched: breadcrumb, compare-salary, multiple-selection, overview-multiple-selection
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 9: Saved Reports (SAVED-REPORTS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-saved-reports, saved-reports
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 10: Single Row View (SINGLE-ROW-VIEW)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-single-row-view, single-row-view
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 11: Traditional Paging (TRADITIONAL-PAGING)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-traditional-paging, traditional-paging
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 12: Traditional Paging (Total Rows) (TRADITIONAL-PAGING-TOTAL-ROWS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-traditional-paging-total-rows, traditional-paging-total-rows
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 13: Icon and Detail Views (ICON-AND-DETAIL-VIEWS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, icon-and-detail-views, overview-icon-and-detail-views
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 14: Chart View (CHART-VIEW)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: basic-read-only, chart-view, overview-chart-view
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 15: Linking to Interactive Grids (LINKING-TO-INTERACTIVE-GRIDS)
+  items:   0/0 (n/a)
+  regions: 0/5 (0%) -- untouched: breadcrumb, container, interactive-grid, overview-linking-to-interactive-grids, report-linking-examples
+  buttons: 0/0 (n/a)
+
+page 17: Traditional Paging (Custom) (TRADITIONAL-PAGING-CUSTOM)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-traditional-paging-custom, traditional-paging-custom
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 18: Traditional Paging (Select List) (TRADITIONAL-PAGING-SELECT-LIST)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-traditional-paging-select-list, traditional-paging-select-list
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 19: Scroll Paging (SCROLL-PAGING)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-scroll-paging, scroll-paging
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 20: Load More Paging (LOAD-MORE-PAGING)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, load-more-paging, overview-load-more-paging
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 21: Full Page with Maximize (FULL-PAGE-WITH-MAXIMIZE)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, full-page-with-maximize, overview-full-page-with-maximize
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 22: Scroll with Maximize (SCROLL-WITH-MAXIMIZE)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-scroll-with-maximize, scroll-with-maximize
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 23: Help (HELP)
+  items:   0/0 (n/a)
+  regions: 0/5 (0%) -- untouched: about-this-application, app-name, features, help-container, quick-start
+  buttons: 0/0 (n/a)
+
+page 24: Administration (ADMINISTRATION)
+  items:   0/0 (n/a)
+  regions: 0/2 (0%) -- untouched: administration, breadcrumb
+  buttons: 0/0 (n/a)
+
+page 25: Manage Sample Data (MANAGE-SAMPLE-DATA)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, buttons, manage-sample-application
+  buttons: 0/2 (0%) -- untouched: Cancel, Reset Data
+
+page 26: Application Theme Style (APPLICATION-THEME-STYLE)
+  items:   0/1 (0%) -- untouched: P26_DESKTOP_THEME_STYLE_ID
+  regions: 0/4 (0%) -- untouched: about-this-page, breadcrumb, items, set-user-interface-theme-style
+  buttons: 0/2 (0%) -- untouched: Cancel, Apply Changes
+
+page 30: Basic Editing (BASIC-EDITING)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: basic-editing, breadcrumb, overview-basic-editing
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 31: Validation (VALIDATION)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-validation, validation
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 32: Delete Only (DELETE-ONLY)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, delete-only, overview-delete-only
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 33: Protected Rows (PROTECTED-ROWS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-protected-rows, protected-rows
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 34: Form with Grid (FORM-WITH-GRID)
+  items:   0/2 (0%) -- untouched: P34_AUTH, P34_JUSTIFICATION
+  regions: 0/4 (0%) -- untouched: breadcrumb, change-control, employees, overview-form-with-grid
+  buttons: 0/4 (0%) -- untouched: Cancel, Next, Previous, Apply Changes
+
+page 35: Master Detail (MASTER-DETAIL)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: breadcrumb, departments, employees, overview-master-detail
+  buttons: 0/3 (0%) -- untouched: Next, Previous, Save
+
+page 36: Other Column Types (OTHER-COLUMN-TYPES)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, other-column-types, overview-other-column-types
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 37: Read Only Reports (READ-ONLY-REPORTS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: about-this-application, breadcrumb, read-only-report-examples
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 38: Pagination (PAGINATION)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: about-this-application, breadcrumb, pagination-examples
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 39: Editing (EDITING)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: about-this-application, breadcrumb, editing-examples
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 40: Advanced (ADVANCED)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: about-this-application, advanced-examples, breadcrumb
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 50: Feature Customization (FEATURE-CUSTOMIZATION)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, feature-customization, overview-feature-customization
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 51: Client Validation (CLIENT-VALIDATION)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, client-validation, overview-client-validation
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 52: Tooltips (TOOLTIPS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-tooltips, tooltips
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 53: Advanced Delete (ADVANCED-DELETE)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: advanced-delete, breadcrumb, overview-advanced-delete
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 54: Editing (Dialog) (EDITING-DIALOG)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, department-overview, overview-editing-in-a-dialog
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 55: "Editing in a Dialog " (EDITING-IN-A-DIALOG)
+  items:   0/1 (0%) -- untouched: P55_DEPTNO
+  regions: 0/3 (0%) -- untouched: basic-editing, buttons, overview-editing-in-a-dialog
+  buttons: 0/2 (0%) -- untouched: Cancel, Apply Changes
+
+page 56: Item Type Plug-Ins (ITEM-TYPE-PLUG-INS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: basic-editing, breadcrumb, overview-basic-editing
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 57: Custom Server Processing (CUSTOM-SERVER-PROCESSING)
+  items:   0/0 (n/a)
+  regions: 0/4 (0%) -- untouched: basic-editing, breadcrumb, overview-custom-server-processing, update-log
+  buttons: 0/3 (0%) -- untouched: Next, Previous, Save
+
+page 58: Dynamic Actions (DYNAMIC-ACTIONS)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, dynamic-actions, overview-dynamic-actions
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 60: People (paging) (PEOPLE-PAGING)
+  items:   0/0 (n/a)
+  regions: 0/3 (0%) -- untouched: breadcrumb, overview-people-paging, people-paging
+  buttons: 0/2 (0%) -- untouched: Next, Previous
+
+page 70: Oracle Text (ORACLE-TEXT)
+  items:   0/0 (n/a)
+  regions: 0/5 (0%) -- untouched: oracle-text, oracle-text-index-does-not-exist, oracle-text-is-not-available, overview-oracle-text, people
+  buttons: 0/3 (0%) -- untouched: Create Oracle Text index, Next, Previous
+
+page 101: Login (LOGIN)
+  items:   0/2 (0%) -- untouched: P101_PASSWORD, P101_USERNAME
+  regions: 0/1 (0%) -- untouched: sample-interactive-grids
+  buttons: 0/1 (0%) -- untouched: Sign In
+
+page 400: Employee (EMPLOYEE)
+  items:   0/10 (0%) -- untouched: P400_COMM, P400_DEPTNO, P400_EMPNO, P400_ENAME, P400_HIREDATE, P400_JOB, P400_MGR, P400_NOTES, P400_ONLEAVE, P400_SAL
+  regions: 0/2 (0%) -- untouched: buttons, employee
+  buttons: 0/4 (0%) -- untouched: Cancel, Create, Delete, Apply Changes
+
+Overall
+  items:   0/18 (0%) -- untouched: P5_CREATE_URL, P8_SELECTED, P26_DESKTOP_THEME_STYLE_ID, P34_AUTH, P34_JUSTIFICATION, P55_DEPTNO, P101_PASSWORD, P101_USERNAME, P400_COMM, P400_DEPTNO, P400_EMPNO, P400_ENAME, P400_HIREDATE, P400_JOB, P400_MGR, P400_NOTES, P400_ONLEAVE, P400_SAL
+  regions: 0/155 (0%) -- untouched: about-this-application, app-name, interactive-grid-examples, oracle-apex-communities-and-resources, breadcrumb, overview-progressive-scroll-paging, progressive-scroll, basic-read-only, basic-reporting, overview-basic-reporting, breadcrumb, column-groups, overview-column-groups, add-toolbar-button, breadcrumb, overview-add-toolbar-button, breadcrumb, overview-row-header, row-header, breadcrumb, overview-sequence-row-header, sequence-row-header, breadcrumb, compare-salary, multiple-selection, overview-multiple-selection, breadcrumb, overview-saved-reports, saved-reports, breadcrumb, overview-single-row-view, single-row-view, breadcrumb, overview-traditional-paging, traditional-paging, breadcrumb, overview-traditional-paging-total-rows, traditional-paging-total-rows, breadcrumb, icon-and-detail-views, overview-icon-and-detail-views, basic-read-only, chart-view, overview-chart-view, breadcrumb, container, interactive-grid, overview-linking-to-interactive-grids, report-linking-examples, breadcrumb, overview-traditional-paging-custom, traditional-paging-custom, breadcrumb, overview-traditional-paging-select-list, traditional-paging-select-list, breadcrumb, overview-scroll-paging, scroll-paging, breadcrumb, load-more-paging, overview-load-more-paging, breadcrumb, full-page-with-maximize, overview-full-page-with-maximize, breadcrumb, overview-scroll-with-maximize, scroll-with-maximize, about-this-application, app-name, features, help-container, quick-start, administration, breadcrumb, breadcrumb, buttons, manage-sample-application, about-this-page, breadcrumb, items, set-user-interface-theme-style, basic-editing, breadcrumb, overview-basic-editing, breadcrumb, overview-validation, validation, breadcrumb, delete-only, overview-delete-only, breadcrumb, overview-protected-rows, protected-rows, breadcrumb, change-control, employees, overview-form-with-grid, breadcrumb, departments, employees, overview-master-detail, breadcrumb, other-column-types, overview-other-column-types, about-this-application, breadcrumb, read-only-report-examples, about-this-application, breadcrumb, pagination-examples, about-this-application, breadcrumb, editing-examples, about-this-application, advanced-examples, breadcrumb, breadcrumb, feature-customization, overview-feature-customization, breadcrumb, client-validation, overview-client-validation, breadcrumb, overview-tooltips, tooltips, advanced-delete, breadcrumb, overview-advanced-delete, breadcrumb, department-overview, overview-editing-in-a-dialog, basic-editing, buttons, overview-editing-in-a-dialog, basic-editing, breadcrumb, overview-basic-editing, basic-editing, breadcrumb, overview-custom-server-processing, update-log, breadcrumb, dynamic-actions, overview-dynamic-actions, breadcrumb, overview-people-paging, people-paging, oracle-text, oracle-text-index-does-not-exist, oracle-text-is-not-available, overview-oracle-text, people, sample-interactive-grids, buttons, employee
+  buttons: 0/97 (0%) -- untouched: Next, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Cancel, Reset Data, Cancel, Apply Changes, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Cancel, Next, Previous, Apply Changes, Next, Previous, Save, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Next, Previous, Cancel, Apply Changes, Next, Previous, Next, Previous, Save, Next, Previous, Next, Previous, Create Oracle Text index, Next, Previous, Sign In, Cancel, Create, Delete, Apply Changes

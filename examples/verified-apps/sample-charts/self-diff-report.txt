@@ -1,0 +1,5 @@
+Regression report
+  old: /private/tmp/claude-501/-Users-aarna-Downloads-healroots-build-6/26047d41-fdf0-4c02-8ce8-647fef0c20c5/scratchpad/sample-apps/sample-charts
+  new: /private/tmp/claude-501/-Users-aarna-Downloads-healroots-build-6/26047d41-fdf0-4c02-8ce8-647fef0c20c5/scratchpad/sample-apps/sample-charts
+
+Summary: 0 added, 0 removed, 0 changed, 49 unchanged
