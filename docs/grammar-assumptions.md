@@ -757,8 +757,150 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         portal` — both blocked on having no license at all (all-rights-
         reserved by default), pending the author's explicit permission.
 
+- [x] **21 more real apps added: 18 from `github.com/oracle/apex`'s `26.1`
+      branch (UPL-1.0) + 3 independent apps (Apache-2.0/MIT).** Corpus now
+      45 real apps (was 24). Full details, per-app breakdown, and license
+      evidence in `.ai/knowledge/verification.md`. Parser/grammar-specific
+      findings from this pass:
+      - **44/45 apps parse with zero warnings.** `strategic-planner` is
+        the sole exception — 8 warnings, all "Unrecognized line", all in
+        `link.target.items` blocks. This is the first app in this
+        project's entire corpus that does NOT parse cleanly.
+      - **Genuinely new construct found and cross-checked against the
+        full relevant EBNF production (not a narrow grep)**: a quoted
+        string used as a property KEY inside an `items { }` group, where
+        the quoted string itself embeds `#substitution#` tokens, paired
+        with a bare (unquoted) `#substitution#` token as the VALUE.
+        Literal evidence (`pages/p00003-project-details.apx:2154`):
+        ```
+        link {
+            target: {
+                page: #EDIT_PAGE#
+                items: {
+                    "P#EDIT_PAGE#_ID": #DOCUMENT_ID#
+                }
+                clearCache: #EDIT_PAGE#
+            }
+        }
+        ```
+        Seven more occurrences of the identical shape across
+        `pages/p00003-project-details.apx` and
+        `pages/p00094-initiative.apx` (both `strategic-planner`). This is
+        a real, dynamically-computed page-item name (`P` + the
+        destination page-number substitution + `_ID`) used as a
+        column-link target item — genuinely new, not seen anywhere else
+        in this project's 45-app corpus (confirmed by grep across the
+        entire corpus for the same `": #` pattern — zero matches
+        elsewhere).
+      - **Full-production EBNF cross-check performed** (curled the raw
+        `.ebnf` directly, per ADR-004 — not a narrow grep): searched every
+        `"target" ":" <ws> <value>` production (11 occurrences, all typed
+        `LINK`) and confirmed the grammar treats `target`/`LINK` as an
+        opaque `<value>` everywhere — it does NOT define the internal
+        `page`/`items`/`clearCache`/`anchor` object-literal shape at all.
+        The grammar is SILENT on this internal structure, the same way it
+        was already found silent on `calendarSettings` — real data is the
+        authority here per ADR-004, and real data confirms the quoted
+        substitution-key shape is genuine, reproducible APEXlang, just
+        not one the current `PROPERTY` regex (`/^([A-Za-z0-9_][\w-]*)\s*:
+        \s*(.*)$/`, requiring a bare-identifier-style key) recognizes.
+        Root cause is precisely diagnosed (the regex's key-character
+        class), but NOT fixed in this pass — filed to `/parser` per the
+        new-verification-app checklist ("any warning here is a real
+        parser gap... immediate handoff to /parser, not something to
+        route around"). Added to "Still open" below.
+      - **Genuinely new region types**: `reflowReport`,
+        `columnToggleReport`, `helpText` (all `universal-theme-reference`
+        — a dedicated Universal Theme showcase app, so new UI-pattern
+        types here are expected), and a brand-new type-name PREFIX,
+        `appTemplateComponent/contentRowSimple` (`strategic-planner`,
+        pages `p00117-release2.apx`/`p00141-documents1.apx`) — the first
+        confirmed instance of an `appTemplateComponent/*` namespace
+        anywhere in this project's corpus, distinct from the
+        already-known `themeTemplateComponent/*` prefix. All four remain
+        untyped (fall into `unmodeled`/`raw` per ADR-001 — real signal
+        for the typed-projection backlog, not typed this pass, no clear
+        testing value identified yet).
+      - **Genuinely new item types**: `combobox`, `colorPicker`,
+        `percentGraph`, `textFieldWithAutocomplete`, `displayMap`,
+        `listManager`, `qrCode`, `selectMany`, `starRating`,
+        `stopAndStartGridLayout`. Cross-checked against the EBNF's
+        `page-item-direct-property` production: `"type" ":" <ws>
+        <string-like-value>` (* type: SUPPORTED UI *) — the grammar
+        deliberately does NOT enumerate the allowed values (unlike, e.g.,
+        `chart.type`'s 17-value enum), so new item-type strings surfacing
+        with each new app is expected, real-data-driven behavior per
+        ADR-004 (grammar silent, real data fills the gap), not a
+        contradiction of anything previously assumed.
+        `stopAndStartGridLayout` specifically is a layout pseudo-item
+        (Universal Theme grid row start/stop marker), not a data-bearing
+        field — confirmed via `pageItem P7_SS ( type:
+        stopAndStartGridLayout )` in `customers` (also present in
+        `team-calendar`).
+      - **`tree` region type CORRECTED, not just extended** (see
+        `.ai/knowledge/verification.md` and
+        `docs/component-coverage-matrix.md` for the full evidence): three
+        genuine content Tree regions found this batch (`sample-trees`,
+        `universal-theme-reference`, `cloud-apps-rest-explorer`),
+        overturning the prior "not a distinct content pattern, just
+        `t_TreeNav` nav-widget reuse" framing from the earlier
+        `sample-workflow-approvals` finding (recorded further up this
+        file, "Sample Workflow, Approvals, and Tasks" entry). Both framings
+        are left visible in this file per this project's correction
+        discipline — the earlier finding was correct for the ONE instance
+        it was based on (the workflow-approvals login picker genuinely IS
+        `t_TreeNav` reuse), it was the generalization ("not a distinct
+        content pattern", full stop) that was wrong.
+      - **`htmlDomId` (ADR-003) confirmed present in real static export
+        data on 22 more region types** never checked for it before in this
+        project's corpus: `staticContent`, `list`, `plugin/badgeList`,
+        `themeTemplateComponent/contentRow`, `plSqlDynamicContent`,
+        `regionDisplaySelector`, `themeTemplateComponent/comments`,
+        `breadcrumb`, `dynamicContent`, `cards`, `facetedSearch`,
+        `smartFilters`, `plugin/componentInstructions`, `search`,
+        `reflowReport`, `columnToggleReport`,
+        `themeTemplateComponent/avatar`, `mediaList`, `timeline`,
+        `metricCard`, `flexboxContainer`, `plugin/html5BarChart`,
+        `plugin/tagCloud` — plus a much richer count on `map` (11/18 map
+        regions in `sample-maps` alone, vs. the single prior instance from
+        `ujnak/draw-polygon-on-map`). All static-only (no live instance
+        available for any of these 21 apps) — nothing contradicts
+        ADR-003's "universal mechanism, not gated to specific types"
+        finding; this substantially strengthens it. Recorded in
+        `docs/quirks/26.1.json`'s `region-id-not-static-id` entry
+        (updated in place, not appended separately).
+      - Determinism confirmed byte-identical (generate twice via
+        `generate()`, `sha256` of the full output directory identical;
+        `apx-diff` self-diff reports zero changes) on the four
+        largest/most complex apps specifically required: `strategic-planner`
+        (261 generated files), `opportunities` (152), `customers` (126),
+        `cymbal-coffee-ops` (8, from the independent-apps set).
+
 ## Still open
 
+- [ ] **NEW (this round): quoted, substitution-embedding property KEYS
+      inside `link.target.items { }` blocks are not parsed.** 8 real
+      occurrences, `strategic-planner` only (see the dated entry above for
+      full evidence and the EBNF cross-check already performed — the
+      grammar types `link.target` as an opaque `<value>`, silent on this
+      internal shape, so real data is the only source). The current
+      `PROPERTY` regex (`packages/parser/src/parser.ts`) requires the key
+      to start with `[A-Za-z0-9_]`; a leading `"` falls through to
+      "Unrecognized line". Needs a `/parser` decision: either (a) extend
+      `PROPERTY` to accept a quoted-string key alternative (mirroring the
+      existing `unquoteIdentifier()` handling for quoted component
+      identifiers), unquoting into the same `props` key space, or (b) a
+      narrower fix scoped just to `items { }` blocks if a general quoted-key
+      property is judged too broad a grammar change from one app's evidence.
+      Either way, the malformed lines currently fall safely into
+      `node.props['#unparsed']` (a warning, not silent data loss or a
+      parser crash) — consistent with ADR-001's "never lose information"
+      guarantee — but the two affected `link.target.items` values
+      themselves are NOT captured in any typed or raw field today. Only
+      one app in the 45-app corpus is affected; do not generalize a fix
+      without a second real occurrence, per this project's "one instance
+      is not enough to generalize from" discipline (the Chart `widget()`
+      lesson).
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF
       (`<comment> ::= "//" { <any-character-except-newline> } <line-end> |
       "/*" { <any-character> | <nl> } "*/"`), not just an assumption
