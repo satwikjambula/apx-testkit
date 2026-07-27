@@ -8,7 +8,10 @@
  *                                                    button | column | facet | process | ...
  *   group     :=  NAME '{' body '}'                  e.g. `layout {`, `label {`
  *   objProp   :=  NAME ':' '{' body '}'              e.g. `homeUrl: {`, `target: {`
- *   property  :=  NAME ':' scalar-to-EOL             no commas; spaces/colons legal in value
+ *   property  :=  (NAME | QUOTED-NAME) ':' scalar-to-EOL   no commas; spaces/colons legal in
+ *                                                    value; QUOTED-NAME only seen inside opaque
+ *                                                    object-literal blobs (e.g. `link.target.items`)
+ *                                                    whose key isn't a bare identifier -- see PROPERTY
  *   fenceProp :=  NAME ':' NEWLINE ```lang ... ```   embedded css/html/sql/js/markdown
  *   value     :=  ref | array | number | boolean | scalar
  *   ref       :=  '@' name | '@/' name               local vs standard-theme
@@ -34,7 +37,31 @@ export interface ParseResult {
 const COMPONENT_OPEN = /^([A-Za-z][\w-]*)(?:\s+("[^"]*"|\S+))?\s*\($/;
 const GROUP_OPEN = /^([A-Za-z][\w-]*)\s*\{$/;
 const OBJ_PROP_OPEN = /^([A-Za-z][\w-]*)\s*:\s*\{$/;
-const PROPERTY = /^([A-Za-z0-9_][\w-]*)\s*:\s*(.*)$/;
+/**
+ * PROPERTY keys are normally a bare identifier (`[A-Za-z0-9_][\w-]*`), but a
+ * quoted-string key alternative is required too -- confirmed real, reproducible
+ * APEXlang inside opaque `link.target.items { }` object literals (`target` is
+ * typed as `<value>` -- an intentionally opaque blob -- by literally every one
+ * of the 30 `"target" ":" <ws> <value>` productions in the official EBNF,
+ * e.g. `<entry-b-link-property>`/`<column-b-link-property>`/
+ * `<column-c-link-property>`/`<column-g-link-property>`, so the grammar never
+ * defines `items`'s internal key shape at all -- real data is the only source
+ * here per ADR-004). Real example (`strategic-planner`,
+ * `pages/p00003-project-details.apx:2154`, one of 8 identical-shape
+ * occurrences across that app's `p00003-project-details.apx`/
+ * `p00094-initiative.apx`): `"P#EDIT_PAGE#_ID": #DOCUMENT_ID#` -- a
+ * dynamically-computed page-item name (`P` + a `#substitution#` page-number
+ * token + `_ID`) used as a column-link target item. The bare `<identifier>`
+ * production (`<identifier-start> ::= "A".."Z" | "a".."z" | "0".."9" | "_"`,
+ * `<identifier-rest>` adds only "." and "-") cannot contain `#`, which is
+ * exactly why the exporter quotes this specific key -- same reason quoted,
+ * space-containing COMPONENT identifiers exist (see `unquoteIdentifier()`
+ * above `COMPONENT_OPEN`'s doc comment). Unquoted the same way, into the same
+ * `props` key space -- the `#substitution#` token inside the key is kept
+ * literal (never evaluated), matching how `#substitution#` tokens are already
+ * kept literal in property VALUES.
+ */
+const PROPERTY = /^("[^"]*"|[A-Za-z0-9_][\w-]*)\s*:\s*(.*)$/;
 const FENCE_OPEN = /^```([A-Za-z0-9_-]*)\s*$/;
 
 export function parseApxFile(file: string, text: string, warnings: ParseIssue[]): ComponentNode[] {
@@ -175,7 +202,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
 
       m = PROPERTY.exec(line);
       if (m) {
-        const key = `${prefix}${m[1]}`;
+        const key = `${prefix}${unquoteIdentifier(m[1])}`;
         i++;
         if (m[2].trim() === '') {
           const fenced = tryFence();

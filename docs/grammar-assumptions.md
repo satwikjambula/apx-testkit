@@ -876,31 +876,106 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         (261 generated files), `opportunities` (152), `customers` (126),
         `cymbal-coffee-ops` (8, from the independent-apps set).
 
+- [x] **RESOLVED: quoted, substitution-embedding property KEYS inside
+      `link.target.items { }` blocks (the `strategic-planner` 8-warning
+      gap from the entry directly above) — fixed in `packages/parser/src/
+      parser.ts`.**
+      - **Root cause confirmed against the literal real source, not the
+        earlier paraphrase alone**: re-read every one of the 8 occurrences
+        directly from `strategic-planner`'s own `.apx` files (not just the
+        two already cited) — `pages/p00003-project-details.apx` has 5
+        occurrences (lines 2154, 2291-2292, 2639) and
+        `pages/p00094-initiative.apx` has 3 (lines 1655, 1776-1777, 2760),
+        all the identical shape: a `link { target: { items: { "P#<PAGE-
+        SUBSTITUTION>#_ID": #<VALUE-SUBSTITUTION># } } }` object literal,
+        one instance nested inside a region's own `link` group (page-level
+        column-link target on an Interactive Report), the rest inside
+        `column NAME ( link { target: { items: { ... } } } } )` blocks (a
+        per-column link target) — confirming the construct occurs in both
+        of the two structural positions `link.target` can appear in this
+        app, not just one.
+      - **Full-production EBNF cross-check re-verified independently**
+        (fresh `curl` of the raw `.ebnf`, 11,743 lines, per ADR-004 — not
+        reused from the prior pass' claim): grepped literally every
+        `"target" ":" <ws> <value>` occurrence in the file (30 total, not
+        the 11 originally estimated) across `<entry-b-link-property>`,
+        `<classic-navigation-bar-entry-link-property>`,
+        `<entry-c-link-property>`, `<column-b-link-property>`,
+        `<column-c-link-property>`, `<column-d-link-property>`,
+        `<column-g-link-property>`, `<pwa-shortcut-shortcut-property>`,
+        plus every branch/action `REDIRECT_PAGE`/`REDIRECT_APP` `target`
+        property — confirmed EVERY one types `target` as an opaque
+        `<value>` (`<value> ::= <string> | <identifier> | <boolean> |
+        <number> | <reference> | <multiline-string> | <array>`). The
+        grammar has no production anywhere that names `page`/`items`/
+        `clearCache`/`anchor`, nor any general "object literal with
+        arbitrary keys" concept at all — `<value>`'s own definition has no
+        map/object alternative. This means `target`'s internal
+        `{ page: ..., items: { ... }, clearCache: ..., anchor: ... }`
+        shape is being serialized using the SAME line-oriented `NAME ':'
+        value` property syntax as everything else, just nested one level
+        deeper than the grammar's own named productions ever reach — real,
+        reproducible APEXlang, genuinely outside what the EBNF formally
+        describes, exactly the same "opaque `<value>`, grammar silent on
+        the internal shape" situation as `calendarSettings` before it.
+        Real data wins per ADR-004 — documented here, not silently
+        resolved by assuming the grammar is exhaustive.
+      - **The fix**: `PROPERTY`'s key-capturing group (`packages/parser/
+        src/parser.ts`) now accepts a quoted-string alternative,
+        `/^("[^"]*"|[A-Za-z0-9_][\w-]*)\s*:\s*(.*)$/` (previously bare-
+        identifier-only), unquoted via the SAME `unquoteIdentifier()`
+        helper already used for quoted, space-containing COMPONENT
+        identifiers (the `column "Row Header" (` fix) — same underlying
+        cause in both cases: the bare `<identifier>` production
+        (`<identifier-start> ::= "A".."Z" | "a".."z" | "0".."9" | "_"`,
+        `<identifier-rest>` adds only "." and "-") cannot contain the
+        characters the real value needs (a space there, a `#` here), so
+        the exporter quotes it — and both times the fix is "accept the
+        quoted alternative, unquote into the same key/identifier space,"
+        not a special case bolted on separately. The `#substitution#`
+        token embedded in the key is kept completely literal (never
+        evaluated) — identical treatment to how `#substitution#` tokens in
+        property VALUES were already handled, now extended to keys.
+      - **No new typed AST field** — `link.target.items.*` stays in
+        `raw`/`ApexRegion.raw` only, per ADR-001 (this is a raw-capture
+        completeness fix, not a new semantic field, so there is nothing to
+        wire into a NEW `apx-diff` field-by-field diff line; the EXISTING
+        whole-`raw`-bag comparison (`rawEqual()` in
+        `packages/generator/src/diff.ts`) already picks up the
+        newly-captured data automatically, confirmed by inspection of
+        `diffRegionFields()`).
+      - **Regression-guarded**: 4 new tests in `packages/parser/test/
+        parser.test.ts` (zero warnings on the real construct; the quoted
+        key unquotes correctly and the embedded `#substitution#` token
+        stays literal; sibling keys in the same `link.target` group are
+        undisturbed, i.e. no desync; a normal bare-identifier key in the
+        same `items { }` shape is unaffected) — confirmed the first two
+        tests fail without the fix (`git stash` the parser-source-only
+        change, rebuild, rerun: "Unrecognized line" warning + `undefined`
+        raw value; restored and reconfirmed green).
+      - **Verified zero warnings**: `strategic-planner` alone (298 `.apx`
+        files, 0 warnings, `link.target.items.P#EDIT_PAGE#_ID` etc. now
+        populated with the correct literal value in `raw`) and the FULL
+        45-app corpus plus the separately-tracked UX Pattern Catalog ground
+        truth app (46 apps total swept) — 0 warnings across every single
+        one, no regressions introduced by the widened `PROPERTY` regex
+        (confirmed no other app in the corpus has a line starting with `"`
+        that used to warn and now mis-parses, by the same zero-warnings
+        sweep catching any new misparse as a `raw`/structural anomaly).
+      - **Determinism reconfirmed**: `examples/employee-page` regenerated
+        byte-identical to the committed fixture; the CI-style
+        generate-twice-diff on `packages/generator/test/fixtures/
+        reference-fixtures` byte-identical; `strategic-planner` itself
+        regenerated twice (261 files both times) byte-identical, AND
+        `apx-diff` self-diff on `strategic-planner` against itself reports
+        "0 added, 0 removed, 0 changed, 261 unchanged."
+
 ## Still open
 
-- [ ] **NEW (this round): quoted, substitution-embedding property KEYS
-      inside `link.target.items { }` blocks are not parsed.** 8 real
-      occurrences, `strategic-planner` only (see the dated entry above for
-      full evidence and the EBNF cross-check already performed — the
-      grammar types `link.target` as an opaque `<value>`, silent on this
-      internal shape, so real data is the only source). The current
-      `PROPERTY` regex (`packages/parser/src/parser.ts`) requires the key
-      to start with `[A-Za-z0-9_]`; a leading `"` falls through to
-      "Unrecognized line". Needs a `/parser` decision: either (a) extend
-      `PROPERTY` to accept a quoted-string key alternative (mirroring the
-      existing `unquoteIdentifier()` handling for quoted component
-      identifiers), unquoting into the same `props` key space, or (b) a
-      narrower fix scoped just to `items { }` blocks if a general quoted-key
-      property is judged too broad a grammar change from one app's evidence.
-      Either way, the malformed lines currently fall safely into
-      `node.props['#unparsed']` (a warning, not silent data loss or a
-      parser crash) — consistent with ADR-001's "never lose information"
-      guarantee — but the two affected `link.target.items` values
-      themselves are NOT captured in any typed or raw field today. Only
-      one app in the 45-app corpus is affected; do not generalize a fix
-      without a second real occurrence, per this project's "one instance
-      is not enough to generalize from" discipline (the Chart `widget()`
-      lesson).
+(the quoted, substitution-embedding property KEY item that lived here has
+been resolved — see the dated entry below, "RESOLVED: quoted,
+substitution-embedding property KEYS...". Left this pointer in place, not
+silently removed, per this project's correction discipline.)
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF
       (`<comment> ::= "//" { <any-character-except-newline> } <line-end> |
       "/*" { <any-character> | <nl> } "*/"`), not just an assumption

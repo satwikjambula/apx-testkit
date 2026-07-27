@@ -575,3 +575,87 @@ describe('region.source.sql (bug: read the wrong raw key)', () => {
     expect(region.source?.sql).toBe('select empno, ename from emp');
   });
 });
+
+describe('quoted, substitution-embedding PROPERTY keys (link.target.items)', () => {
+  // Reproduces a real, previously-unhandled construct found in Oracle's own
+  // "strategic-planner" starter app (github.com/oracle/apex, 26.1 branch,
+  // pages/p00003-project-details.apx:2154 and 7 more identical-shape
+  // occurrences across that page + p00094-initiative.apx): a quoted string
+  // used as a PROPERTY key inside an opaque `link.target.items { }` object
+  // literal, where the quoted string itself embeds a `#substitution#` token
+  // (a dynamically-computed page-item name: `P` + a page-number substitution
+  // + `_ID`). The official EBNF types `target`/`LINK` as an opaque `<value>`
+  // everywhere (every one of the 30 `"target" ":" <ws> <value>` productions
+  // across the whole grammar, e.g. `<entry-b-link-property>`,
+  // `<column-b-link-property>`, `<column-c-link-property>`,
+  // `<column-g-link-property>`) -- it never defines `items`'s internal key
+  // shape, so real data is the only source here (ADR-004). The bare
+  // `<identifier>` production cannot contain `#`
+  // (`<identifier-start> ::= "A".."Z" | "a".."z" | "0".."9" | "_"`), which is
+  // exactly why the exporter quotes this specific key -- the same reason
+  // quoted, space-containing COMPONENT identifiers exist (see the
+  // "quoted multi-word component identifiers" describe block above). Before
+  // the fix, the PROPERTY regex required a bare-identifier-style key, so
+  // this line fell through to "Unrecognized line" and the value was lost to
+  // `#unparsed` instead of `link.target.items.*`.
+  const apxWithQuotedSubstitutionKey = `page 3 (
+  name: Project Details
+  alias: PROJECT-DETAILS
+  region documents (
+    type: interactiveReport
+    link {
+      linkColumn: customTarget
+      target: {
+        page: #EDIT_PAGE#
+        items: {
+          "P#EDIT_PAGE#_ID": #DOCUMENT_ID#
+        }
+        clearCache: #EDIT_PAGE#
+        anchor: #DOCUMENT_ID#
+      }
+    }
+  )
+)`;
+
+  it('parses with no warnings', () => {
+    const warnings: import('../src/index.js').ParseIssue[] = [];
+    parseApxFile('p00003-project-details.apx', apxWithQuotedSubstitutionKey, warnings);
+    expect(warnings).toEqual([]);
+  });
+
+  it('unquotes the key and preserves the embedded #substitution# token literally', () => {
+    const result = parseApp({ 'p00003-project-details.apx': apxWithQuotedSubstitutionKey });
+    const [region] = result.ast.pages[0].regions;
+    expect(region.raw['link.target.items.P#EDIT_PAGE#_ID']).toBe('#DOCUMENT_ID#');
+  });
+
+  it('does not desync the surrounding link.target group (sibling keys stay intact)', () => {
+    const result = parseApp({ 'p00003-project-details.apx': apxWithQuotedSubstitutionKey });
+    const [region] = result.ast.pages[0].regions;
+    expect(region.raw['link.target.page']).toBe('#EDIT_PAGE#');
+    expect(region.raw['link.target.clearCache']).toBe('#EDIT_PAGE#');
+    expect(region.raw['link.target.anchor']).toBe('#DOCUMENT_ID#');
+  });
+
+  it('still parses a normal, bare-identifier key in the same items block unaffected', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region r (
+    type: interactiveReport
+    link {
+      target: {
+        page: 66
+        items: {
+          P66_AREA_ID: #AREA_ID#
+        }
+      }
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    expect(region.raw['link.target.items.P66_AREA_ID']).toBe('#AREA_ID#');
+  });
+});
