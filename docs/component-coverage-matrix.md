@@ -4,9 +4,11 @@ Number of real apps was never the right metric on its own — app count
 proves the parser handles real-world export variety, but says nothing
 about whether any *specific* component has enough diversity behind it, or
 whether it's been verified live at all. This tracks both: how many of the
-13 real, statically-parsed exports contain each region/item type, and
+24 real, statically-parsed exports contain each region/item type, and
 separately, whether that type has ever been checked against a running
-instance.
+instance. (13 from Oracle's own sample gallery + 11 independently-authored
+apps from `ujnak/APEXlang-exports`, MIT licensed — see
+`.ai/knowledge/verification.md`.)
 
 Regenerate the counts with:
 
@@ -27,7 +29,7 @@ function loadExport(dir) {
 "
 ```
 
-(The 13 real exports used to produce this table are not committed to this
+(The 24 real exports used to produce this table are not committed to this
 repo — see docs/limitations.md on redistribution rights. Re-run against
 your own exports to reproduce or extend it.)
 
@@ -35,45 +37,51 @@ your own exports to reproduce or extend it.)
 
 | Type | Apps | Total | Live verification |
 |---|---|---|---|
-| `staticContent` | 13/13 | 650 | N/A — not a widget region |
-| `classicReport` | 13/13 | 57 | Not verified — no dedicated component |
-| `breadcrumb` | 12/13 | 287 | N/A — not a widget region |
-| `list` | 12/13 | 75 | Not verified — no dedicated component |
-| `interactiveReport` | 8/13 | 39 | **Verified** — generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues, focus, getViewName); search/sort/pagination confirmed private (`_`-prefixed) |
-| `regionDisplaySelector` | 6/13 | 31 | Not verified |
-| `interactiveGrid` | 5/13 | 64 | **Verified** — `ApexInteractiveGridRegion` (getActions, getViews, getCurrentView, getCurrentViewId, getSelectedRecords) |
-| `cards` | 5/13 | 40 | **Verified** — `ApexCardsRegion` (pagination, selection); `getRecords`/`getModel` confirmed broken |
-| `form` | 5/13 | 27 | N/A — items within forms verified individually via `item.ts` |
-| `chart` | 4/13 | 107 | **Partially verified** — generic `ApexRegion.refresh()` only; `apex.region(id).widget()` confirmed to return `null` for charts (real structural difference from IG/Cards/IR). Static config now also typed: `ApexRegion.chartSettings.type` (parser-only, does not add runtime capability) |
-| `calendar` | 3/13 | 25 | Typed-but-unverified — `ApexRegion.calendarSettings` is now typed (parser-only), but the `Calendar` runtime stub remains unbuilt: zero live ground truth |
-| `facetedSearch` | 3/13 | 7 | **Verified** — `ApexFacetsRegion` (facet counts, apply/clear) |
-| `search` | 2/13 | 27 | Not verified — new region type (AI-powered search results, gated on `CURRENT_AI_PROVIDER`), no dedicated component |
-| `map` | 2/13 | 3 | Not verified — `MapRegion` stub, zero live ground truth |
-| `tree` | 1/13 | 1 | Partially explored — confirmed to be the standard `t_TreeNav` navigation widget reused as a login picker, not a distinct content pattern; `TreeRegion` stub still covers the general case |
-| `listView` | 1/13 | 1 | Not verified — new region type, no dedicated component |
-| all `plugin/*`, `themeTemplateComponent/*`, `dynamicContent`, `plSqlDynamicContent`, `smartFilters`, `workflowDiagram` | 1–7/13 each | — | Not verified, no dedicated component for any of them |
+| `staticContent` | 24/24 | 685 | N/A — not a widget region |
+| `classicReport` | 16/24 | 63 | Not verified — no dedicated component |
+| `breadcrumb` | 14/24 | 290 | N/A — not a widget region |
+| `list` | 13/24 | 76 | Not verified — no dedicated component |
+| `interactiveReport` | 11/24 | 42 | **Verified** — generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues, focus, getViewName); search/sort/pagination confirmed private (`_`-prefixed); `expectRegionsResolve()` also confirmed live (ADR-003 htmlDomId-resolved where set) |
+| `form` | 7/24 | 29 | N/A — items within forms verified individually via `item.ts` |
+| `interactiveGrid` | 6/24 | 66 | **Verified** — `ApexInteractiveGridRegion` (getActions, getViews, getCurrentView, getCurrentViewId, getSelectedRecords); auto-generated `getCurrentViewId()` check when `htmlDomId` is set |
+| `regionDisplaySelector` | 6/24 | 31 | Not verified |
+| `cards` | 5/24 | 40 | **Verified** — `ApexCardsRegion` (pagination, selection); `getRecords`/`getModel` confirmed broken |
+| `chart` | 4/24 | 107 | **Verified** — `ApexChartRegion` (`getOption`/`setOption`, confirmed live on 3 chart types); generic `ApexRegion.refresh()` also confirmed. Static config typed: `ApexRegion.chartSettings.type` + `ApexRegion.htmlDomId`. Corrects an earlier wrong claim that `apex.region(id).widget()` returns `null` for charts — it does not (see `docs/quirks/26.1.json` `chart-region-widget-returns-null`). Also confirmed live: declared type ≠ runtime type in at least one case (`donut` reports as `pie` — `chart-declared-type-not-runtime-type`) |
+| `calendar` | 3/24 | 25 | Typed-but-unverified — `ApexRegion.calendarSettings` is now typed (parser-only), but the `Calendar` runtime stub remains unbuilt: zero live ground truth |
+| `facetedSearch` | 3/24 | 7 | **Verified** — `ApexFacetsRegion` (facet counts, apply/clear) |
+| `map` | 3/24 | 4 | Not verified — `MapRegion` stub, zero live ground truth. Notable: `htmlDomId` confirmed set on a `map` region (`draw-polygon-on-map`, first confirmation of `htmlDomId` on this type) |
+| `search` | 2/24 | 27 | Not verified — new region type (AI-powered search results, gated on `CURRENT_AI_PROVIDER`), no dedicated component |
+| `tree` | 1/24 | 1 | Partially explored — confirmed to be the standard `t_TreeNav` navigation widget reused as a login picker, not a distinct content pattern; `TreeRegion` stub still covers the general case |
+| `listView` | 1/24 | 1 | Not verified — new region type, no dedicated component |
+| all `plugin/*`, `themeTemplateComponent/*`, `dynamicContent`, `plSqlDynamicContent`, `smartFilters`, `workflowDiagram` | 1–7/24 each | — | Not verified, no dedicated component for any of them |
+
+Also notable: `htmlDomId` confirmed set on `classicReport` regions too
+(`menu-popup-with-action`, `salary-management-agent`) — the fourth and
+fifth region types confirmed to use this mechanism (after Chart,
+Interactive Grid, Interactive Report), further supporting ADR-003's
+"universal mechanism, not gated to specific types" finding.
 
 ## Item types
 
 | Type | Apps | Total | Live verification |
 |---|---|---|---|
-| `hidden` | 13/13 | 205 | **Verified** — `apex.item()` round-trip |
-| `textField` | 13/13 | 120 | **Verified** |
-| `selectList` | 11/13 | 111 | **Verified** — basic get/set only; richer label/value/option-list interaction not verified |
-| `password` | 11/13 | 14 | Partially — `login()`'s `.fill()` works against it in practice, but not verified via the generic `ApexItem`/`apex.item()` round-trip the way the other types are |
-| `displayOnly` | 9/13 | 63 | Not verified |
-| `textarea` | 9/13 | 37 | **Verified** |
-| `numberField` | 9/13 | 34 | **Verified** |
-| `datePicker` | 8/13 | 42 | **Verified** — basic get/set only; calendar-widget interaction (`date.select("2026-04-10")`-style) not verified |
-| `switch` | 6/13 | 17 | Not verified — `Switch` stub |
-| `radioGroup` | 5/13 | 8 | Not verified — `RadioGroup` stub |
-| `checkboxGroup` | 5/13 | 6 | Not verified |
-| `checkbox` | 4/13 | 11 | Not verified, not stubbed either — likely tractable, just never exercised live |
-| `shuttle` | 3/13 | 3 | Not verified — `Shuttle` stub |
-| `fileUpload` | 2/13 | 2 | Not verified — `FileBrowse` stub |
-| `popupLov` | 1/13 | 7 | Not verified — `PopupLov` stub; first static ground truth came from `sample-dynamic-actions` |
-| `richTextEditor` | 1/13 | 2 | Not verified — `RichText` stub; first static ground truth came from `image-support-rte` |
-| `markdownEditor`, `imageUpload`, `datePickerJquery`, `displayImage`, `plugin/slider`, `selectOne` | 1/13 each | 1–4 | Not verified, no dedicated handling — new types |
+| `textField` | 24/24 | 140 | **Verified** |
+| `password` | 22/24 | 25 | Partially — `login()`'s `.fill()` works against it in practice, but not verified via the generic `ApexItem`/`apex.item()` round-trip the way the other types are |
+| `hidden` | 15/24 | 219 | **Verified** — `apex.item()` round-trip |
+| `selectList` | 15/24 | 116 | **Verified** — basic get/set only; richer label/value/option-list interaction not verified |
+| `checkbox` | 15/24 | 22 | Not verified, not stubbed either — likely tractable, just never exercised live |
+| `textarea` | 11/24 | 40 | **Verified** |
+| `displayOnly` | 10/24 | 65 | Not verified |
+| `numberField` | 10/24 | 37 | **Verified** |
+| `datePicker` | 9/24 | 43 | **Verified** — basic get/set only; calendar-widget interaction (`date.select("2026-04-10")`-style) not verified |
+| `switch` | 7/24 | 23 | Not verified — `Switch` stub |
+| `radioGroup` | 5/24 | 8 | Not verified — `RadioGroup` stub |
+| `checkboxGroup` | 5/24 | 6 | Not verified |
+| `fileUpload` | 3/24 | 4 | Not verified — `FileBrowse` stub |
+| `shuttle` | 3/24 | 3 | Not verified — `Shuttle` stub |
+| `richTextEditor` | 2/24 | 3 | Not verified — `RichText` stub; first static ground truth came from `image-support-rte` |
+| `popupLov` | 1/24 | 7 | Not verified — `PopupLov` stub; first static ground truth came from `sample-dynamic-actions` |
+| `markdownEditor`, `imageUpload`, `datePickerJquery`, `displayImage`, `plugin/slider`, `selectOne` | 1/24 each | 1–4 | Not verified, no dedicated handling — new types |
 
 ## Dynamic Actions
 
@@ -99,7 +107,18 @@ not.
 | `image-support-rte` | 3 |
 | `sample-collections` | 3 |
 | `sample-cards` | 2 |
-| **Total** | **329** |
+| `XLIFF-TRANSLATE` | 2 |
+| `driving-with-apex` | 1 |
+| `employee-management` | 1 |
+| `menu-popup-with-action` | 1 |
+| `salary-management-agent` | 1 |
+| `test-button-show-as-disabled-261` | 1 |
+| `CSP-REPORT` | 0 |
+| `draw-polygon-on-map` | 0 |
+| `get-table-info-by-apex-db-dictionary` | 0 |
+| `sample-terminal-emulator` | 0 |
+| `world-diner` | 0 |
+| **Total** | **336** |
 
 Verification status: metadata only (trigger, condition, nested actions
 all typed and diffable). Zero live ground truth on runtime triggering —
@@ -129,6 +148,6 @@ typed metadata doesn't change that (see docs/ecosystem-roadmap.md
   capability behind it yet. Don't conflate "the parser understands this"
   with "the testkit can act on this."
 
-This table is a snapshot from a specific set of 13 exports, not a live
+This table is a snapshot from a specific set of 24 exports, not a live
 report — re-run the script above after adding new exports, or after any
 new live verification pass, to keep it current.

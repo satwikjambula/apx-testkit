@@ -713,6 +713,50 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         determinism reconfirmed; zero warnings across all 13 real
         exports.
 
+- [x] **First non-Oracle real apps added to the corpus:
+      `ujnak/APEXlang-exports` (11 apps, MIT licensed).** Beyond Oracle's
+      own sample gallery (13 apps + UX Pattern Catalog), this project
+      now also parses 11 small, independently-authored real apps from
+      `github.com/ujnak/APEXlang-exports`: `CSP-REPORT`,
+      `XLIFF-TRANSLATE`, `draw-polygon-on-map`, `driving-with-apex`,
+      `employee-management`, `get-table-info-by-apex-db-dictionary`,
+      `menu-popup-with-action`, `salary-management-agent`,
+      `sample-terminal-emulator`, `test-button-show-as-disabled-261`,
+      `world-diner`. Confirmed genuine APEXlang 26.1 format
+      (`mmdVersion 26.1.0+3102`, matching the rest of the corpus,
+      confirmed by direct file fetch before cloning) and MIT license
+      (confirmed via the repo's own LICENSE file) before adding.
+      - Parsed all 11 with `@apx/parser` — **zero warnings**, matching
+        the existing 13-app corpus. No new region or component types
+        found (all 8 region types seen — breadcrumb, classicReport,
+        form, interactiveGrid, interactiveReport, list, map,
+        staticContent — and all 4 unmodeled component types — column,
+        layer, process, savedReport — were already known).
+      - Confirmed the parser handles a real non-ASCII/Unicode region
+        identifier correctly: `menu-popup-with-action` has a region
+        named `ジョブのリスト` ("job list" in Japanese).
+      - **New finding**: `advanced { htmlDomId: ... }` confirmed present
+        in real static export data on two region types never checked for
+        it before — `map` (`draw-polygon-on-map`, region `map` →
+        `htmlDomId: MAP`) and `classicReport`
+        (`menu-popup-with-action`/`salary-management-agent`, region
+        `employees`/`employees_1` → `htmlDomId: EMP`). This is a
+        *static* confirmation only (no live instance available for these
+        apps to verify actual runtime resolution) — recorded as such in
+        `docs/quirks/26.1.json` `region-id-not-static-id`, distinct from
+        the live-confirmed cases (Chart/IG/Interactive Report).
+      - Determinism confirmed on all 11 (generate twice, byte-identical);
+        `apx-diff` self-diff spot-checked on 3, all report zero changes.
+      - Regenerated `docs/component-coverage-matrix.md` in full (13→24
+        apps — every ratio recomputed, not just appended, to avoid a
+        mixed-denominator table) and `.ai/knowledge/verification.md`
+        (new "Non-Oracle real apps" section). Also recorded two more
+        genuine 26.1-format apps found in the same research pass but
+        NOT added — `maniltns/ojas-apex-varient` (AI-generated POC
+        content, not a real business app) and `ShayneJaya/customer-
+        portal` — both blocked on having no license at all (all-rights-
+        reserved by default), pending the author's explicit permission.
+
 ## Still open
 
 - [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF

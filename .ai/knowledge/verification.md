@@ -47,6 +47,38 @@ static-ground-truth only until a running instance becomes available.
 **These exports/zips must never be committed to the repository** — treat
 them the same as credentials: useful locally, kept out of git.
 
+## Non-Oracle real apps: `ujnak/APEXlang-exports`
+
+11 more real, independently-authored small apps beyond the Oracle
+gallery pool, cloned locally from
+[`github.com/ujnak/APEXlang-exports`](https://github.com/ujnak/APEXlang-exports)
+(**MIT licensed**, confirmed via the repo's own LICENSE file — cleaner
+redistribution status than Oracle's own samples, which still have an
+open question per `docs/license-check.md`; still kept local-only, same
+as the rest of the corpus, not because of licensing uncertainty this
+time but for consistency): `CSP-REPORT`, `XLIFF-TRANSLATE`,
+`draw-polygon-on-map`, `driving-with-apex`, `employee-management`,
+`get-table-info-by-apex-db-dictionary`, `menu-popup-with-action`,
+`salary-management-agent`, `sample-terminal-emulator`,
+`test-button-show-as-disabled-261`, `world-diner`. Confirmed genuine
+APEXlang 26.1 format (`mmdVersion 26.1.0+3102`, matching the rest of the
+corpus) before adding. Static-ground-truth only, no live access found.
+Small apps (2-6 pages each) but a genuinely independent, non-Oracle-
+gallery data point — parsed with zero warnings, no new region/component
+types, determinism confirmed on all 11. Notable finding: `htmlDomId`
+confirmed on two region types not previously checked for it (`map`,
+`classicReport`), extending ADR-003's "universal mechanism" finding
+further. Also confirmed the parser handles non-ASCII/Unicode region
+identifiers correctly (a real Japanese region name in
+`menu-popup-with-action`).
+
+Two more apps from the same research pass were found in genuine 26.1
+APEXlang format but are **not** in the local corpus — both have **no
+license at all** (`maniltns/ojas-apex-varient`, `ShayneJaya/customer-
+portal`), which needs the author's explicit permission before any use,
+even local-only, per the same discipline as Oracle's own redistribution
+question.
+
 ## `docs/quirks/26.1.json` — the runtime evidence ledger
 
 One entry per finding: `id`, `component`, `issue`, `evidence`
