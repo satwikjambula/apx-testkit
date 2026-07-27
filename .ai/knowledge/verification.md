@@ -105,19 +105,21 @@ regions, 380 dynamic actions (see `docs/component-coverage-matrix.md`) —
 and surfaced genuinely new signal, unlike the small (2-6 page) apps in
 the previous `ujnak` batch:
 
-- **Zero-warnings parse: 17/18 clean. `strategic-planner` has 8 real
-  parser warnings** — NOT a clean corpus addition, and not silently
-  smoothed over. Two `link.target.items` blocks (in
-  `pages/p00003-project-details.apx` and `pages/p00094-initiative.apx`)
-  use a quoted string as a property KEY, where the quoted string itself
-  contains embedded `#substitution#` tokens (e.g. `"P#EDIT_PAGE#_ID":
-  #DOCUMENT_ID#`) — a real, reproducible construct the parser's
-  `PROPERTY` regex (which requires a bare identifier-style key) does not
-  recognize. See `docs/grammar-assumptions.md`'s "Still open" section for
-  the full evidence and EBNF cross-check (the EBNF types `link.target` as
-  an opaque `<value>`, so it's silent on this internal object-literal
-  shape entirely — real data is the only source here, consistent with
-  ADR-004). Filed to `/parser`, not fixed in this pass.
+- **Zero-warnings parse: 18/18 clean, including `strategic-planner`.**
+  It initially surfaced 8 real parser warnings — NOT a clean corpus
+  addition on first pass, and not silently smoothed over. Eight
+  `link.target.items` blocks (across `pages/p00003-project-details.apx`
+  and `pages/p00094-initiative.apx`) use a quoted string as a property
+  KEY, where the quoted string itself contains embedded `#substitution#`
+  tokens (e.g. `"P#EDIT_PAGE#_ID": #DOCUMENT_ID#`) — a real, reproducible
+  construct the parser's `PROPERTY` regex (which required a bare
+  identifier-style key) did not recognize. Filed to `/parser` and fixed:
+  the regex now accepts a quoted-string key alternative, unquoted via the
+  existing `unquoteIdentifier()` helper. See `docs/grammar-assumptions.md`
+  for the full evidence, EBNF cross-check (the EBNF types `link.target` as
+  an opaque `<value>`, silent on this internal object-literal shape
+  entirely — real data was the only source here, consistent with
+  ADR-004), and the regression tests added in `packages/parser/test/`.
 - **Genuinely new region types found** (none of these existed in the
   24-app corpus's type list): `reflowReport`, `columnToggleReport`,
   `helpText` (all `universal-theme-reference`, a dedicated Universal
@@ -205,10 +207,10 @@ applied to the `ujnak` batch).
 ## Corpus size after this addition
 
 45 real apps total: the original 13 Oracle gallery apps + 11 `ujnak`
-apps + 18 `oracle/apex` (26.1 branch) apps + 3 independent apps. 44/45
-parse with zero warnings; `strategic-planner` is the one exception (8
-warnings, a genuine new parser gap, documented above and in
-`docs/grammar-assumptions.md`, not fixed in this pass).
+apps + 18 `oracle/apex` (26.1 branch) apps + 3 independent apps. All 45
+parse with zero warnings (`strategic-planner`'s 8 warnings were a real
+parser gap, found and fixed in this pass — see above and
+`docs/grammar-assumptions.md`).
 
 ## `docs/quirks/26.1.json` — the runtime evidence ledger
 
