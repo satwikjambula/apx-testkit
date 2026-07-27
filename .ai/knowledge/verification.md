@@ -176,6 +176,80 @@ to the repo rather than kept local-only. This is flagged here as a
 unilaterally in this pass — the 13 apps remain local-only, unchanged,
 until that's explicitly decided.
 
+**Resolution (Product Architect, 2026-07-27) — defer bulk action, one narrow exception flagged.**
+
+A quick name-level check of `oracle/apex`'s `26.1` branch
+(`sample-apps/` directory listing via the GitHub API) found that **12 of
+the 13 local-only apps have an exact or trivially-renamed counterpart
+already present**: `ux-pattern-catalog`, `apextogo`,
+`brookstrut-sample-app` (↔ `brookstrut`), `image-support-rte`,
+`sample-interactive-grids` (↔ `interactive-grids`),
+`sample-application-search`, `sample-calendar`, `sample-cards`,
+`sample-charts`, `sample-collections`, `sample-dynamic-actions`,
+`sample-master-detail`, `sample-vector-search` all appear by name.
+`sample-approvals`'s README ("manage changes to employees' salaries and
+jobs after getting the approval of an appropriate individual") matches
+`workflow-approvals`'s description closely enough to be the same app
+under a renamed directory — 13/13 plausible matches, not a handful. So
+the *name-level* cross-check this note called for turned out to be
+nearly free, not the open-ended fuzzy-matching exercise it could have
+been.
+
+That resolves the *mechanical* part of the open question cheaply. It
+does not change the recommendation, for reasons that have nothing to do
+with matching difficulty:
+
+1. **The "local-only" status of this corpus was never solely a licensing
+   gate.** 32 of the 45 real apps in this corpus (the 11 `ujnak` apps —
+   MIT — and the 18 `oracle/apex` apps documented just above this note —
+   UPL-1.0 — and the 3 independent Apache-2.0/MIT apps) already have
+   *fully clean, confirmed* licenses today and are still kept
+   local-only, explicitly "for consistency with the project's
+   established handling," not because of any remaining legal question.
+   Committing the 13 the moment their license clears would break that
+   already-deliberate consistency practice for no reason tied to those
+   13 specifically — the same argument for keeping the 18 UPL-1.0 apps
+   local applies equally to these 13 once their license clears.
+2. **No second real-app determinism trigger exists for 12 of the 13.**
+   This project's own discipline (ADR-004, the Chart/Calendar precedent,
+   the rejected "Analysis Engineer" role) is: build/commit infrastructure
+   when a concrete need is blocked on it, not when it merely becomes
+   *possible*. Confirming a license is necessary but not sufficient — it
+   answers "are we allowed to," not "do we need to right now."
+3. **One narrow, real exception**: `docs/limitations.md`'s Generator
+   section already names `UX Pattern Catalog` specifically as the reason
+   a real capability can't be exercised — "Determinism is proven against
+   a hand-written synthetic fixture... not the actual multi-page UX
+   Pattern Catalog export — that export isn't committed (redistribution
+   rights unchecked)." That is a pre-existing, documented gap this
+   session's finding may resolve (the GitHub `ux-pattern-catalog` app,
+   622KB zipped, is very likely the same app by name and role as this
+   project's own primary ground-truth app). This is the one candidate
+   worth pursuing on its own, later, not as part of a 13-app batch.
+4. **Repo-size consideration is real, not hypothetical.** A single
+   sample app's zip export is ~600KB; several of these 13 (`brookstrut`,
+   `interactive-grids`) are known to be substantial multi-page apps in
+   the same family as `strategic-planner` (262 pages) from the 18-app
+   batch. Committing 13 raw `.apx`/zip exports is a meaningfully
+   different repo-size decision than committing hand-written fixtures,
+   and shouldn't be taken as a side effect of a licensing question
+   getting answered.
+
+**Verdict: defer bulk action on all 13. Do not commit any of them now.**
+The 13 stay local-only, unchanged, individually-unresolved on licensing
+per `docs/license-check.md` (name-matching a UPL-1.0 GitHub app is
+supporting evidence, not the same as re-doing the content-level
+per-app check `docs/license-check.md`'s discipline requires before
+calling a specific app's license resolved). The one specific,
+already-justified follow-up worth doing later, on its own, not as a
+13-app batch: if/when someone actually needs the determinism-vs-real-
+multi-page-export proof `docs/limitations.md` flags as missing, verify
+`oracle/apex`'s `ux-pattern-catalog` is content-level the same app (not
+just same name) as this project's local `UX Pattern Catalog`, and only
+then decide whether to commit that one export (or a derived fixture) to
+close that specific gap. That real need is the trigger — not this
+session's license confirmation on its own.
+
 ## Independent apps beyond `oracle/apex` and `ujnak` — 3 apps
 
 Three more independent, real apps confirmed in genuine 26.1 APEXlang
