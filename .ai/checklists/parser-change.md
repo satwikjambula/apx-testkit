@@ -19,6 +19,24 @@ reviewing an existing one for correctness — not just new components.
       data confirm the EBNF's claim? Does it show something the EBNF is
       silent on, or contradicts? Real data wins when they disagree (ADR-004)
       — document the discrepancy rather than silently picking one side.
+- [ ] **Cross-check against `Sawalhah/apexlang-view`'s independent parser**
+      (`src/parser.js`, reference only -- read it on GitHub, NEVER add it
+      as a dependency, NEVER import/require any of its code). It's a
+      separately-authored parser for the same APEXlang format, validated
+      by its own author against ~1,263 real exports -- roughly 90x this
+      project's local corpus. Fetch the relevant section (e.g.
+      `https://github.com/Sawalhah/apexlang-view/blob/main/src/parser.js`)
+      and check: does it handle the construct being touched the same way?
+      Confirmed convergent findings so far: the "fenced block may start on
+      the following line, indented" quirk (matches this project's own
+      `tryFence()` handling), and the `@/standard-theme` reference
+      exclusion (matches `RefValue.standard` here). A DIVERGENCE is real
+      signal worth investigating — either this project has a gap their
+      larger corpus already caught, or they do. Their `looksLikeGarbage
+      TypeName()`/`assessParseQuality()` heuristics are also worth reading
+      for edge cases neither project has documented yet. This is a
+      complementary, non-authoritative source (like the EBNF) — real
+      local export data still wins when it disagrees with either.
 - [ ] **Write the fix/field** with a doc comment citing both the specific
       EBNF production checked and the real data that confirmed it
       (counts, example values, which real app).

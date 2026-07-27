@@ -51,16 +51,21 @@ discrepancy, don't silently pick a side.
 
 1. The full EBNF production(s) checked (raw `curl`, never `WebFetch`).
 2. Cross-check against every real local `.apx` export available.
-3. A typed field/fix with a doc comment citing both sources.
-4. Wiring into `apx-diff`'s field-by-field diffing
+3. Cross-check against `Sawalhah/apexlang-view`'s independent parser
+   (`src/parser.js`, reference only via GitHub — **never** a dependency,
+   **never** imported). Validated by its author against ~1,263 real
+   exports, roughly 90x this project's local corpus — a divergence is
+   real signal. See `.ai/knowledge/verification.md`.
+4. A typed field/fix with a doc comment citing all of the above.
+5. Wiring into `apx-diff`'s field-by-field diffing
    (`packages/generator/src/diff.ts`) in the *same* change — this has
    been forgotten twice already (`calendarSettings`, then
    `chartSettings`/`htmlDomId`) and is not optional.
-5. `vitest` regression tests.
-6. A zero-warnings sweep across every real local export.
-7. A determinism check (regenerate `reference-fixtures`, diff against
+6. `vitest` regression tests.
+7. A zero-warnings sweep across every real local export.
+8. A determinism check (regenerate `reference-fixtures`, diff against
    `examples/employee-page` — byte-identical).
-8. An entry in `docs/grammar-assumptions.md`.
+9. An entry in `docs/grammar-assumptions.md`.
 
 Full detail: `.ai/checklists/parser-change.md`. Use
 `.ai/prompts/parser-review.md` when reviewing someone else's parser

@@ -15,13 +15,21 @@ The discipline behind ADR-004, and the concrete mechanics of it.
    fetched via `curl` to a raw file, **never** through an AI-summarizing
    fetch tool (a summarized fetch once hallucinated a `@{component-id}`
    syntax that doesn't exist in the real grammar — see ADR-004).
+4. **`Sawalhah/apexlang-view`'s independent parser** (`src/parser.js`) —
+   a separately-authored parser for the same format, validated by its
+   author against ~1,263 real exports (roughly 90x this project's local
+   corpus). Reference only via GitHub — **never** a dependency, **never**
+   imported. A divergence from this project's own parser is real signal
+   worth investigating, given the corpus-size gap. See
+   `.ai/checklists/parser-change.md` for the check step.
 
-When two sources disagree, or one is silent where another has a clear
-answer, **real data (1 or 2) wins over the grammar (3)** — the EBNF is
-authoritative but not necessarily complete (confirmed: `calendarSettings`
-properties are entirely absent from the 11,700+ line grammar despite being
-real and live-verified). The discrepancy gets documented, not silently
-resolved by picking a side.
+When sources disagree, or one is silent where another has a clear answer,
+**real data (1 or 2) wins over the grammar (3) or the reference parser
+(4)** — the EBNF is authoritative but not necessarily complete (confirmed:
+`calendarSettings` properties are entirely absent from the 11,700+ line
+grammar despite being real and live-verified), and apexlang-view is a
+useful cross-check, not ground truth on its own. The discrepancy gets
+documented, not silently resolved by picking a side.
 
 ## Real Oracle apps this project has access to
 

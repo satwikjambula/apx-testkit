@@ -59,7 +59,10 @@ so a reader can see which types have been considered.
 
 The short version: check the **full** relevant EBNF production(s) (not
 just the property you already assume matters), cross-check against every
-real `.apx` export available locally, add the field with a doc comment
-citing both, wire it into `apx-diff`'s `diffRegionFields()`/equivalent in
-the *same* change, add `vitest` regression tests, and run the
-zero-warnings sweep across all real exports plus the determinism check.
+real `.apx` export available locally, cross-check against
+`Sawalhah/apexlang-view`'s independent parser (reference only, never a
+dependency — see `.ai/knowledge/verification.md`), add the field with a
+doc comment citing all of the above, wire it into `apx-diff`'s
+`diffRegionFields()`/equivalent in the *same* change, add `vitest`
+regression tests, and run the zero-warnings sweep across all real
+exports plus the determinism check.
