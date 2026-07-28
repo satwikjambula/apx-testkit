@@ -1035,6 +1035,164 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         byte-identical; full `vitest` suite green across all workspaces;
         `spike/` typechecks clean.
 
+- **2026-07-27, `branch`/`validation`/`lov` typed AST fields (Seventh
+  round follow-through, Compiler/Parser Engineer)** — Product Architect's
+  scope decision (`docs/ecosystem-roadmap.md` "Seventh round (2026-07-27)")
+  actioned: `ApexPage.branches`, `ApexPage.validations`, and
+  `ApexItem.lovName` added to `packages/parser/src/ast.ts`, wired into
+  `packages/parser/src/parser.ts`'s `projectPages()`, and into
+  `packages/generator/src/diff.ts`'s field-by-field diffing (and
+  `diff-cli.ts`'s printed output) in the same change, per this project's
+  own repeated-gap history (`calendarSettings`, then
+  `chartSettings`/`htmlDomId`) — not deferred this time.
+  - **`ApexPage.branches` (`branch (...)`, EBNF `branch-a`, FULL
+    production checked: name/execution/behavior/serverSideCondition/
+    security/config/comments)**. Real data: 325 real branches across this
+    project's full corpus (concurrent-manager: 6 pages, matching the
+    Seventh-round prompt exactly). **Confirmed identifier asymmetry**:
+    branches NEVER carry a component-id (0/325) — the one
+    page-child-component type observed with none at all, unlike
+    `validation`/`region`/`item`/`button` (always present) — so
+    `apx-diff`'s `diffBranches()` cannot reuse `diffByIdentifier` and
+    matches positionally instead (documented limitation: a true
+    reordering between two export versions would show as spurious
+    per-position changes, not a real add/remove).
+  - **CONFIRMED EBNF DISCREPANCY (real data wins, ADR-004)**:
+    `branch-a-behavior-property` types `target` as an opaque scalar
+    `<value>` with a sibling `type` enum (`pageOrUrl`/
+    `urlIdentifiedByItem`/...) and a flat `pageNumber` property. Real data
+    NEVER matches this — `target` is always a nested object group
+    (`target: { page: N, items: {...}, clearCache: N|[N]|&ITEM.,
+    action: ..., successMessage: ..., request: ... }`, or `target: {
+    type: url, url: ... }` for the external-redirect variant, confirmed
+    in `apextogo`'s sign-out branch). The same class of gap already
+    documented for `calendarSettings` (real properties absent from the
+    grammar entirely) — here the grammar names the concept but the shape
+    it describes doesn't match what real 26.1 exports produce.
+  - **Second, narrower real-data finding**: `target.page` is not always a
+    literal page number as the EBNF's sibling button/menu "LINK_IN_APP"
+    value type would suggest. Confirmed THREE real shapes in Oracle's own
+    `customers` starter app (`p00002-customer-details.apx:1848-1896`,
+    three consecutive branches, one of each): a literal number (`page:
+    50`, the dominant case, 317/325), a page ALIAS string (`page:
+    CUSTOMERS`), and an item-substitution token (`page: &LAST_VIEW.`, on
+    an entirely unconditional branch with no `serverSideCondition` block
+    at all — also confirmed real and common, not an edge case).
+    `ApexBranchTarget.page` typed `number | string | null` to hold all
+    three without lossy coercion.
+  - **`ApexPage.validations` (`validation <id> (...)`, EBNF
+    `validation-b`, FULL production checked: name/execution/validation/
+    advanced/error/serverSideCondition/security/config/comments)**. Real
+    data: 353 real validations across this project's full corpus
+    (concurrent-manager: 8 pages / 14 instances). **Confirmed the
+    inverse identifier asymmetry from `branch`**: every real validation
+    carries a component-id (353/353) — `diffByIdentifier` reused as-is,
+    no bespoke diff needed. `validation.type`'s open-string enum (9
+    distinct real values: itemIsNotNull, noRowsReturned,
+    functionBodyReturningBoolean, itemMatchesRegexp,
+    itemIsAValidTimestamp, rowsReturned, itemIsNumeric, functionBody,
+    columnMatchesRegexp) matches the EBNF's item-scoped/column-scoped
+    enums exactly — no discrepancy found here, unlike `branch`.
+  - **Clarifying the Seventh-round prompt's own counts**: the roadmap
+    entry cited "34 pages use validation" and "LOVs referenced across
+    11+ pages" for concurrent-manager, sourced from a broad substring
+    grep (`grep -rl validation pages/`, `grep -rl lov pages/`) done
+    during the scope-decision pass. That substring net is intentionally
+    wider than the typed constructs added here: it also catches
+    `ApexItem.required`'s existing `validation { valueRequired }` group
+    (an item-level "is this field required" flag, unrelated to the
+    page-level `validation()` component — already typed, unchanged by
+    this pass) and every `lov {}` group regardless of LOV type
+    (`sqlQuery`/`staticValues`/`functionBody`, not just
+    `sharedComponent`). The precise, typed-construct counts for
+    concurrent-manager specifically: 8 pages / 14 instances of the actual
+    `validation()` component; 8 pages carry a gated-type
+    (`selectList`/`radioGroup`/`popupLov`) item with a `sharedComponent`
+    LOV reference. Not a contradiction of the scope decision — the
+    decision to build was correct and the real data backs it — just a
+    reconciliation worth recording so the two numbers aren't mistaken for
+    the same measurement later.
+  - **`ApexItem.lovName` (`lov { type: sharedComponent, lov: @name }`,
+    EBNF `page-item-lov-property`, `"lov" ":" <ws> <reference>`, applies
+    when `type = SHARED`)** — gated to exactly the three item types
+    Product Architect scoped this to (`selectList`/`radioGroup`/
+    `popupLov`), per the roadmap's explicit "narrow scope only" framing.
+    Real data confirms the identical shape is ALSO common on
+    `checkboxGroup` (30/70 real items), `selectOne` (13/37),
+    `displayOnly` (23/251), `shuttle` (1/4), and
+    `textFieldWithAutocomplete` (1/2) across the full corpus — reported
+    honestly rather than silently expanding the gate, since the scope
+    decision was explicit about which three types, not "wherever the
+    data supports it." `shared-components/lovs.apx` (the LOV's actual
+    list of values) remains entirely out of `loadExport()`'s scope, per
+    the same roadmap entry — this field is a reference only, resolvable
+    to nothing further without a separate architecture change.
+  - **`Sawalhah/apexlang-view` cross-check**: fetched
+    `github.com/Sawalhah/apexlang-view/blob/main/src/parser.js` directly
+    (`curl` to raw.githubusercontent.com, browsed as text, never
+    imported/depended on). Real, direct signal found, not a non-event:
+    that project DOES have construct-specific handling for `branch`
+    (`NAV_TRIGGER_TYPES`/`collectNavTargets`, part of its page-navigation-
+    graph feature), and its own code comment is an independent
+    corroboration of this exact pass's EBNF-discrepancy finding: *"a
+    page-level `branch (...)` form... nest[s] the target under groups...
+    confirmed against real exports"* — i.e. their own, separately-
+    authored, ~1,263-real-export-validated parser also treats `branch`'s
+    `behavior { target: { page: N } } }` as a nested-group shape, not the
+    official EBNF's flat scalar `<value>`, the same real-data-vs-grammar
+    divergence this pass found independently. One partial divergence
+    worth flagging rather than silently smoothing over: their
+    `collectNavTargets` only accepts a target `page` that matches
+    `/^\d+$/` (a bare digit string) — it silently drops the alias-string
+    (`CUSTOMERS`) and substitution-token (`&LAST_VIEW.`) shapes this
+    pass's `ApexBranchTarget.page` explicitly types as `number | string |
+    null` to hold. Read as indirect corroboration that non-numeric
+    targets are real (their code guards for exactly that possibility)
+    rather than a contradiction — they chose to narrow their feature's
+    scope (page-navigation-graph edges only make sense for a resolvable
+    page number) where this project chose to preserve the value losslessly
+    instead. No construct-specific handling for `validation` or `lov`
+    exists anywhere in their `parser.js` — nothing to cross-check against
+    for those two.
+  - **Wired into `apx-diff` in this same change** (`diffBranches()`,
+    `diffValidationFields()` via `diffByIdentifier`, and `lovName` added
+    to `diffItemFields()`) — not deferred, per ADR-001's consequence
+    about this exact gap having happened twice already.
+  - **Regression tests**: `packages/parser/test/parser.test.ts`, three
+    new `describe` blocks (`typed branch support`, `typed validation
+    support`, `item.lovName`), covering the alias/substitution/URL target
+    variants, the compound-condition case, the null-condition
+    (unconditional) case, and the gated-vs-ungated LOV item-type cases.
+  - **Zero-warnings sweep**: re-ran the full 46-app corpus sweep after
+    this change — 0 warnings, unchanged from the prior pass. `branch` and
+    `validation` no longer appear in any app's `ApexAppAst.unmodeled`
+    (aggregate union across the 46-app corpus: 317 real branches across
+    27 apps, 340 real validations across 19 apps, 718 real `lovName`
+    references across 23 apps -- these three counts match the "27/46
+    branch, 19/46 validation" figures the Product Architect's own,
+    independently-run "Continuation" pass recorded the same day, a useful
+    cross-check that this pass's sweep methodology and that pass's
+    per-app `RESULTS.md` grep agree; an EARLIER draft of this sweep,
+    before that cross-check, undercounted badly -- 239/16, 278/12,
+    552/16 -- traced to a stale, emptied-out `pages/` directory under one
+    of two duplicate local copies of the 13 original Oracle sample-gallery
+    apps in this session's scratch space; re-pointed at the populated
+    copy and re-verified against the Product Architect's independent
+    figures before writing this entry, per this project's own "don't
+    trust a script blindly" discipline).
+  - **Determinism confirmed**: `examples/employee-page` regenerates
+    byte-identical (unaffected — that fixture has no branch/validation/
+    LOV constructs to exercise, confirming no regression to unrelated
+    generation paths); concurrent-manager itself (which DOES exercise all
+    three) regenerated twice into scratch output, byte-identical both
+    times; `apx-diff` self-diff against itself unchanged (0 added, 0
+    removed, 0 changed, 55 unchanged) with the new branch/validation
+    diffing wired in, confirming no spurious diffs on an identical
+    export; a synthetic two-export diff (hand-written fixture, one
+    branch target page changed, one validation error message changed)
+    confirmed both new diff paths actually surface a change when one
+    exists, not just stay silent on identical input.
+
 ## Still open
 
 (the quoted, substitution-embedding property KEY item that lived here has
@@ -1079,20 +1237,37 @@ silently removed, per this project's correction discipline.)
       entirely (`branch`, `columnGroup`, `computation`, `filter`, `layer`,
       `metaTag`, `parameter`, `searchSource`, `validation`). Left the old
       list visible above rather than silently deleted, per this project's
-      correction discipline. **Current, real-data-confirmed unmodeled set
-      across the full 46-app corpus swept in this pass** (union of every
-      app's `ApexAppAst.unmodeled`, computed directly from `@apx/parser`'s
-      built output, not hand-maintained): `action`, `axis`, `branch`,
-      `column`, `columnGroup`, `computation`, `facet`, `filter`, `layer`,
-      `metaTag`, `pageGroup`, `parameter`, `process`, `savedReport`,
-      `searchSource`, `series`, `validation` — 17 types. (`authentication`,
-      `authorization`, `buildOption`, `componentSetting`, `facetGroup`,
-      `file`, `lov` from the old list do not currently appear as top-level
-      unmodeled component types anywhere in this corpus — either they were
-      seen only in the separately-tracked UX Pattern Catalog ground-truth
-      app, not the 46-app corpus this list is now scoped to, or the
-      earlier list was simply inaccurate; not re-investigated further in
-      this pass, flagged here rather than silently carried forward.)
+      correction discipline. **Unmodeled set as it stood right before the
+      2026-07-27 `branch`/`validation`/`lov` pass** (union of every app's
+      `ApexAppAst.unmodeled` across the full 46-app corpus, computed
+      directly from `@apx/parser`'s built output, not hand-maintained):
+      `action`, `axis`, `branch`, `column`, `columnGroup`, `computation`,
+      `facet`, `filter`, `layer`, `metaTag`, `pageGroup`, `parameter`,
+      `process`, `savedReport`, `searchSource`, `series`, `validation` —
+      17 types. (`authentication`, `authorization`, `buildOption`,
+      `componentSetting`, `facetGroup`, `file`, `lov` from the old list do
+      not currently appear as top-level unmodeled component types
+      anywhere in this corpus — either they were seen only in the
+      separately-tracked UX Pattern Catalog ground-truth app, not the
+      46-app corpus this list is now scoped to, or the earlier list was
+      simply inaccurate; not re-investigated further in that pass,
+      flagged here rather than silently carried forward.)
+
+      **CORRECTION (2026-07-27, same-day follow-through pass)**: `branch`
+      and `validation` are typed as of this pass — see the dated entry
+      above ("`branch`/`validation`/`lov` typed AST fields") — and no
+      longer appear in any app's `unmodeled` set. The re-swept, current
+      15-type unmodeled set across the same 46-app corpus: `action`,
+      `axis`, `column`, `columnGroup`, `computation`, `facet`, `filter`,
+      `layer`, `metaTag`, `pageGroup`, `parameter`, `process`,
+      `savedReport`, `searchSource`, `series`. `lov` was never itself a
+      top-level unmodeled type (a `pageItem`'s `lov {}` group is a nested
+      property group on an already-typed `ApexItem`, not its own
+      top-level component) — the narrow `ApexItem.lovName` reference
+      field added this pass does not change that; the bigger,
+      out-of-scope `shared-components/lovs.apx` LOV-definition file
+      remains outside `loadExport()`'s scope entirely, unrelated to this
+      list.
 
 ## Fixture policy
 

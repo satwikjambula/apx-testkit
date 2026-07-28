@@ -521,6 +521,330 @@ describe('multi-line array parsing (bug: first element dropped)', () => {
   });
 });
 
+describe('typed branch support (branch (...))', () => {
+  // Reproduces real structure found in Oracle's own "customers" starter app
+  // (github.com/oracle/apex, 26.1 branch, p00002-customer-details.apx:1848+):
+  // three branches on one page, one with an alias-string page target and a
+  // whenButtonPressed condition, one with a numeric page target + carried
+  // items + clearCache/action, and one entirely unconditional with an
+  // item-substitution-token page target (`&LAST_VIEW.`).
+  const apxWithBranches = `page 2 (
+  name: Customer Details
+  alias: CUSTOMER-DETAILS
+
+  branch (
+    name: Go To CUSTOMERS after delete
+    execution {
+      sequence: 10
+    }
+    behavior {
+      target: {
+        page: CUSTOMERS
+        successMessage: false
+      }
+    }
+    serverSideCondition {
+      whenButtonPressed: @delete
+    }
+  )
+
+  branch (
+    name: goto edit customer on create
+    execution {
+      sequence: 20
+    }
+    behavior {
+      target: {
+        page: 50
+        items: {
+          P50_ID: &P2_ID.
+        }
+        clearCache: 50
+        action: resetPagination
+        successMessage: false
+      }
+    }
+    serverSideCondition {
+      whenButtonPressed: @create
+    }
+  )
+
+  branch (
+    execution {
+      sequence: 30
+    }
+    behavior {
+      target: {
+        page: &LAST_VIEW.
+        request: &P2_REQUEST.
+      }
+      saveStateBeforeBranching: true
+    }
+  )
+)`;
+
+  it('parses with no warnings and removes branch from unmodeled', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithBranches });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.unmodeled).not.toContain('branch');
+  });
+
+  it('always has a null identifier -- confirmed real (branches never carry a component-id)', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithBranches });
+    for (const branch of result.ast.pages[0].branches) {
+      expect(branch.identifier).toBeNull();
+    }
+  });
+
+  it('projects a page-alias-string target alongside a whenButtonPressed condition', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithBranches });
+    const [first] = result.ast.pages[0].branches;
+    expect(first.name).toBe('Go To CUSTOMERS after delete');
+    expect(first.sequence).toBe(10);
+    expect(first.target).toEqual({ page: 'CUSTOMERS', url: null, items: null });
+    expect(first.condition).toEqual({
+      whenButtonPressed: 'delete',
+      type: null,
+      item: null,
+      value: null,
+      plsqlExpression: null,
+    });
+  });
+
+  it('projects a numeric page target with carried items', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithBranches });
+    const [, second] = result.ast.pages[0].branches;
+    expect(second.target).toEqual({ page: 50, url: null, items: { P50_ID: '&P2_ID.' } });
+  });
+
+  it('projects an item-substitution-token page target with a null (unconditional) condition', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithBranches });
+    const [, , third] = result.ast.pages[0].branches;
+    expect(third.name).toBeNull();
+    expect(third.target).toEqual({ page: '&LAST_VIEW.', url: null, items: null });
+    expect(third.condition).toBeNull();
+  });
+
+  it('projects an external URL redirect target (apextogo sign-out branch shape)', () => {
+    const apx = `page 20000 (
+  name: Account
+  alias: ACCOUNT
+
+  branch (
+    name: Go To Page &LOGOUT_URL.
+    execution {
+      sequence: 10
+    }
+    behavior {
+      target: {
+        type: url
+        url: &LOGOUT_URL.
+      }
+    }
+    serverSideCondition {
+      whenButtonPressed: @sign-out
+    }
+  )
+)`;
+    const result = parseApp({ 'p20000-account.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [branch] = result.ast.pages[0].branches;
+    expect(branch.target).toEqual({ page: null, url: '&LOGOUT_URL.', items: null });
+  });
+});
+
+describe('typed validation support (validation <id> (...))', () => {
+  // Reproduces real structure found in the user's own "concurrent-manager"
+  // app (pages/p00010-request-submission.apx:530+): an itemIsNotNull
+  // validation gated on whenButtonPressed, and a functionBody validation
+  // whose error has no errorMessage of its own (associatedItem only).
+  const apxWithValidations = `page 10 (
+  name: Request Submission
+  alias: REQUEST-SUBMISSION
+
+  validation job-selected (
+    name: Job selected
+    execution {
+      sequence: 10
+    }
+    validation {
+      type: itemIsNotNull
+      item: P10_JOB_CODE
+      alwaysExecute: true
+    }
+    error {
+      errorMessage: Program Should Have Value
+      associatedItem: @P10_JOB_CODE
+    }
+    serverSideCondition {
+      whenButtonPressed: @submit-request
+    }
+  )
+
+  validation schedule-interval-required (
+    name: "Schedule interval required "
+    execution {
+      sequence: 30
+    }
+    validation {
+      type: itemIsNotNull
+      item: P10_SCHEDULE_INTERVAL
+      alwaysExecute: true
+    }
+    error {
+      errorMessage: Interval / Expression Cannot be Null
+      associatedItem: @P10_SCHEDULE_INTERVAL
+    }
+    serverSideCondition {
+      whenButtonPressed: @submit-request
+      type: item!=value
+      item: P10_SCHEDULE_TYPE
+      value: ONCE
+    }
+  )
+)`;
+
+  it('parses with no warnings and removes validation from unmodeled', () => {
+    const result = parseApp({ 'p00010-request-submission.apx': apxWithValidations });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.unmodeled).not.toContain('validation');
+  });
+
+  it('always has a real identifier -- confirmed real (unlike branch, validation always carries a component-id)', () => {
+    const result = parseApp({ 'p00010-request-submission.apx': apxWithValidations });
+    expect(result.ast.pages[0].validations.map((v) => v.identifier)).toEqual([
+      'job-selected',
+      'schedule-interval-required',
+    ]);
+  });
+
+  it('projects the rule (type/item), error, and whenButtonPressed-only condition', () => {
+    const result = parseApp({ 'p00010-request-submission.apx': apxWithValidations });
+    const [first] = result.ast.pages[0].validations;
+    expect(first.type).toBe('itemIsNotNull');
+    expect(first.item).toBe('P10_JOB_CODE');
+    expect(first.column).toBeNull();
+    expect(first.error).toEqual({
+      message: 'Program Should Have Value',
+      displayLocation: null,
+      associatedItem: 'P10_JOB_CODE',
+      associatedColumn: null,
+    });
+    expect(first.condition).toEqual({
+      whenButtonPressed: 'submit-request',
+      type: null,
+      item: null,
+      value: null,
+      plsqlExpression: null,
+    });
+  });
+
+  it('projects a compound condition (whenButtonPressed AND item!=value together)', () => {
+    const result = parseApp({ 'p00010-request-submission.apx': apxWithValidations });
+    const [, second] = result.ast.pages[0].validations;
+    // Real value is quoted in the export (trailing space forces quoting);
+    // property-value quote-stripping is a separately-tracked open item
+    // (docs/grammar-assumptions.md "Still open" -- unrelated to this
+    // change), so the literal quotes are preserved as-is, matching
+    // current parser behavior for quoted PROPERTY VALUES.
+    expect(second.name).toBe('"Schedule interval required "');
+    expect(second.condition).toEqual({
+      whenButtonPressed: 'submit-request',
+      type: 'item!=value',
+      item: 'P10_SCHEDULE_TYPE',
+      value: 'ONCE',
+      plsqlExpression: null,
+    });
+  });
+
+  it('reports null error and condition when neither block is present', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+
+  validation always-true (
+    name: Always true
+    validation {
+      type: expression
+      plsqlExpression: 1 = 1
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [v] = result.ast.pages[0].validations;
+    expect(v.error).toBeNull();
+    expect(v.condition).toBeNull();
+    expect(v.type).toBe('expression');
+  });
+});
+
+describe('item.lovName (lov { type: sharedComponent, lov: @name })', () => {
+  // Reproduces real structure found in the user's own "concurrent-manager"
+  // app (pages/p00010-request-submission.apx:280+).
+  it('projects the named LOV reference for a gated item type (selectList)', () => {
+    const apx = `page 10 (
+  name: Request Submission
+  alias: REQUEST-SUBMISSION
+
+  pageItem P10_SCHEDULE_TYPE (
+    type: selectList
+    lov {
+      type: sharedComponent
+      lov: @schedule-type-lov
+    }
+  )
+)`;
+    const result = parseApp({ 'p00010-request-submission.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [item] = result.ast.pages[0].items;
+    expect(item.lovName).toBe('schedule-type-lov');
+  });
+
+  it('is null for an inline (non-shared) LOV, even on a gated item type', () => {
+    const apx = `page 10 (
+  name: Test
+  alias: TEST
+
+  pageItem P10_TEMPLATE_ID (
+    type: selectList
+    lov {
+      type: staticValues
+      staticValues:
+        \`\`\`
+        FOO;foo
+        \`\`\`
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    const [item] = result.ast.pages[0].items;
+    expect(item.lovName).toBeNull();
+  });
+
+  it('is null for a shared LOV on an item type outside the gated scope', () => {
+    // Confirmed real (not gated by this project's own choice): the
+    // identical shape also occurs on checkboxGroup/selectOne/displayOnly/
+    // shuttle/textFieldWithAutocomplete items. Stays in raw only.
+    const apx = `page 10 (
+  name: Test
+  alias: TEST
+
+  pageItem P10_STATUS (
+    type: checkboxGroup
+    lov {
+      type: sharedComponent
+      lov: @status-lov
+    }
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    const [item] = result.ast.pages[0].items;
+    expect(item.lovName).toBeNull();
+    expect(item.raw['lov.lov']).toEqual({ ref: 'status-lov', standard: false });
+  });
+});
+
 describe('region.source.sql (bug: read the wrong raw key)', () => {
   // Reproduces a real bug found by cross-checking against Oracle's
   // official EBNF: the SQL source property is named `sqlQuery`, not

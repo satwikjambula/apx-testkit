@@ -57,6 +57,8 @@ for (const p of report.pages) {
   printComponentDiffs('region', p.regions);
   printComponentDiffs('button', p.buttons);
   printComponentDiffs('dynamicAction', p.dynamicActions);
+  printComponentDiffs('branch', p.branches);
+  printComponentDiffs('validation', p.validations);
   console.log(`    affected: ${p.affectedFiles.join(', ')}`);
   console.log('');
 }

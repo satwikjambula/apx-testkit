@@ -23,16 +23,20 @@ layers (see ADR-001):
 
 - `src/ast.ts` — the type definitions (`ApexAppAst`, `ApexPage`,
   `ApexRegion`, `ApexItem`, `ApexButton`, `ApexDynamicAction`,
-  `ApexCalendarSettings`, `ApexChartSettings`, `RawBag`/`RawValue`/
-  `ComponentNode`).
+  `ApexCalendarSettings`, `ApexChartSettings`, `ApexBranch`,
+  `ApexValidation`, `ApexServerSideCondition` (shared by branch and
+  validation), `RawBag`/`RawValue`/`ComponentNode`). `ApexItem.lovName` is
+  a narrow named-LOV reference field, gated to `selectList`/
+  `radioGroup`/`popupLov` (see docs/ecosystem-roadmap.md "Seventh round").
 - `src/parser.ts` — the tokenizer (`COMPONENT_OPEN`/`GROUP_OPEN`/
   `OBJ_PROP_OPEN`/`PROPERTY`/`FENCE_OPEN` regexes), the line-oriented
   recursive-descent `parseBody()`, `parseArray()` (has a documented
   history of a subtle line-advance bug, fixed — see
   `docs/grammar-assumptions.md`), `tryFence()` for multiline
   `{lang, code}` fenced strings, and the `projectPages()`/`projectItem()`/
-  `projectButton()`/`projectDAAction()`/`projectDynamicAction()` functions
-  that build the typed layer from the generic tree.
+  `projectButton()`/`projectDAAction()`/`projectDynamicAction()`/
+  `projectBranch()`/`projectValidation()` functions that build the typed
+  layer from the generic tree.
 - `src/index.ts` — public exports.
 
 ## Key helpers in `parser.ts`

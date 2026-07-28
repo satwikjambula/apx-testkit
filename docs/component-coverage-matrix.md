@@ -221,6 +221,131 @@ no known way to fire a named Dynamic Action from `@apx/testkit` yet, and
 typed metadata doesn't change that (see docs/ecosystem-roadmap.md
 "Dynamic Action triggering").
 
+## Branches
+
+`branch (...)` — page-processing redirect rules. Typed as of the Seventh
+round (`ApexPage.branches`) — see docs/grammar-assumptions.md's
+2026-07-27 entry and docs/ecosystem-roadmap.md's "Seventh round
+(2026-07-27)" for the full grammar, the confirmed EBNF-vs-real-data
+discrepancy on `target`'s shape, and why there is deliberately no runtime
+component (parser-only, per ADR-002's precedent).
+
+| App | Branches |
+|---|---|
+| `poll` | 40 |
+| `customers` | 33 |
+| `qask` | 33 |
+| `strategic-planner` | 30 |
+| `opportunities` | 27 |
+| `team-calendar` | 25 |
+| `brookstrut` | 18 |
+| `sample-vector-search` | 13 |
+| `sample-collections` | 9 |
+| `sample-dynamic-actions` | 9 |
+| `concurrent-manager` | 9 |
+| `sample-master-detail` | 8 |
+| `sample-trees` | 7 |
+| `universal-theme-reference` | 7 |
+| `apextogo` | 6 |
+| `sample-rest-services` | 6 |
+| `sample-data-loading` | 5 |
+| `sample-email-authentication` | 5 |
+| `sample-file-upload-download` | 5 |
+| `sample-calendar` | 4 |
+| `sample-workflow-approvals` | 4 |
+| `sample-application-search` | 3 |
+| `json-duality-views` | 3 |
+| `sample-reporting` | 3 |
+| `sample-interactive-grids` | 2 |
+| `sample-charts` | 2 |
+| `sample-maps` | 1 |
+| **Total (27/46 apps)** | **317** |
+
+Verification status: typed metadata only, no runtime component by design
+— the only externally observable effect (which page/URL is landed on) is
+already assertable today via `@apx/testkit`'s `page.url()` with zero
+branch-specific code.
+
+## Validations
+
+`validation <id> (...)` — server-side field/page validation rules. Typed
+as of the Seventh round (`ApexPage.validations`) — see
+docs/grammar-assumptions.md's 2026-07-27 entry. NOT the same construct as
+`ApexItem.required` (a different, already-typed `validation {
+valueRequired }` group that lives directly on an item).
+
+| App | Validations |
+|---|---|
+| `opportunities` | 57 |
+| `strategic-planner` | 50 |
+| `customers` | 48 |
+| `team-calendar` | 35 |
+| `poll` | 31 |
+| `qask` | 25 |
+| `sample-workflow-approvals` | 19 |
+| `sample-vector-search` | 15 |
+| `concurrent-manager` | 14 |
+| `sample-interactive-grids` | 13 |
+| `sample-master-detail` | 9 |
+| `sample-data-loading` | 7 |
+| `sample-email-authentication` | 6 |
+| `brookstrut` | 4 |
+| `sample-rest-services` | 2 |
+| `sample-trees` | 2 |
+| `sample-calendar` | 1 |
+| `sample-collections` | 1 |
+| `sample-file-upload-download` | 1 |
+| **Total (19/46 apps)** | **340** |
+
+Verification status: typed metadata only. A runtime validation-failure-
+display component is explicitly DEFERRED pending a separate
+live-verification check of whether `messages.ts`'s existing
+`apex.message`/`#APEX_ERROR_MESSAGE` wrapper already covers it (see
+docs/ecosystem-roadmap.md "Seventh round") — not blocked on that finding.
+
+## Item LOV references (`ApexItem.lovName`)
+
+A named-LOV *reference* on an item (`lov { type: sharedComponent, lov:
+@name }`), gated to `selectList`/`radioGroup`/`popupLov` per Product
+Architect's explicit narrow-scope decision (Seventh round). NOT the LOV
+*definition* itself (`shared-components/lovs.apx`'s actual list of
+values) — that remains out of `loadExport()`'s scope entirely.
+
+| App | Gated-type shared-LOV references |
+|---|---|
+| `customers` | 158 |
+| `opportunities` | 140 |
+| `poll` | 80 |
+| `sample-master-detail` | 60 |
+| `team-calendar` | 54 |
+| `sample-dynamic-actions` | 40 |
+| `strategic-planner` | 38 |
+| `brookstrut` | 28 |
+| `concurrent-manager` | 24 |
+| `sample-calendar` | 20 |
+| `sample-trees` | 16 |
+| `qask` | 12 |
+| `sample-workflow-approvals` | 10 |
+| `sample-reporting` | 8 |
+| `sample-data-loading` | 6 |
+| `sample-cards` | 4 |
+| `sample-collections` | 4 |
+| `employee-management` | 4 |
+| `sample-email-authentication` | 4 |
+| `sample-rest-services` | 3 |
+| `sample-maps` | 2 |
+| `universal-theme-reference` | 2 |
+| `cloud-apps-rest-explorer` | 1 |
+| **Total (23/46 apps)** | **718** |
+
+Verification status: typed metadata only. Real data confirms the
+identical `lov { type: sharedComponent, lov: @name }` shape is also
+common on `checkboxGroup`/`selectOne`/`displayOnly`/`shuttle`/
+`textFieldWithAutocomplete` items across this corpus — deliberately left
+ungated (stays in `raw`), not because those types lack the data.
+Runtime PopupLOV support is unchanged by this — still zero live ground
+truth for the open/search/select widget flow (`unsupported.ts`).
+
 ## Reading this table
 
 - **High app-count + verified**: the safe, load-bearing parts of this

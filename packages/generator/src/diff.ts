@@ -7,17 +7,20 @@
  *
  * Scope is deliberately honest about what the AST actually tracks today
  * (see docs/ecosystem-roadmap.md "needs parser extension first"): items,
- * regions, buttons, dynamic actions, and a handful of page-level fields
- * are typed and diffed field-by-field with old/new values shown. LOVs,
- * validations, processes, and branches are NOT typed AST fields -- they
- * live in `raw` bags. Rather than silently missing changes to them, every
- * item/region/button/dynamicAction/page also gets an order-independent
+ * regions, buttons, dynamic actions, branches, validations, and a handful
+ * of page-level fields are typed and diffed field-by-field with old/new
+ * values shown (branches and validations added in the "Seventh round"
+ * pass -- see docs/grammar-assumptions.md). An item's LOV *reference*
+ * (`ApexItem.lovName`) is also diffed field-by-field; the LOV
+ * *definition* itself (`shared-components/lovs.apx`'s actual values) and
+ * `process` remain untyped, living in `raw` bags. Rather than silently
+ * missing changes to what's still untyped, every item/region/button/
+ * dynamicAction/branch/validation/page also gets an order-independent
  * structural comparison of its full `raw` bag; if anything in there
  * differs, that's reported as "other metadata changed" WITHOUT claiming
  * to know what specifically changed. That's the honest signal this can
- * give for untyped constructs: "something changed here, go look," not
- * "the LOV changed" (which would be a claim this project cannot back up
- * yet).
+ * give for untyped constructs: "something changed here, go look," not a
+ * specific claim this project cannot back up yet.
  *
  * Each added/removed/changed page also lists the generated `.page.ts`/
  * `.spec.ts` filenames a regeneration would touch -- computed from the
@@ -29,12 +32,14 @@
  */
 import {
   parseApp,
+  type ApexBranch,
   type ApexButton,
   type ApexDAAction,
   type ApexDynamicAction,
   type ApexItem,
   type ApexPage,
   type ApexRegion,
+  type ApexValidation,
   type RawBag,
 } from '@apx/parser';
 import { resolve } from 'node:path';
@@ -69,6 +74,8 @@ export interface PageDiff {
   regions: ComponentDiff[];
   buttons: ComponentDiff[];
   dynamicActions: ComponentDiff[];
+  branches: ComponentDiff[];
+  validations: ComponentDiff[];
 }
 
 export interface DiffSummary {
@@ -103,7 +110,7 @@ function rawEqual(a: RawBag, b: RawBag): boolean {
 }
 
 const RAW_CHANGED_NOTE =
-  'other metadata changed (raw properties differ -- may include LOV/validation/Dynamic Action/process changes, not individually tracked yet)';
+  'other metadata changed (raw properties differ -- may include LOV value/process changes, not individually tracked yet)';
 
 function diffItemFields(a: ApexItem, b: ApexItem): string[] {
   const changes: string[] = [];
@@ -112,6 +119,9 @@ function diffItemFields(a: ApexItem, b: ApexItem): string[] {
   if (a.required !== b.required) changes.push(`required: ${a.required} -> ${b.required}`);
   if (a.sourceColumn !== b.sourceColumn) {
     changes.push(`sourceColumn: ${JSON.stringify(a.sourceColumn)} -> ${JSON.stringify(b.sourceColumn)}`);
+  }
+  if (a.lovName !== b.lovName) {
+    changes.push(`lovName: ${JSON.stringify(a.lovName)} -> ${JSON.stringify(b.lovName)}`);
   }
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
@@ -214,6 +224,68 @@ function diffByIdentifier<T extends { identifier: string; raw: RawBag }>(
   return diffs.sort((a, b) => a.identifier.localeCompare(b.identifier));
 }
 
+function diffValidationFields(a: ApexValidation, b: ApexValidation): string[] {
+  const changes: string[] = [];
+  if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
+  if (a.type !== b.type) changes.push(`type: ${JSON.stringify(a.type)} -> ${JSON.stringify(b.type)}`);
+  if (a.item !== b.item) changes.push(`item: ${JSON.stringify(a.item)} -> ${JSON.stringify(b.item)}`);
+  if (a.column !== b.column) changes.push(`column: ${JSON.stringify(a.column)} -> ${JSON.stringify(b.column)}`);
+  const errA = JSON.stringify(a.error);
+  const errB = JSON.stringify(b.error);
+  if (errA !== errB) changes.push(`error: ${errA} -> ${errB}`);
+  const condA = JSON.stringify(a.condition);
+  const condB = JSON.stringify(b.condition);
+  if (condA !== condB) changes.push(`condition: ${condA} -> ${condB}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
+function diffBranchFields(a: ApexBranch, b: ApexBranch): string[] {
+  const changes: string[] = [];
+  if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
+  if (a.sequence !== b.sequence) changes.push(`sequence: ${a.sequence} -> ${b.sequence}`);
+  if (a.point !== b.point) changes.push(`point: ${JSON.stringify(a.point)} -> ${JSON.stringify(b.point)}`);
+  const targetA = JSON.stringify(a.target);
+  const targetB = JSON.stringify(b.target);
+  if (targetA !== targetB) changes.push(`target: ${targetA} -> ${targetB}`);
+  const condA = JSON.stringify(a.condition);
+  const condB = JSON.stringify(b.condition);
+  if (condA !== condB) changes.push(`condition: ${condA} -> ${condB}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
+/**
+ * Branches have NO stable identifier in real APEXlang data (0/325 real
+ * branches across this project's full corpus carry a component-id -- see
+ * `ApexBranch`'s doc comment) -- unlike every other diffed construct here,
+ * `diffByIdentifier` cannot be reused. Matched positionally instead:
+ * branch order within a page is stable across regenerations of the SAME
+ * export (confirmed by the determinism check), which is exact for that
+ * question. A genuine REORDERING between two different export versions
+ * would show as spurious per-position "changed" entries rather than a
+ * true add/remove -- an honest, documented limitation (labeled with the
+ * branch's own `name` when present, or a positional `branch #N` fallback
+ * when not, matching how anonymous branches are the norm, not the
+ * exception -- 127/325 real branches have no `name` either).
+ */
+function diffBranches(oldList: readonly ApexBranch[], newList: readonly ApexBranch[]): ComponentDiff[] {
+  const diffs: ComponentDiff[] = [];
+  const max = Math.max(oldList.length, newList.length);
+  const label = (br: ApexBranch, idx: number): string => br.name ?? `branch #${idx}`;
+  for (let idx = 0; idx < max; idx++) {
+    const a = oldList[idx];
+    const b = newList[idx];
+    if (a && !b) diffs.push({ kind: 'removed', identifier: label(a, idx), changes: [] });
+    else if (!a && b) diffs.push({ kind: 'added', identifier: label(b, idx), changes: [] });
+    else if (a && b) {
+      const changes = diffBranchFields(a, b);
+      if (changes.length > 0) diffs.push({ kind: 'changed', identifier: label(b, idx), changes });
+    }
+  }
+  return diffs;
+}
+
 function diffPageFields(a: ApexPage, b: ApexPage): string[] {
   const changes: string[] = [];
   if (a.alias !== b.alias) changes.push(`alias: ${JSON.stringify(a.alias)} -> ${JSON.stringify(b.alias)}`);
@@ -259,6 +331,8 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
         regions: [],
         buttons: [],
         dynamicActions: [],
+        branches: [],
+        validations: [],
       });
       continue;
     }
@@ -275,6 +349,8 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
         regions: [],
         buttons: [],
         dynamicActions: [],
+        branches: [],
+        validations: [],
       });
       continue;
     }
@@ -284,12 +360,16 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
       const regions = diffByIdentifier(oldPage.regions, newPage.regions, diffRegionFields);
       const buttons = diffByIdentifier(oldPage.buttons, newPage.buttons, diffButtonFields);
       const dynamicActions = diffByIdentifier(oldPage.dynamicActions, newPage.dynamicActions, diffDynamicActionFields);
+      const branches = diffBranches(oldPage.branches, newPage.branches);
+      const validations = diffByIdentifier(oldPage.validations, newPage.validations, diffValidationFields);
       const hasChanges =
         pageChanges.length > 0 ||
         items.length > 0 ||
         regions.length > 0 ||
         buttons.length > 0 ||
-        dynamicActions.length > 0;
+        dynamicActions.length > 0 ||
+        branches.length > 0 ||
+        validations.length > 0;
       if (hasChanges) {
         summary.pagesChanged++;
         pages.push({
@@ -303,6 +383,8 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
           regions,
           buttons,
           dynamicActions,
+          branches,
+          validations,
         });
       } else {
         summary.pagesUnchanged++;

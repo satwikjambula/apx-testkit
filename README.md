@@ -238,7 +238,9 @@ not existing).
 | Map | 🚧 (falls to `raw`) | ❌ explicit stub — confirmed present in real exports (`apextogo`/`sample-application-search`), but zero LIVE ground truth | ❌ |
 | Tree (as a content/data-display pattern) | 🚧 (falls to `raw`) | ❌ explicit stub — the only Tree seen live is the universal left-nav reused as a login picker, not a distinct content region | ❌ |
 | Dynamic Actions | ✅ `ApexPage.dynamicActions` — trigger, condition, and nested true/false actions all typed | ❌ — no known way to trigger one by name at runtime (typed metadata does not solve this) | ❌ |
-| LOVs, server-side validations, navigation/branches | ❌ (no typed AST field — fall into `raw`) | — | ❌ |
+| Branches (page-processing redirects) | ✅ `ApexPage.branches` (target page/URL/carried items, condition) | N/A — no runtime hook exists; the only observable effect (which page/URL is landed on) is already assertable via `page.url()` | ❌ not wired into generator yet |
+| Validations (server-side field/page rules) | ✅ `ApexPage.validations` (rule type/item/column, error, condition) | ❌ deferred pending a live-verification check of whether `messages.ts` already covers validation-failure display | ❌ not wired into generator yet |
+| LOV references (`selectList`/`radioGroup`/`popupLov` only) | ✅ `ApexItem.lovName` — narrow reference to the named LOV; the LOV's actual list of values (`shared-components/lovs.apx`) remains out of scope | — | ❌ not wired into generator yet |
 | Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
 | Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed) | — |

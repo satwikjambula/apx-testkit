@@ -23,8 +23,9 @@
  */
 
 import type {
-  ApexAppAst, ApexButton, ApexDAAction, ApexDynamicAction, ApexItem, ApexPage, ApexRegion,
-  ComponentNode, Loc, RawValue, RefValue,
+  ApexAppAst, ApexBranch, ApexBranchTarget, ApexButton, ApexDAAction, ApexDynamicAction, ApexItem,
+  ApexPage, ApexRegion, ApexServerSideCondition, ApexValidation, ApexValidationError,
+  ComponentNode, Loc, RawBag, RawValue, RefValue,
 } from './ast.js';
 
 export interface ParseIssue { message: string; loc: Loc; }
@@ -253,6 +254,16 @@ function refName(v: RawValue | undefined): string | null {
 function bool(v: RawValue | undefined): boolean | null {
   return typeof v === 'boolean' ? v : null;
 }
+function num(v: RawValue | undefined): number | null {
+  return typeof v === 'number' ? v : null;
+}
+/** `branch.behavior.target.page`-style values: confirmed live to be
+ * EITHER a literal page number, a page ALIAS string, or an
+ * item-substitution token string (see ApexBranchTarget's doc comment) --
+ * kept as the raw number-or-string union rather than coerced. */
+function numOrStr(v: RawValue | undefined): number | string | null {
+  return typeof v === 'number' || typeof v === 'string' ? v : null;
+}
 /** `when.items`/`affectedElements.items`-style values: a single identifier or an array of them. */
 function stringArray(v: RawValue | undefined): string[] | null {
   if (v === undefined) return null;
@@ -274,13 +285,23 @@ function multilineText(v: RawValue | undefined): string | null {
 
 const ITEM_TYPES = new Set(['pageItem', 'item']);
 
+/** Item types Product Architect scoped the `lovName` typed field to (see
+ * ApexItem.lovName's doc comment) -- narrower than the full real set of
+ * item types that carry the identical shared-LOV-reference shape. */
+const LOV_GATED_ITEM_TYPES = new Set(['selectList', 'radioGroup', 'popupLov']);
+
 function projectItem(n: ComponentNode): ApexItem {
+  const type = str(n.props['type']);
   return {
     identifier: n.identifier ?? '(anonymous)',
-    type: str(n.props['type']),
+    type,
     label: str(n.props['label.label']) ?? str(n.props['label']),
     required: n.props['validation.valueRequired'] === true || n.props['required'] === true,
     sourceColumn: str(n.props['source.column']),
+    lovName:
+      type !== null && LOV_GATED_ITEM_TYPES.has(type) && n.props['lov.type'] === 'sharedComponent'
+        ? refName(n.props['lov.lov'])
+        : null,
     loc: n.loc,
     raw: n.props,
   };
@@ -328,6 +349,84 @@ function projectDynamicAction(n: ComponentNode): ApexDynamicAction {
         }
       : null,
     actions: n.children.filter((c) => c.type === 'action').map(projectDAAction),
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
+/** Shared by `branch` and `validation` -- see ApexServerSideCondition's
+ * doc comment for why the two EBNF productions are treated as one shape. */
+function projectServerSideCondition(props: RawBag): ApexServerSideCondition | null {
+  const hasCondition = Object.keys(props).some((k) => k.startsWith('serverSideCondition.'));
+  if (!hasCondition) return null;
+  return {
+    whenButtonPressed: refName(props['serverSideCondition.whenButtonPressed']),
+    type: str(props['serverSideCondition.type']),
+    item: str(props['serverSideCondition.item']),
+    value: str(props['serverSideCondition.value']),
+    plsqlExpression: multilineText(props['serverSideCondition.plsqlExpression']),
+  };
+}
+
+/** `behavior.target.items.<ITEM>`-style flattened keys, collected back
+ * into a plain map. Values are kept as their string representation --
+ * real data shows plain literals and `&ITEM.` substitution tokens, never
+ * numbers or booleans in this position, but coerced defensively either
+ * way since the EBNF leaves `target`'s internal shape entirely opaque. */
+function targetItems(props: RawBag, keyPrefix: string): Record<string, string> | null {
+  const prefix = `${keyPrefix}.`;
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(props)) {
+    if (!k.startsWith(prefix)) continue;
+    if (typeof v === 'string' || typeof v === 'number' || typeof v === 'boolean') {
+      out[k.slice(prefix.length)] = String(v);
+    }
+  }
+  return Object.keys(out).length > 0 ? out : null;
+}
+
+function projectBranchTarget(props: RawBag): ApexBranchTarget | null {
+  const hasTarget = Object.keys(props).some((k) => k.startsWith('behavior.target.'));
+  if (!hasTarget) return null;
+  return {
+    page: numOrStr(props['behavior.target.page']),
+    url: str(props['behavior.target.url']),
+    items: targetItems(props, 'behavior.target.items'),
+  };
+}
+
+function projectBranch(n: ComponentNode): ApexBranch {
+  return {
+    identifier: n.identifier,
+    name: str(n.props['name']),
+    sequence: num(n.props['execution.sequence']),
+    point: str(n.props['execution.point']),
+    target: projectBranchTarget(n.props),
+    condition: projectServerSideCondition(n.props),
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
+function projectValidation(n: ComponentNode): ApexValidation {
+  const hasError = Object.keys(n.props).some((k) => k.startsWith('error.'));
+  const error: ApexValidationError | null = hasError
+    ? {
+        message: multilineText(n.props['error.errorMessage']),
+        displayLocation: str(n.props['error.displayLocation']),
+        associatedItem: refName(n.props['error.associatedItem']),
+        associatedColumn: str(n.props['error.associatedColumn']),
+      }
+    : null;
+  return {
+    identifier: n.identifier ?? '(anonymous)',
+    name: str(n.props['name']),
+    sequence: num(n.props['execution.sequence']),
+    type: str(n.props['validation.type']),
+    item: str(n.props['validation.item']),
+    column: str(n.props['validation.column']),
+    error,
+    condition: projectServerSideCondition(n.props),
     loc: n.loc,
     raw: n.props,
   };
@@ -387,6 +486,8 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
     const items: ApexItem[] = [];
     const buttons: ApexButton[] = [];
     const dynamicActions: ApexDynamicAction[] = [];
+    const branches: ApexBranch[] = [];
+    const validations: ApexValidation[] = [];
     for (const c of n.children) {
       if (ITEM_TYPES.has(c.type)) {
         const item = projectItem(c);
@@ -400,6 +501,10 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
         if (owner) byId.get(owner)?.buttons.push(button);
       } else if (c.type === 'dynamicAction') {
         dynamicActions.push(projectDynamicAction(c));
+      } else if (c.type === 'branch') {
+        branches.push(projectBranch(c));
+      } else if (c.type === 'validation') {
+        validations.push(projectValidation(c));
       } else if (c.type !== 'region') {
         unmodeled.add(c.type);
       }
@@ -424,7 +529,7 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
       alias: str(n.props['alias']),
       name: str(n.props['name']),
       title: str(n.props['title']),
-      regions, items, buttons, dynamicActions,
+      regions, items, buttons, dynamicActions, branches, validations,
       loc: n.loc,
       raw: n.props,
     });
