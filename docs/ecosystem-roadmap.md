@@ -931,6 +931,100 @@ None of the three change the "zero ground truth" status of
 this round is exclusively about the parser layer plus one scoped
 live-verification step for `validation`.
 
+### Follow-up (2026-07-27/28): `/apex` live-verification pass on `validation` — inconclusive, real new signal, still blocked on login
+
+The scoped live-verification step above ("does a triggered server-side
+validation failure surface through `#APEX_ERROR_MESSAGE`, i.e. does
+`messages.ts`'s `expectError()` already cover it with zero new code")
+was attempted. Result: **not resolved — genuinely blocked, not merely
+undone** — but the attempt surfaced concrete, evidence-backed signal a
+future pass can start from instead of guessing.
+
+**Blocker, stated plainly, first**: both of this project's live-running
+apps that actually have real ground truth for this question — Sample
+Interactive Grids and Sample Charts — require login
+(`pageAccessProtection: argumentsMustHaveChecksum` + a real
+authentication page), and this pass had **zero credential values
+available anywhere in the environment** (by design — `APX_LOGIN_TEST_USERNAME`/
+`APX_LOGIN_TEST_PASSWORD` are read from env vars at test-run time only,
+never committed, and were unset in this session). Separately and
+independently, an AI agent driving a browser interactively is barred
+from ever entering a password into a login field, regardless of who
+supplies it or asks for it — a hard operating rule with no
+task-instruction override. Both facts together mean the login-gated
+half of this verification did not happen this pass, not because it was
+skipped, but because it could not be done inside the rules this agent
+operates under. If this needs to be closed with actual DOM/console
+evidence from Sample Interactive Grids, it has to be done either by a
+human running the existing env-var-gated Playwright spec
+(`spike/tests/interactive-grid-demo.spec.ts` pattern extended to
+page 31), or by an agent/session that has legitimate credential access
+through a mechanism other than an AI directly typing a password.
+
+**What WAS confirmed, live and via real export data, in this pass:**
+
+1. **The "advertises validation" claim (checked, not trusted) is TRUE —
+   confirmed via the real `sample-interactive-grids` export, not
+   paraphrase.** Page 31, alias `VALIDATION`, name "Validation," exists
+   with two genuine page-level `validation(...)` components scoped to
+   the Interactive Grid's `editableRegion`: `comm-limit` (SQL expression
+   `:COMM is null or to_number(:COMM) < 1.5 * to_number(:SAL)`) and
+   `hire-date-in-past` (`to_date(:HIREDATE) < SYSDATE`, `associatedColumn:
+   HIREDATE`), plus column-level `validation { valueRequired: true }` on
+   the `ENAME` and `HIREDATE` columns. The page's own bundled help text
+   is directly informative: *"The Name column is set to Required. This
+   will be checked on the client as well as the server... Required
+   columns are indicated with a red triangle in the column header (when
+   in edit mode). Remove the name... to see how the validation error is
+   reported."* That description ("red triangle in the column header,"
+   "reported" in-grid) points at Interactive Grid's own cell/row-level
+   validity UI, not a page banner — real signal, not yet live-confirmed
+   DOM evidence.
+2. **A new, real, negative finding on the one live app reachable
+   *without* login** (UX Pattern Catalog — public authentication scheme,
+   used because the two apps with genuine validations are gated): its
+   "Data Entry – Simple Form" page (410) visually marks Name and Job
+   Code as required, and clicking its Save button *does* perform a real
+   `POST .../wwv_flow.accept` (confirmed 3× via `read_network_requests`,
+   not a client-side no-op) — but `#APEX_ERROR_MESSAGE` and every
+   per-item `_error_placeholder` element stay empty/`u-hidden` every
+   time. This reference-pattern page's required marker is decorative,
+   not backed by a real validation — see
+   `docs/quirks/26.1.json`'s `ux-pattern-catalog-required-marker-not-enforced`
+   entry for full evidence. Useful negative result (this specific page
+   can't be used to observe a real validation failure), but it does not
+   answer the actual question either way.
+
+**The concrete, evidence-backed hypothesis for the next `/apex` or
+`/runtime` pass to check, once login access exists**: Interactive Grid
+validation failures are structurally unlikely to route through the same
+`#APEX_ERROR_MESSAGE` page banner `messages.ts` wraps, because IG saves
+are per-row AJAX operations (`interactiveGridAutoRowProcessing`) handled
+by the grid widget's own client-side validity/error display (cell
+highlighting, row error icon) — a different code path from a classic
+page's full-submit-and-redisplay-with-`showErrors()` flow that a
+Form-region declarative Validation would use. This is reasoned from the
+export's own descriptive text plus the general, well-documented
+structural difference between IG's AJAX row-save protocol and classic
+page processing — **explicitly not itself live-confirmed this pass**,
+flagged here as a hypothesis, not a finding, per ADR-002/004 discipline.
+For a classic Form-region page-level Validation (not Interactive Grid),
+the documented `apex.message` API surface (item Error Template vs. page
+Notification template) is structurally consistent with what
+`messages.ts` already wraps — but even that specific case has never
+actually been observed via a genuine validation-triggered failure
+either: `messages.ts`'s own doc comment states its existing live
+verification called `apex.message.showPageSuccess()` **directly**, not
+through a real submission that failed a real declarative validation.
+So neither the Form case nor the Interactive Grid case has a fully
+closed, DOM-observed answer yet — this pass narrows the open question
+and gives it a concrete reproduction target (page 31 of Sample
+Interactive Grids, clear the Name cell, save, inspect
+`#APEX_ERROR_MESSAGE` vs. the grid's own error UI), it does not close
+it. **Verdict: still deferred, not resolved; `validation`'s runtime
+component stays un-built until this specific reproduction happens with
+real login access.**
+
 ## Fifth round: Application Model, package boundaries, verifier, showcase app
 
 A fifth round proposed a full architectural restructuring: an

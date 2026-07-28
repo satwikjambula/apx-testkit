@@ -355,6 +355,61 @@ parser gap, found and fixed in an earlier pass — see above and
 to regenerate byte-identical output in this pass (no drift), alongside the
 new app's own determinism check.
 
+## `validation` runtime question — attempted, blocked on login, real partial signal (2026-07-27/28)
+
+The `/apex` pass called for by `docs/ecosystem-roadmap.md`'s Seventh
+round ("does a real server-side validation failure already surface
+through `messages.ts`'s `expectError()`, zero new code needed") could
+not be fully closed. **Stated plainly, per this doc's own discipline
+for when live access isn't available**: Sample Interactive Grids and
+Sample Charts — the two live apps with actual ground truth for this
+question — require login, and this pass had zero credential values
+available anywhere in the environment (by design: `APX_LOGIN_TEST_USERNAME`/
+`APX_LOGIN_TEST_PASSWORD` are read from env vars at test time only,
+never committed, unset here). Independently of that, an AI agent
+driving the browser interactively does not enter passwords into login
+forms under any circumstance, including a task instruction saying to.
+Both are real, not cosmetic, blockers — this is "live access needed,"
+the valid answer this project's own ADR-004 discipline explicitly
+allows for, not a shortcut taken.
+
+What this pass *did* establish, combining real export data (source 2)
+and one live app reachable without login (source 1, UX Pattern
+Catalog's public pages):
+
+- Confirmed via the real `sample-interactive-grids` export (not
+  paraphrase): page 31 ("Validation") has two genuine page-level
+  `validation()` components scoped to the IG's `editableRegion`
+  (`comm-limit`, `hire-date-in-past`) plus column-level
+  `valueRequired: true` on `ENAME`/`HIREDATE`. The page's own bundled
+  help text describes required-column errors as "reported" via a red
+  triangle in the column header — in-grid UI language, not page-banner
+  language.
+- Confirmed live on UX Pattern Catalog's "Data Entry – Simple Form"
+  page (the one live app reachable without login): a required-looking
+  field that performs a genuine `wwv_flow.accept` POST (3× reproduced)
+  but never toggles `#APEX_ERROR_MESSAGE` — this page's required marker
+  turned out to be decorative, not a real validation, a real but
+  negative/inconclusive finding for the actual question. See
+  `docs/quirks/26.1.json`'s `ux-pattern-catalog-required-marker-not-enforced`.
+- Working hypothesis, **explicitly not live-confirmed**: Interactive
+  Grid validation failures likely route through the grid widget's own
+  AJAX-row-save error/validity UI, not the classic `#APEX_ERROR_MESSAGE`
+  page banner `messages.ts` wraps — a structurally different code path
+  than a classic Form region's full-submit-and-redisplay flow. Even the
+  classic-Form case was never actually observed via a genuine
+  validation-triggered failure either — `messages.ts`'s own prior live
+  verification called `apex.message.showPageSuccess()` directly, not via
+  a real failed submission.
+
+**Next step for whoever picks this up with real login access**: open
+Sample Interactive Grids page 31 (`VALIDATION`), clear the `ENAME` cell
+in the `emp` grid, attempt save, and inspect
+`document.getElementById('APEX_ERROR_MESSAGE')` alongside the grid's own
+DOM (cell/row error classes) and `read_network_requests`/console to see
+which one actually carries the message. Full detail:
+`docs/ecosystem-roadmap.md`'s Seventh round follow-up section.
+
 ## `docs/quirks/26.1.json` — the runtime evidence ledger
 
 One entry per finding: `id`, `component`, `issue`, `evidence`

@@ -145,6 +145,17 @@
       "status": "confirmed for one alias (donut->pie) and two direct matches (pie, area); the remaining 14 declared type values are unconfirmed",
       "rootCauseDiagnosed": true,
       "source": "packages/generator/src/lib.ts (Chart auto-assertion), spike/tests/chart-demo.spec.ts, packages/parser/src/ast.ts (ApexChartSettings)"
+    },
+    {
+      "id": "ux-pattern-catalog-required-marker-not-enforced",
+      "component": "Page items -- 'required' visual marker vs. real server-side enforcement (data-entry-simple-form page, UX Pattern Catalog)",
+      "issue": "The red required-field marker on this reference-pattern page (Name, Job Code items) is decorative only -- it is NOT backed by a real declarative Validation or 'Value Required' server-side check. Submitting the page with both fields empty performs a genuine POST to wwv_flow.accept (a real server round trip, not a client-side block) but #APEX_ERROR_MESSAGE and every per-item _error_placeholder element stay empty and class u-hidden -- no validation ever fires.",
+      "evidence": "Live: clicked the page's 'Primary Action' (Save) button 3 times with P410_NAME and P410_JOB empty. Network log showed 3 distinct 'POST .../ords/wwv_flow.accept?p_context=ux-pattern-catalog/data-entry-simple-form/...' -> 200 OK each time (confirmed via read_network_requests, so this is a real submission, not a client-side no-op). After every submission: document.getElementById('APEX_ERROR_MESSAGE').className stayed 'apex-page-error u-hidden', innerHTML stayed ''; all 8 *_error_placeholder elements (P410_NAME_error_placeholder, P410_JOB_error_placeholder, etc., class 'a-Form-error') stayed present but empty. No console errors, no apex.message calls observed.",
+      "reproducedAgainst": "UX Pattern Catalog app (data-entry-simple-form page, page 410) -- the only one of this project's real live-accessible APEX apps reachable without login (public authentication scheme)",
+      "workaround": "None needed for testkit purposes, but a real finding: do not assume a 'required' visual marker on this specific catalog page implies a real, testable server-side validation. This page is illustrative of the required-marker UI pattern only, not a functioning validation round trip. Use a different page/app (one with a real declarative Validation, e.g. Sample Interactive Grids page 31 'Validation') to exercise and assert on a genuine validation-failure display.",
+      "status": "confirmed live -- this specific page has no functioning server-side validation to observe, despite the required-field visual marker",
+      "rootCauseDiagnosed": true,
+      "source": "packages/testkit/src/components/messages.ts, docs/ecosystem-roadmap.md Seventh round (2026-07-27) follow-up"
     }
   ]
 }
