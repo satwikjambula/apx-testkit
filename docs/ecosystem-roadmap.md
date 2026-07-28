@@ -1025,6 +1025,201 @@ it. **Verdict: still deferred, not resolved; `validation`'s runtime
 component stays un-built until this specific reproduction happens with
 real login access.**
 
+### Continuation (same pass): the remaining 15 unmodeled types
+
+`branch`/`validation`/`lov` were 3 of the 17 real, corpus-confirmed
+unmodeled component types (`docs/grammar-assumptions.md`, "Still open",
+concurrent-manager pass). Asked directly whether anything else in that
+17-type set is missing a decision: yes, the other 15 — `action`, `axis`,
+`column`, `columnGroup`, `computation`, `facet`, `filter`, `layer`,
+`metaTag`, `pageGroup`, `parameter`, `process`, `savedReport`,
+`searchSource`, `series`. Triaged the same way, on real evidence, not
+guessed.
+
+**Evidence source for this pass**: every one of the 46 real apps in this
+corpus already has a per-app "Unmodeled component types" breakdown
+recorded in its own `examples/verified-apps/<app>/RESULTS.md` (written
+when that app was added to the corpus). Grepping all 46 files directly
+gives an exact, real, per-type app-count — the same real-data discipline
+this project already applies everywhere else, not a new method:
+
+| Type | Apps (of 46) |
+|---|---|
+| `process` | 45 |
+| `column` | 39 |
+| `pageGroup` | 29 |
+| `savedReport` | 29 |
+| `computation` | 19 |
+| `series` | 14 |
+| `action` | 14 |
+| `axis` | 12 |
+| `facet` | 9 |
+| `layer` | 6 |
+| `filter` | 5 |
+| `columnGroup` | 3 |
+| `parameter` | 3 |
+| `searchSource` | 3 |
+| `metaTag` | 1 |
+
+(`branch` 27/46, `validation` 19/46 — already decided above, included
+here only to calibrate scale: this round's "near-universal" and "rare"
+language is relative to those two known reference points.)
+
+**Important note on what this pass did NOT do**: it did not re-fetch or
+re-cross-check the official APEXlang EBNF production for any of these 15
+— that is `/parser`'s job, per `DESIGN_GUARDRAILS.md`'s "always
+cross-check the full relevant EBNF production" rule, and a precondition
+for any of these before implementation, not something a scope decision
+can substitute for. What follows is frequency plus plausible semantic
+grouping (cross-referenced against this project's own prior findings in
+`docs/grammar-assumptions.md` and `docs/component-coverage-matrix.md`),
+enough to decide *whether it's worth asking `/parser` to do that check at
+all* — the actual Product Architect question — not enough to claim any
+of these are grammar-confirmed yet.
+
+#### BUILD NOW — parser-only, same shape and bar as `branch`/`validation`
+
+- **`process`** (45/46 — closer to universal than `branch` or
+  `validation` themselves). This is the APEX Page Designer "Processing"
+  node — the same family as `branch`/`validation`/`computation` (the
+  canonical four page-level PL/SQL/built-in processing categories:
+  Processing, Validation, Branch, Computation). Same reasoning as
+  `branch`'s verdict above applies directly: no client-JS hook exists to
+  observe "which process fired" — the only externally observable effect
+  is a page's resulting state (a row got inserted, a redirect happened),
+  which `process` metadata itself doesn't change how `@apx/testkit`
+  observes. What has clear, direct value: a typed `ApexPage.processes`
+  field (name, process type, when-condition, sequence) is real
+  `apx-diff` and coverage-input material, and is actually stronger
+  CRUD-detection signal than `branch` — process type names directly
+  distinguish "Automatic Row Fetch"/DML processes from custom PL/SQL,
+  exactly the kind of static signal the previously-rejected "Analysis
+  Engineer" proposal would have needed before it could exist (still not
+  building that agent — this is parser metadata, not a workflow-discovery
+  engine). **Next step: `/parser`**, full `page-process-*` EBNF
+  production check first, then `ApexPage.processes` +
+  `diffPageFields()` wiring + regression tests.
+- **`computation`** (19/46). The fourth member of the same canonical
+  Page-Designer cluster as `branch`/`validation`/`process` — an item +
+  computation-type + when-condition shape, same diffing value, same
+  "no runtime hook, parser-only" stopping point. No reason to treat it
+  differently from its three siblings now that three of the four already
+  have a verdict. **Next step: `/parser`**, alongside `process`.
+- **`column`** (39/46 — this is NOT the chart-internal `axis`/`series`/
+  `column` styling trio ruled out below; see that item for why those
+  three are a separate, already-decided question). This `column` is the
+  classicReport/interactiveReport/interactiveGrid report-column
+  definition (label, format, sort, link target) — the single most
+  load-bearing construct in this batch after `process` itself, given
+  `classicReport` alone is 35/46 and `interactiveReport` 29/46. Column
+  label/format/link changes are precisely the "did the UI change" signal
+  `apx-diff` exists to catch, and this project has already investigated
+  column link-target shapes directly (`docs/grammar-assumptions.md`'s
+  `column-link` findings) without yet promoting the column itself to a
+  typed field. **Next step: `/parser`** — full `column`/`report-column-*`
+  EBNF production check, typed field, diffing.
+- **`action`** (14/46 — confirmed by prior investigation to be a
+  genuinely distinct construct from the already-typed Dynamic-Action
+  nested `action`: a stand-alone row-level action/link nested directly
+  in a Cards/List/report region, e.g. `position: fullRowLink`, per the
+  explicit "component type name `action` is OVERLOADED" note already in
+  `docs/grammar-assumptions.md`). Real, not a duplicate of what's already
+  typed, and has the same row-affordance diffing value as `column`.
+  **Next step: `/parser`**, same production-check discipline, explicitly
+  scoped to exclude the already-typed `dynamicAction`-nested `action`
+  shape so the two don't collide.
+
+#### Genuine individual consideration, DEFER — real signal, no forcing consumer yet
+
+- **`facet`** (9/46 — exact count match with the `facetedSearch` region,
+  9/46, which already has a **live-verified** runtime component
+  (`ApexFacetsRegion`: facet counts, apply/clear, confirmed live). This
+  is the one item in this whole sweep where a typed field would
+  complement an *already-verified* runtime capability rather than sit
+  ahead of an unbuilt one — the strongest case in this "defer" group, and
+  worth revisiting soon rather than shelving indefinitely. Held out of
+  "build now" only because, unlike `process`/`column`/`action`, nobody
+  has yet named a concrete diff/coverage consumer for the facet
+  *definition* itself (label, source) the way `apx-diff`'s existing
+  identifier-keyed diffing already does for regions/items. Trigger to
+  promote: the first time someone actually needs to diff a facet
+  definition change, or `/apex` wants richer facet-definition metadata to
+  drive `ApexFacetsRegion` assertions beyond counts.
+- **`pageGroup`** (29/46 — common, and technically cheap: `page-groups.apx`
+  is already inside `loadExport()`'s scope today, unlike the LOV
+  definition file). But it's purely organizational (which folder a page
+  sits under in the App Builder tree) — zero runtime relevance, and no
+  concrete diff/coverage consumer has been named for "this page's group
+  changed" the way one exists for `branch`'s unreachable-branch detection
+  or `process`'s CRUD signal. Commonality alone doesn't clear this
+  project's bar. Revisit if/when a navigation-graph-shaped consumer is
+  actually being built (same trigger condition already on record for the
+  `@apx/model` intermediate representation below) and page organization
+  becomes real input to it.
+- **`savedReport`** (29/46 — count tracks the classicReport/
+  interactiveReport family closely, consistent with "most IR/classic
+  reports ship a default saved view"). Plausible diffing value (a
+  region's default sort/filter is a real behavior fact), but what
+  `savedReport` actually contains hasn't been checked against the full
+  EBNF production yet, and no consumer has asked for it. Don't build
+  speculatively; revisit alongside `column` if/when `/parser` is already
+  in that area of the grammar and can check the production cheaply as
+  part of the same pass.
+
+#### FAST-TRACKED — not worth it now (grouped, one-line disqualifier each)
+
+- **`axis`, `series`** — already decided, not a new question. An earlier
+  round explicitly investigated the `chart`-region's
+  `chartAppearance`/`chartLayout` groups and found `axis`/`series`/
+  `column` sub-components to be "font/color/position/scaling styling with
+  no assertion value," a **documented, deliberate** scope decision
+  (`docs/grammar-assumptions.md`, chart-region entry), not an oversight.
+  These two names in the 17-type unmodeled set are that same
+  already-rejected chart-styling construct resurfacing, not a fresh gap.
+  Nothing new changes that verdict here.
+- **`filter`, `layer`, `searchSource`, `parameter`** — each one's
+  app-count matches, near-exactly, a region that is *itself* still
+  unverified, rare, or feature-gated: `filter` (5/46) with `smartFilters`
+  (5/46, "not verified"); `layer` (6/46) with `map` (6/46, "zero live
+  ground truth," `MapRegion` stub); `searchSource` and `parameter` (3/46
+  each) with the AI-gated `search` region (3/46, "gated on
+  `CURRENT_AI_PROVIDER`, no dedicated component"). Typing any of these
+  four now would be metadata for a runtime component that doesn't exist
+  yet, sitting ahead of a parent region this project has already,
+  correctly, left unbuilt for lack of ground truth — the same
+  "infrastructure ahead of real ground truth" pattern the Analysis
+  Engineer proposal was rejected for. Revisit each only when its parent
+  region (`smartFilters`, `map`, `search`) itself gets picked up.
+- **`columnGroup`** (3/46) — a genuinely rare, grouped-header variant of
+  `column` (IG/IR column grouping). Too thin a base to justify its own
+  effort; if/when `column` above gets built, check whether `columnGroup`
+  rides along for free in the same EBNF production — don't scope
+  separate work for it.
+- **`metaTag`** (1/46, a single app — `apex-pwa-reference`'s PWA
+  `<head>` metadata) — one occurrence in the entire 46-app corpus, purely
+  descriptive page metadata with no runtime behavior and no diffing case
+  anyone could make. Disqualified on rarity alone; revisit only if a
+  second real app surfaces a genuine use.
+
+#### Coverage-matrix cross-check — nothing new surfaces
+
+Separately checked `docs/component-coverage-matrix.md`'s region-type and
+item-type tables for "Not verified"/no-dedicated-component gaps outside
+the 17-type unmodeled set (`checkbox`, `switch`, `radioGroup`, and
+similar). All of these are **already tracked, existing runtime debt**,
+not new Product Architect decisions — the matrix's own "Reading this
+table" section already prioritizes the highest-value ones
+(`classicReport`, `list`, `breadcrumb`, `regionDisplaySelector`,
+`selectList`'s richer interactions, `dynamicContent`,
+`plSqlDynamicContent`) as "common in the wild, genuinely worth closing
+next," which is a Runtime & Test Automation Engineer / QA/Verification
+Engineer queue question, not a fresh gap this pass needs to re-litigate.
+Nothing outside the 17-type set surfaced as a missed item.
+
+None of this changes the "zero ground truth" status of any runtime
+component in `unsupported.ts` — this entire continuation, like the round
+it extends, is a parser-layer scope decision only.
+
 ## Fifth round: Application Model, package boundaries, verifier, showcase app
 
 A fifth round proposed a full architectural restructuring: an
