@@ -970,6 +970,71 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         `apx-diff` self-diff on `strategic-planner` against itself reports
         "0 added, 0 removed, 0 changed, 261 unchanged."
 
+- [x] **46th real app added: `concurrent-manager`, authored by this
+      project's own user — the best-provenance app in the corpus (no
+      licensing question at all, unlike every other entry).** Confirmed
+      genuine `mmdVersion 26.1.0+3102`, 56 pages. Full provenance and
+      corpus-size accounting in `.ai/knowledge/verification.md`; full
+      per-app breakdown in
+      `examples/verified-apps/concurrent-manager/RESULTS.md`. Parser/
+      grammar-specific findings from this pass:
+      - **Zero warnings**, matching the rest of the corpus.
+      - **No genuinely new region, item, or unmodeled-component type** —
+        checked deliberately, not assumed clean by default, per
+        `.ai/checklists/new-verification-app.md`. All 10 region types
+        (`breadcrumb`, `staticContent`, `interactiveGrid`,
+        `interactiveReport`, `classicReport`, `form`, `chart`, `cards`,
+        `regionDisplaySelector`, `dynamicContent`), all 15 item types, and
+        all 8 unmodeled component types (`axis`, `branch`, `column`,
+        `pageGroup`, `process`, `savedReport`, `series`, `validation`)
+        were already known from the 45-app corpus before this addition.
+        This is itself a real (negative) finding, not a non-event: a
+        56-page app with its own custom plugin was a real candidate for
+        new signal, and it's being reported honestly that none surfaced,
+        rather than the checklist being treated as satisfied by parsing
+        cleanly alone.
+      - **Custom item plugin checked specifically, found unused**: this
+        export ships `shared-components/plugins/item/advancedSlider`
+        (static id `HR.BILOG.MGORICKI.ADVANCED_SLIDER`), a real,
+        independently-authored jQuery UI slider item plugin — exactly the
+        kind of thing expected to surface a new `plugin/*` item-type
+        instance. A full grep of every `pages/*.apx` file in this export
+        for the plugin's static id/name found **zero page items
+        reference it** — the plugin is defined but never placed on any
+        page. It therefore contributes no `plugin/*` item-type instance
+        to this app's parse output. Separately, and true for every app in
+        this corpus already, not something new here: `shared-components/**`
+        (plugin definitions, themes, static files) is outside
+        `@apx/generator`'s `loadExport()` scope entirely
+        (`application.apx` + `page-groups.apx` + `pages/*.apx` only) — a
+        plugin's own `plugin.apx` definition is never itself parsed by
+        this project's tooling, only a resulting `pageItem ( type:
+        plugin/... )` reference on a page that uses it, had one existed.
+      - **ADR-003 (`htmlDomId`) cross-checked specifically against this
+        app**: present on 17/159 regions, across `staticContent`,
+        `interactiveReport`, `interactiveGrid`, `dynamicContent` — all
+        four already confirmed elsewhere in the corpus. Nothing
+        contradicts ADR-003's "universal mechanism" finding; a small
+        additional corroboration on an independently-sourced 46th app.
+      - **Determinism confirmed**: generated twice, byte-identical output
+        both times; `apx-diff` self-diff against itself: 0 added, 0
+        removed, 0 changed, 55 unchanged (55 page-object/spec pairs from
+        56 parsed pages — the global page, id 0, is excluded from
+        generation by design, same convention as every other app in this
+        corpus).
+      - **Live verification**: none available. The export's own
+        `deployments/default.json` records only an app id (`20500`), no
+        reachable instance URL — checked directly, not assumed, per this
+        task's explicit instruction to confirm rather than assume
+        static-only status.
+      - **Full regression sweep re-run against the whole 46-app corpus in
+        this pass** (not just the new app): all 46 exports parse with
+        zero warnings; all 45 pre-existing apps in `examples/
+        verified-apps/` regenerate byte-identical output (no drift); the
+        `examples/employee-page` determinism fixture regenerates
+        byte-identical; full `vitest` suite green across all workspaces;
+        `spike/` typechecks clean.
+
 ## Still open
 
 (the quoted, substitution-embedding property KEY item that lived here has
@@ -1001,11 +1066,33 @@ silently removed, per this project's correction discipline.)
 - [ ] `required` property canonical name — build a form with a required item
       and re-export to confirm (`validation.valueRequired` is our guess).
 - [ ] Casing rules; property-order significance (assumed none).
-- [ ] Region/report types beyond this app (calendar, map, tree...); 18
-      component types currently land in `unmodeled` — that list IS the
-      typed-projection backlog: action, authentication, authorization, axis,
-      breadcrumb, buildOption, column, componentSetting, dynamicAction, facet,
-      facetGroup, file, list, lov, pageGroup, process, savedReport, series.
+- [ ] Region/report types beyond this app (calendar, map, tree...); this
+      list is the typed-projection backlog. **Correction (this pass,
+      concurrent-manager addition)**: the 18-entry list that used to sit
+      here (`action, authentication, authorization, axis, breadcrumb,
+      buildOption, column, componentSetting, dynamicAction, facet,
+      facetGroup, file, list, lov, pageGroup, process, savedReport,
+      series`) had gone stale — several of those (`breadcrumb`,
+      `dynamicAction`, `list`) are now typed, not unmodeled (see
+      `docs/component-coverage-matrix.md`), and several real unmodeled
+      types present in the current 46-app corpus were missing from it
+      entirely (`branch`, `columnGroup`, `computation`, `filter`, `layer`,
+      `metaTag`, `parameter`, `searchSource`, `validation`). Left the old
+      list visible above rather than silently deleted, per this project's
+      correction discipline. **Current, real-data-confirmed unmodeled set
+      across the full 46-app corpus swept in this pass** (union of every
+      app's `ApexAppAst.unmodeled`, computed directly from `@apx/parser`'s
+      built output, not hand-maintained): `action`, `axis`, `branch`,
+      `column`, `columnGroup`, `computation`, `facet`, `filter`, `layer`,
+      `metaTag`, `pageGroup`, `parameter`, `process`, `savedReport`,
+      `searchSource`, `series`, `validation` — 17 types. (`authentication`,
+      `authorization`, `buildOption`, `componentSetting`, `facetGroup`,
+      `file`, `lov` from the old list do not currently appear as top-level
+      unmodeled component types anywhere in this corpus — either they were
+      seen only in the separately-tracked UX Pattern Catalog ground-truth
+      app, not the 46-app corpus this list is now scoped to, or the
+      earlier list was simply inaccurate; not re-investigated further in
+      this pass, flagged here rather than silently carried forward.)
 
 ## Fixture policy
 

@@ -1,14 +1,17 @@
 # Verified apps — real APEX 26.1+ app results
 
 Generated `@apx/testgen` output (page objects + smoke specs) and results
-summaries for 45 real APEX 26.1+ applications this project has used to
+summaries for 46 real APEX 26.1+ applications this project has used to
 verify `@apx/parser` and `@apx/testkit` against a genuinely wide variety of
 real, structurally different apps: the original 13 Oracle sample-gallery
-apps, plus 32 more added in a later corpus-expansion pass — 11 independent
+apps, 32 more added in a later corpus-expansion pass — 11 independent
 apps from `ujnak/APEXlang-exports` (MIT), 18 apps from Oracle's own
 `github.com/oracle/apex` 26.1 branch (UPL-1.0), and 3 further independent
-apps (Apache-2.0/MIT). See `.ai/knowledge/verification.md` for the full
-provenance and license-check history of every app in this directory.
+apps (Apache-2.0/MIT) — plus 1 more app added after that, `concurrent-
+manager`, authored by this project's own user (no licensing question of
+any kind — see its own section below). See `.ai/knowledge/verification.md`
+for the full provenance and license-check history of every app in this
+directory.
 
 ## What's here, and what's deliberately NOT here
 
@@ -35,12 +38,16 @@ explicitly invites that). For the 32 apps added later (11 `ujnak`, MIT; 18
 the license question is already fully resolved for every one of them —
 raw exports are still kept out of this directory **for consistency with
 the rest of this corpus's handling**, not because of any remaining
-licensing question for those 32 specifically. Either way, committing only
-this project's own generated output — structural metadata (page/region/
-item ids, labels, region types) transformed by an independent tool, not a
-copy of any app's export — avoids the question entirely. See
-`.ai/knowledge/verification.md` and `docs/grammar-assumptions.md`'s
-"Fixture policy" for the full reasoning.
+licensing question for those 32 specifically. `concurrent-manager` (added
+after those 32) takes this one step further: there is no licensing
+question at all, not even a resolved one, since it's this project's own
+user's app — its raw export is withheld purely for consistency with every
+other entry here, the cleanest case in the whole directory. Either way,
+committing only this project's own generated output — structural metadata
+(page/region/item ids, labels, region types) transformed by an
+independent tool, not a copy of any app's export — avoids the question
+entirely. See `.ai/knowledge/verification.md` and
+`docs/grammar-assumptions.md`'s "Fixture policy" for the full reasoning.
 
 ## Apps
 
@@ -108,6 +115,20 @@ copy of any app's export — avoids the question entirely. See
 | `cymbal-coffee-ops` (`cofin/oracledb-vertexai-demo`, Apache-2.0) | 9 | 18 | No |
 | `ai-procurement-agents` (`denioflavio/ai-procurement-agents`, MIT) | 11 | 15 | No |
 | `plsql-dynamic-content-home` (`denioflavio/apex-plsql-dynamic-content-home`, MIT) | 5 | 4 | No |
+
+### `concurrent-manager` — 1 app (no licensing question — the user's own app)
+
+| App | Pages | Regions | Live-verified |
+|---|---|---|---|
+| `concurrent-manager` (this project's own user's app) | 56 | 159 | No |
+
+Unlike every other entry in this file, this app has **zero licensing
+question of any kind** — it's authored by this project's own user, not a
+third-party sample or independently-authored repo. No new region/item/
+unmodeled-component types surfaced (see `RESULTS.md` for the full
+diversity check, including the app's own custom item plugin, which was
+checked but turned out to be unused on any page). ADR-003 (`htmlDomId`)
+holds, confirmed on 4 already-known region types, nothing contradicted.
 
 Every app parses with **zero warnings** and regenerates **byte-identical**
 output every time — see each app's `RESULTS.md` for the full breakdown.

@@ -278,13 +278,69 @@ every other real export in this corpus, despite the permissive licenses —
 consistency, not a licensing concern this time (same reasoning already
 applied to the `ujnak` batch).
 
+## `concurrent-manager` — 1 app (the user's own app; no licensing question at all)
+
+A 46th app, added after the 45-app corpus above: **Concurrent Manager**,
+authored by this project's own user. Confirmed genuine
+`mmdVersion 26.1.0+3102` (`.apex/apexlang.json`), 56 pages. This is the
+**best-possible-provenance addition in this corpus** — every other app
+here (the 13 Oracle gallery apps, the 11 `ujnak` apps, the 18
+`oracle/apex` apps, the 3 further independent apps) carries some form of
+licensing bookkeeping, resolved or not. This one carries none: it's the
+user's own application, so there is no redistribution-rights question to
+track in `docs/license-check.md` at all, not even a cleared one. It's
+still kept local-only / raw-export-excluded from `examples/verified-apps/`,
+same as every other app — purely for consistency with this corpus's
+established handling, not because of any licensing concern (the same
+distinction already drawn for the `ujnak`/`oracle-apex`/independent
+batches, taken one step further here since there's no underlying question
+to be consistent *about*).
+
+- **Zero-warnings parse**: confirmed clean, matching the rest of the
+  corpus. Total regions: 159 across 56 pages (items: 217, buttons: 67,
+  dynamic actions: 46).
+- **No genuinely new region, item, or unmodeled-component type.** All 10
+  region types (`breadcrumb`, `staticContent`, `interactiveGrid`,
+  `interactiveReport`, `classicReport`, `form`, `chart`, `cards`,
+  `regionDisplaySelector`, `dynamicContent`), all 15 item types, and all 8
+  unmodeled component types (`axis`, `branch`, `column`, `pageGroup`,
+  `process`, `savedReport`, `series`, `validation`) were already known
+  from the 45-app corpus before this addition. Despite the app having its
+  own custom item plugin (`shared-components/plugins/item/advancedSlider`,
+  static id `HR.BILOG.MGORICKI.ADVANCED_SLIDER`) and 56 pages — a
+  reasonable expectation of new signal going in — this specific plugin
+  turned out to be **defined but never placed on any page** (a full grep
+  of every `pages/*.apx` file for its static id/name found zero
+  references), so it contributes no `plugin/*` item-type instance to this
+  app's parse output. This is recorded as a checked-and-negative finding,
+  not a skipped one — see `examples/verified-apps/concurrent-manager/RESULTS.md`.
+- **ADR-003 (`htmlDomId`) cross-checked specifically against this app, per
+  the new-app checklist**: present on 17/159 regions, across 4 region
+  types (`staticContent`, `interactiveReport`, `interactiveGrid`,
+  `dynamicContent`) — all 4 already confirmed to carry `htmlDomId`
+  elsewhere in the corpus. Nothing here contradicts ADR-003's "universal
+  mechanism" finding; it's a small additional corroboration on a 46th,
+  independently-sourced app, not a new divergence.
+- **Live verification**: no running instance available — confirmed
+  directly rather than assumed (the export's own `deployments/default.json`
+  records only an app id, `20500`, no reachable instance URL). Static
+  ground truth only.
+- **Determinism confirmed**: generated twice from the same export,
+  byte-identical output both times; `apx-diff` self-diff against itself:
+  0 added, 0 removed, 0 changed, 55 unchanged (55 page-object/spec pairs
+  from 56 pages — the global page, id 0, is excluded from generation by
+  design, same as every other app in this corpus).
+
 ## Corpus size after this addition
 
-45 real apps total: the original 13 Oracle gallery apps + 11 `ujnak`
-apps + 18 `oracle/apex` (26.1 branch) apps + 3 independent apps. All 45
+46 real apps total: the original 13 Oracle gallery apps + 11 `ujnak`
+apps + 18 `oracle/apex` (26.1 branch) apps + 3 independent apps + 1 more
+(`concurrent-manager`, the user's own app, no licensing question). All 46
 parse with zero warnings (`strategic-planner`'s 8 warnings were a real
-parser gap, found and fixed in this pass — see above and
-`docs/grammar-assumptions.md`).
+parser gap, found and fixed in an earlier pass — see above and
+`docs/grammar-assumptions.md`). All 45 pre-existing apps were re-verified
+to regenerate byte-identical output in this pass (no drift), alongside the
+new app's own determinism check.
 
 ## `docs/quirks/26.1.json` — the runtime evidence ledger
 

@@ -4,12 +4,13 @@ Number of real apps was never the right metric on its own — app count
 proves the parser handles real-world export variety, but says nothing
 about whether any *specific* component has enough diversity behind it, or
 whether it's been verified live at all. This tracks both: how many of the
-45 real, statically-parsed exports contain each region/item type, and
+46 real, statically-parsed exports contain each region/item type, and
 separately, whether that type has ever been checked against a running
 instance. (13 from Oracle's own sample gallery + 11 independently-authored
 apps from `ujnak/APEXlang-exports` (MIT) + 18 more from `github.com/
 oracle/apex`'s `26.1` branch (UPL-1.0) + 3 more independent apps
-(Apache-2.0/MIT) — see `.ai/knowledge/verification.md`.)
+(Apache-2.0/MIT) + 1 more, `concurrent-manager`, this project's own user's
+app with no licensing question at all — see `.ai/knowledge/verification.md`.)
 
 Regenerate the counts with:
 
@@ -25,7 +26,7 @@ const fs = require('fs'), path = require('path');
 "
 ```
 
-(The 45 real exports used to produce this table are not committed to this
+(The 46 real exports used to produce this table are not committed to this
 repo — see docs/license-check.md on redistribution rights. Re-run against
 your own exports to reproduce or extend it.)
 
@@ -33,36 +34,46 @@ your own exports to reproduce or extend it.)
 
 | Type | Apps | Total | Live verification |
 |---|---|---|---|
-| `staticContent` | 45/45 | 2810 | N/A — not a widget region |
-| `breadcrumb` | 30/45 | 794 | N/A — not a widget region |
-| `classicReport` | 34/45 | 487 | Not verified — no dedicated component |
-| `interactiveReport` | 28/45 | 361 | **Verified** — generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues, focus, getViewName); search/sort/pagination confirmed private (`_`-prefixed); `expectRegionsResolve()` also confirmed live (ADR-003 htmlDomId-resolved where set) |
-| `list` | 29/45 | 192 | Not verified — no dedicated component |
-| `chart` | 13/45 | 145 | **Verified** — `ApexChartRegion` (`getOption`/`setOption`, confirmed live on 3 chart types); generic `ApexRegion.refresh()` also confirmed. Static config typed: `ApexRegion.chartSettings.type` + `ApexRegion.htmlDomId`. Corrects an earlier wrong claim that `apex.region(id).widget()` returns `null` for charts — it does not (see `docs/quirks/26.1.json` `chart-region-widget-returns-null`). Also confirmed live: declared type ≠ runtime type in at least one case (`donut` reports as `pie` — `chart-declared-type-not-runtime-type`) |
-| `regionDisplaySelector` | 15/45 | 139 | Not verified |
-| `form` | 13/45 | 107 | N/A — items within forms verified individually via `item.ts` |
-| `dynamicContent` | 10/45 | 102 | Not verified, no dedicated component. Promoted from the long-tail catch-all row to its own line this round — no longer a rare type (10/45 apps, 102 instances) |
-| `themeTemplateComponent/contentRow` | 9/45 | 93 | Not verified — see the `themeTemplateComponent/*` aggregate note below the table |
-| `interactiveGrid` | 10/45 | 72 | **Verified** — `ApexInteractiveGridRegion` (getActions, getViews, getCurrentView, getCurrentViewId, getSelectedRecords); auto-generated `getCurrentViewId()` check when `htmlDomId` is set |
-| `cards` | 11/45 | 57 | **Verified** — `ApexCardsRegion` (pagination, selection); `getRecords`/`getModel` confirmed broken |
-| `plugin/componentInstructions` | 1/45 | 53 | Not verified — see the `plugin/*` aggregate note below the table |
-| `plSqlDynamicContent` | 11/45 | 52 | Not verified, no dedicated component. Also promoted to its own line this round (11/45 apps, 52 instances) |
-| `plugin/sourceDisplay` | 8/45 | 49 | Not verified — `plugin/*` aggregate |
-| `facetedSearch` | 9/45 | 46 | **Verified** — `ApexFacetsRegion` (facet counts, apply/clear) |
-| `plugin/previewTemplateOptions` | 1/45 | 43 | Not verified — `plugin/*` aggregate |
-| `calendar` | 10/45 | 41 | Typed-but-unverified — `ApexRegion.calendarSettings` is now typed (parser-only), but the `Calendar` runtime stub remains unbuilt: zero live ground truth |
-| `search` | 3/45 | 28 | Not verified — AI-powered search results region (gated on `CURRENT_AI_PROVIDER`), no dedicated component |
-| `map` | 6/45 | 18 | Not verified — `MapRegion` stub, zero live ground truth. `htmlDomId` confirmed set on 11/18 `map` regions this round (`sample-maps`), the richest static confirmation of this mechanism on `map` yet (previously a single instance, `ujnak/draw-polygon-on-map`) |
-| `listView` | 9/45 | 14 | Not verified — no dedicated component. Real ground truth grew sharply this round (was 1/24, total 1; now 9/45, total 14) |
-| `tree` | 4/45 | 4 | **Corrected this round** — previously documented as "partially explored... standard `t_TreeNav` navigation widget reused as a login picker, not a distinct content pattern." Three genuine CONTENT tree regions found this batch: `sample-trees` (Oracle's own dedicated Tree sample app, region `task-tree`), `universal-theme-reference` (region `demo-2` on the dedicated `p01901-tree.apx` showcase page), `cloud-apps-rest-explorer` (region `business-objects-tree`, a real REST-endpoint tree browser). All three have `htmlDomId` set (`task_tree`, `Demo1`, `bo-tree`). Tree IS a real, distinct content pattern — the `TreeRegion` stub in `unsupported.ts` still has zero LIVE ground truth (static-only), but the "not a distinct pattern" framing was wrong and is corrected here, not silently dropped |
-| `reflowReport` | 1/45 | 3 | Not verified — genuinely new region type this round (`universal-theme-reference`, `p01710-reflow-report.apx`/`p01711-...-mobile-examples.apx`), not part of any previously-known catch-all bucket |
-| `columnToggleReport` | 1/45 | 3 | Not verified — genuinely new region type this round (`universal-theme-reference`, `p01720-column-toggle-report.apx`/`p01721-...-mobile-examples.apx`), not part of any previously-known catch-all bucket |
-| `smartFilters` | 5/45 | 10 | Not verified |
-| `workflowDiagram` | 3/45 | 4 | Not verified |
-| `helpText` | 1/45 | 1 | Not verified — genuinely new region type this round (`universal-theme-reference`, `p01903-help-text.apx`) |
-| `appTemplateComponent/contentRowSimple` | 1/45 | 2 | Not verified — genuinely new region-type PREFIX this round (`strategic-planner`). Distinct from the existing `themeTemplateComponent/*` prefix — first confirmed instance of an `appTemplateComponent/*` namespace anywhere in this project's corpus |
-| all remaining `plugin/*` subtypes (`translatedMessage`, `regionSourceCode`, `badgeList`, `tagCloud`, `html5BarChart`, `contentValidator`, `markdownRegion`, `authorizationAdministration`, `aclWarning`, `miniCalendar`, `aclStatus`, `timelineAndStatusList`, `jetLegend`, `legacyOracleHtml5MapsRegion`, `completeness`, `validateContent`, `sampleAppsFooter`) | 1–11/45 each | 1–27 | Not verified, no dedicated component for any of them. Many more distinct `plugin/*` subtypes surfaced this round than in the 24-app corpus (chiefly from `universal-theme-reference`, `customers`, `strategic-planner`) — all still fall under the generic `plugin/*` unmodeled bucket, not a new category of gap |
-| all remaining `themeTemplateComponent/*` subtypes (`comments`, `flexboxContainer`, `metricCard`, `avatar`, `mediaList`, `timeline`) | 1–4/45 each | 1–13 | Not verified, no dedicated component for any of them |
+| `staticContent` | 46/46 | 2849 | N/A — not a widget region |
+| `breadcrumb` | 31/46 | 836 | N/A — not a widget region |
+| `classicReport` | 35/46 | 499 | Not verified — no dedicated component |
+| `interactiveReport` | 29/46 | 377 | **Verified** — generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues, focus, getViewName); search/sort/pagination confirmed private (`_`-prefixed); `expectRegionsResolve()` also confirmed live (ADR-003 htmlDomId-resolved where set) |
+| `list` | 29/46 | 192 | Not verified — no dedicated component |
+| `chart` | 14/46 | 149 | **Verified** — `ApexChartRegion` (`getOption`/`setOption`, confirmed live on 3 chart types); generic `ApexRegion.refresh()` also confirmed. Static config typed: `ApexRegion.chartSettings.type` + `ApexRegion.htmlDomId`. Corrects an earlier wrong claim that `apex.region(id).widget()` returns `null` for charts — it does not (see `docs/quirks/26.1.json` `chart-region-widget-returns-null`). Also confirmed live: declared type ≠ runtime type in at least one case (`donut` reports as `pie` — `chart-declared-type-not-runtime-type`) |
+| `regionDisplaySelector` | 16/46 | 143 | Not verified |
+| `form` | 14/46 | 114 | N/A — items within forms verified individually via `item.ts` |
+| `dynamicContent` | 11/46 | 104 | Not verified, no dedicated component. Promoted from the long-tail catch-all row to its own line in an earlier round — no longer a rare type (11/46 apps, 104 instances) |
+| `themeTemplateComponent/contentRow` | 9/46 | 93 | Not verified — see the `themeTemplateComponent/*` aggregate note below the table |
+| `interactiveGrid` | 11/46 | 101 | **Verified** — `ApexInteractiveGridRegion` (getActions, getViews, getCurrentView, getCurrentViewId, getSelectedRecords); auto-generated `getCurrentViewId()` check when `htmlDomId` is set |
+| `cards` | 12/46 | 61 | **Verified** — `ApexCardsRegion` (pagination, selection); `getRecords`/`getModel` confirmed broken |
+| `plugin/componentInstructions` | 1/46 | 53 | Not verified — see the `plugin/*` aggregate note below the table |
+| `plSqlDynamicContent` | 11/46 | 52 | Not verified, no dedicated component. Also promoted to its own line in an earlier round (11/46 apps, 52 instances) |
+| `plugin/sourceDisplay` | 8/46 | 49 | Not verified — `plugin/*` aggregate |
+| `facetedSearch` | 9/46 | 46 | **Verified** — `ApexFacetsRegion` (facet counts, apply/clear) |
+| `plugin/previewTemplateOptions` | 1/46 | 43 | Not verified — `plugin/*` aggregate |
+| `calendar` | 10/46 | 41 | Typed-but-unverified — `ApexRegion.calendarSettings` is now typed (parser-only), but the `Calendar` runtime stub remains unbuilt: zero live ground truth |
+| `search` | 3/46 | 28 | Not verified — AI-powered search results region (gated on `CURRENT_AI_PROVIDER`), no dedicated component |
+| `map` | 6/46 | 18 | Not verified — `MapRegion` stub, zero live ground truth. `htmlDomId` confirmed set on 11/18 `map` regions in an earlier round (`sample-maps`), the richest static confirmation of this mechanism on `map` yet (previously a single instance, `ujnak/draw-polygon-on-map`) |
+| `listView` | 9/46 | 14 | Not verified — no dedicated component. Real ground truth grew sharply in an earlier round (was 1/24, total 1; now 9/46, total 14) |
+| `tree` | 4/46 | 4 | **Corrected in an earlier round** — previously documented as "partially explored... standard `t_TreeNav` navigation widget reused as a login picker, not a distinct content pattern." Three genuine CONTENT tree regions found in that batch: `sample-trees` (Oracle's own dedicated Tree sample app, region `task-tree`), `universal-theme-reference` (region `demo-2` on the dedicated `p01901-tree.apx` showcase page), `cloud-apps-rest-explorer` (region `business-objects-tree`, a real REST-endpoint tree browser). All three have `htmlDomId` set (`task_tree`, `Demo1`, `bo-tree`). Tree IS a real, distinct content pattern — the `TreeRegion` stub in `unsupported.ts` still has zero LIVE ground truth (static-only), but the "not a distinct pattern" framing was wrong and is corrected here, not silently dropped. `concurrent-manager` (the newest app in the corpus) has zero `tree` regions — no change to this count from that addition |
+| `reflowReport` | 1/46 | 3 | Not verified — genuinely new region type in an earlier round (`universal-theme-reference`, `p01710-reflow-report.apx`/`p01711-...-mobile-examples.apx`), not part of any previously-known catch-all bucket |
+| `columnToggleReport` | 1/46 | 3 | Not verified — genuinely new region type in an earlier round (`universal-theme-reference`, `p01720-column-toggle-report.apx`/`p01721-...-mobile-examples.apx`), not part of any previously-known catch-all bucket |
+| `smartFilters` | 5/46 | 10 | Not verified |
+| `workflowDiagram` | 3/46 | 4 | Not verified |
+| `helpText` | 1/46 | 1 | Not verified — genuinely new region type in an earlier round (`universal-theme-reference`, `p01903-help-text.apx`) |
+| `appTemplateComponent/contentRowSimple` | 1/46 | 2 | Not verified — genuinely new region-type PREFIX in an earlier round (`strategic-planner`). Distinct from the existing `themeTemplateComponent/*` prefix — first confirmed instance of an `appTemplateComponent/*` namespace anywhere in this project's corpus |
+| all remaining `plugin/*` subtypes (`translatedMessage`, `regionSourceCode`, `badgeList`, `tagCloud`, `html5BarChart`, `contentValidator`, `markdownRegion`, `authorizationAdministration`, `aclWarning`, `miniCalendar`, `aclStatus`, `timelineAndStatusList`, `jetLegend`, `legacyOracleHtml5MapsRegion`, `completeness`, `validateContent`, `sampleAppsFooter`) | 1–11/46 each | 1–27 | Not verified, no dedicated component for any of them. Many more distinct `plugin/*` subtypes surfaced in an earlier round than in the 24-app corpus (chiefly from `universal-theme-reference`, `customers`, `strategic-planner`) — all still fall under the generic `plugin/*` unmodeled bucket, not a new category of gap |
+| all remaining `themeTemplateComponent/*` subtypes (`comments`, `flexboxContainer`, `metricCard`, `avatar`, `mediaList`, `timeline`) | 1–4/46 each | 1–13 | Not verified, no dedicated component for any of them |
+
+`concurrent-manager` (the 46th app, added after the batch above — see
+`.ai/knowledge/verification.md`) contributed real instances of 10 already-
+known region types (`breadcrumb`, `staticContent`, `interactiveGrid`,
+`interactiveReport`, `classicReport`, `form`, `chart`, `cards`,
+`regionDisplaySelector`, `dynamicContent` — the ten rows whose Apps/Total
+counts above increased by exactly 1 app / this app's per-type instance
+count from the previous 45-app snapshot) but **zero genuinely new region
+types** — checked specifically per `.ai/checklists/new-verification-app.md`,
+not assumed clean by default.
 
 Also notable: `htmlDomId` (ADR-003's "universal mechanism") was confirmed
 present in real static export data on a substantially wider set of region
@@ -82,42 +93,60 @@ mechanism, not gated to specific types" finding. Static-only confirmation
 `docs/quirks/26.1.json` `region-id-not-static-id` and
 `docs/grammar-assumptions.md` for the full breakdown.
 
+`concurrent-manager` (the 46th app) was checked against this specifically,
+per `.ai/checklists/new-verification-app.md` — `htmlDomId` is present on
+17/159 of its regions, across `staticContent`, `interactiveReport`,
+`interactiveGrid`, and `dynamicContent`, all four already on the confirmed
+list above. No new region type added to this list from this app; nothing
+found to contradict ADR-003 either.
+
 ## Item types
 
 | Type | Apps | Total | Live verification |
 |---|---|---|---|
-| `hidden` | 34/45 | 1281 | **Verified** — `apex.item()` round-trip |
-| `textField` | 45/45 | 625 | **Verified** |
-| `selectList` | 29/45 | 437 | **Verified** — basic get/set only; richer label/value/option-list interaction not verified |
-| `displayOnly` | 22/45 | 246 | Not verified |
-| `textarea` | 24/45 | 203 | **Verified** |
-| `switch` | 15/45 | 134 | Not verified — `Switch` stub |
-| `datePicker` | 20/45 | 113 | **Verified** — basic get/set only; calendar-widget interaction (`date.select("2026-04-10")`-style) not verified |
-| `radioGroup` | 15/45 | 108 | Not verified — `RadioGroup` stub |
-| `numberField` | 20/45 | 104 | **Verified** |
-| `checkboxGroup` | 15/45 | 69 | Not verified |
-| `password` | 40/45 | 47 | Partially — `login()`'s `.fill()` works against it in practice, but not verified via the generic `ApexItem`/`apex.item()` round-trip the way the other types are |
-| `popupLov` | 9/45 | 47 | Not verified — `PopupLov` stub |
-| `checkbox` | 25/45 | 39 | Not verified, not stubbed either — likely tractable, just never exercised live |
-| `fileUpload` | 12/45 | 39 | Not verified — `FileBrowse` stub |
-| `selectOne` | 4/45 | 37 | Not verified — new type as of the previous round, real ground truth grew this batch (was 1/24, now 4/45) |
-| `richTextEditor` | 3/45 | 26 | Not verified — `RichText` stub |
-| `displayImage` | 5/45 | 17 | Not verified |
-| `combobox` | 2/45 | 10 | Not verified — genuinely new item type this round (`universal-theme-reference`, `strategic-planner`) |
-| `imageUpload` | 4/45 | 7 | Not verified |
-| `markdownEditor` | 2/45 | 5 | Not verified |
-| `shuttle` | 4/45 | 4 | Not verified — `Shuttle` stub |
-| `stopAndStartGridLayout` | 2/45 | 3 | Not verified — genuinely new item type this round; a layout pseudo-item (Universal Theme grid row start/stop marker inside a `form` region), not a data-bearing field. First confirmed in `customers` (`pageItem P7_SS ( type: stopAndStartGridLayout )`), also in `team-calendar` |
-| `colorPicker` | 1/45 | 2 | Not verified — genuinely new item type this round (`universal-theme-reference`) |
-| `percentGraph` | 1/45 | 2 | Not verified — genuinely new item type this round (`universal-theme-reference`) |
-| `textFieldWithAutocomplete` | 2/45 | 2 | Not verified — genuinely new item type this round |
-| `datePickerJquery` | 1/45 | 1 | Not verified |
-| `plugin/slider` | 1/45 | 1 | Not verified |
-| `displayMap` | 1/45 | 1 | Not verified — genuinely new item type this round (`sample-maps`) |
-| `listManager` | 1/45 | 1 | Not verified — genuinely new item type this round |
-| `qrCode` | 1/45 | 1 | Not verified — genuinely new item type this round (`universal-theme-reference`) |
-| `selectMany` | 1/45 | 1 | Not verified — genuinely new item type this round |
-| `starRating` | 1/45 | 1 | Not verified — genuinely new item type this round (`universal-theme-reference`) |
+| `hidden` | 35/46 | 1330 | **Verified** — `apex.item()` round-trip |
+| `textField` | 46/46 | 689 | **Verified** |
+| `selectList` | 30/46 | 459 | **Verified** — basic get/set only; richer label/value/option-list interaction not verified |
+| `displayOnly` | 23/46 | 251 | Not verified |
+| `textarea` | 25/46 | 216 | **Verified** |
+| `switch` | 16/46 | 145 | Not verified — `Switch` stub |
+| `numberField` | 21/46 | 131 | **Verified** |
+| `datePicker` | 21/46 | 128 | **Verified** — basic get/set only; calendar-widget interaction (`date.select("2026-04-10")`-style) not verified |
+| `radioGroup` | 16/46 | 112 | Not verified — `RadioGroup` stub |
+| `checkboxGroup` | 16/46 | 70 | Not verified |
+| `popupLov` | 10/46 | 49 | Not verified — `PopupLov` stub |
+| `password` | 41/46 | 48 | Partially — `login()`'s `.fill()` works against it in practice, but not verified via the generic `ApexItem`/`apex.item()` round-trip the way the other types are |
+| `checkbox` | 26/46 | 40 | Not verified, not stubbed either — likely tractable, just never exercised live |
+| `fileUpload` | 12/46 | 39 | Not verified — `FileBrowse` stub |
+| `selectOne` | 4/46 | 37 | Not verified — new type as of an earlier round, real ground truth grew in that batch (was 1/24, now 4/46) |
+| `richTextEditor` | 4/46 | 27 | Not verified — `RichText` stub |
+| `displayImage` | 5/46 | 17 | Not verified |
+| `combobox` | 2/46 | 10 | Not verified — genuinely new item type in an earlier round (`universal-theme-reference`, `strategic-planner`) |
+| `imageUpload` | 4/46 | 7 | Not verified |
+| `markdownEditor` | 3/46 | 6 | Not verified |
+| `shuttle` | 4/46 | 4 | Not verified — `Shuttle` stub |
+| `stopAndStartGridLayout` | 2/46 | 3 | Not verified — genuinely new item type in an earlier round; a layout pseudo-item (Universal Theme grid row start/stop marker inside a `form` region), not a data-bearing field. First confirmed in `customers` (`pageItem P7_SS ( type: stopAndStartGridLayout )`), also in `team-calendar` |
+| `colorPicker` | 1/46 | 2 | Not verified — genuinely new item type in an earlier round (`universal-theme-reference`) |
+| `percentGraph` | 1/46 | 2 | Not verified — genuinely new item type in an earlier round (`universal-theme-reference`) |
+| `textFieldWithAutocomplete` | 2/46 | 2 | Not verified — genuinely new item type in an earlier round |
+| `datePickerJquery` | 1/46 | 1 | Not verified |
+| `plugin/slider` | 1/46 | 1 | Not verified |
+| `displayMap` | 1/46 | 1 | Not verified — genuinely new item type in an earlier round (`sample-maps`) |
+| `listManager` | 1/46 | 1 | Not verified — genuinely new item type in an earlier round |
+| `qrCode` | 1/46 | 1 | Not verified — genuinely new item type in an earlier round (`universal-theme-reference`) |
+| `selectMany` | 1/46 | 1 | Not verified — genuinely new item type in an earlier round |
+| `starRating` | 1/46 | 1 | Not verified — genuinely new item type in an earlier round (`universal-theme-reference`) |
+
+`concurrent-manager` (the 46th app) contributed real instances of 15
+already-known item types (`textField`, `hidden`, `numberField`,
+`selectList`, `datePicker`, `textarea`, `switch`, `displayOnly`,
+`radioGroup`, `popupLov`, `checkboxGroup`, `richTextEditor`,
+`markdownEditor`, `password`, `checkbox`) but **zero genuinely new item
+types** — checked specifically, including this app's own custom item
+plugin (`shared-components/plugins/item/advancedSlider`), which turned
+out to be defined but never actually placed on any page item in this
+export, so it contributes no `plugin/*` instance either. See
+`examples/verified-apps/concurrent-manager/RESULTS.md`.
 
 Note on item-type completeness: the official APEXlang EBNF types
 `pageItem`'s `type` property as an open `<string-like-value>` ("type:
@@ -146,6 +175,7 @@ not.
 | `team-calendar` | 71 |
 | `sample-calendar` | 55 |
 | `sample-charts` | 48 |
+| `concurrent-manager` | 46 |
 | `universal-theme-reference` | 43 |
 | `sample-master-detail` | 41 |
 | `qask` | 30 |
@@ -183,7 +213,7 @@ not.
 | `sample-document-generator` | 0 |
 | `cymbal-coffee-ops` | 0 |
 | `apex-plsql-dynamic-content-home` | 0 |
-| **Total** | **1420** |
+| **Total** | **1466** |
 
 Verification status: metadata only (trigger, condition, nested actions
 all typed and diffable). Zero live ground truth on runtime triggering —
@@ -217,13 +247,17 @@ typed metadata doesn't change that (see docs/ecosystem-roadmap.md
   capability behind it yet. Don't conflate "the parser understands this"
   with "the testkit can act on this."
 
-This table is a snapshot from a specific set of 45 exports, not a live
+This table is a snapshot from a specific set of 46 exports, not a live
 report — re-run the script above after adding new exports, or after any
-new live verification pass, to keep it current. **Known gap in this
-snapshot**: `strategic-planner` (one of the 45) has 8 real parser
-warnings (`docs/grammar-assumptions.md`, "quoted substitution-token
-property keys" finding) — its region/item counts above are still
-accurate (the malformed lines are isolated to two `link.target.items`
-blocks and don't affect region/item projection), but this is the first
-app in the corpus that is NOT a clean zero-warnings parse. See
-`docs/grammar-assumptions.md`'s "Still open" section.
+new live verification pass, to keep it current. **Correction to a stale
+note that used to live here**: an earlier version of this file flagged
+`strategic-planner` as having 8 real parser warnings ("quoted
+substitution-token property keys", `docs/grammar-assumptions.md`) and
+being "NOT a clean zero-warnings parse." That was true when first found,
+but the underlying regex was fixed in the same pass (the parser's
+`PROPERTY` regex now accepts a quoted-string key, per
+`docs/grammar-assumptions.md`) — `strategic-planner` has parsed with
+**zero warnings**, same as every other app in the corpus, in every
+verification pass since, including this one. Corrected in place here
+rather than left to silently imply a still-open gap that no longer
+exists.
