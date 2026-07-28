@@ -846,6 +846,91 @@ specifics on each.
   here. Grow the typed hierarchy one verified type at a time, as already
   established with `ApexCardsRegion`/`ApexFacetsRegion`.
 
+## Seventh round (2026-07-27): `branch`/`validation`/`lov` — Product Architect scope decision
+
+Prompted by `concurrent-manager` (the 46th app, the project's own user's
+app): 6 pages use `branch`, 34 use `validation`, and
+`shared-components/lovs.apx` is referenced across 11+ pages — all three
+sit in the confirmed 17-type unmodeled-set (see
+`docs/grammar-assumptions.md` "Still open", concurrent-manager pass) with
+no typed AST field and no runtime component. Verdict on each, applying
+this project's existing bar (real ground truth, clear testing/diffing
+value, ADR-002's parser-only stopping point, check existing components
+before proposing new ones) — not a new framework, slotted into the
+existing Tier structure above:
+
+- **`branch` — BUILD NOW, parser-only. No runtime component.** A branch
+  is a server-side page-processing redirect rule
+  (`REDIRECT_PAGE`/`REDIRECT_APP`/target, gated by a condition) — there is
+  no client-JS hook to observe "which branch fired" the way region
+  methods are observed elsewhere in this project; the only externally
+  observable effect is which page/URL you land on, which `@apx/testkit`
+  can already assert today with zero branch-specific code
+  (`page.url()`). That rules out a runtime component the same way `branch`
+  was already ruled out of the Navigation Graph proposal above ("needs
+  parser extension first"). What DOES have clear, direct value: a typed
+  `ApexPage.branches` field (sequence, condition, target) makes branches
+  diffable in `apx-diff` and gives static analysis (unreachable-branch
+  detection, coverage-recording input) something real to read — exactly
+  the Dynamic-Actions precedent (typed metadata without runtime
+  triggering being a legitimate, complete stopping point per ADR-002).
+  **Next step: `/parser`** — type `ApexPage.branches`, wire into
+  `diffPageFields()`, regression tests, per
+  `.ai/checklists/parser-change.md`.
+
+- **`validation` — typed AST field BUILD NOW; runtime component DEFERRED
+  pending a live-verification pass.** The parser-only half is the same
+  low-risk, high-precedent move as `branch` (name, associated item/page,
+  `valueRequired`-shaped condition — clear diffing value, 34 pages of
+  real ground truth in `concurrent-manager` alone). The runtime half is
+  NOT a "don't build" — this project's own `messages.ts` already wraps
+  `apex.message`/`#APEX_ERROR_MESSAGE`, the same universal mechanism
+  Oracle uses for validation failures, and Oracle's own "Sample
+  Interactive Grids" gallery app (already live-accessible in this
+  project — see the Interactive Grid Tier 1 entry) explicitly advertises
+  "validation" among its showcased features. That means live ground
+  truth to check this against may already be reachable without acquiring
+  a new app. But it must be CHECKED, not assumed: does a triggered
+  server-side validation failure actually surface through
+  `#APEX_ERROR_MESSAGE` (in which case `expectError()` already covers
+  this today, zero new runtime code needed), or does APEX route
+  item-level validation failures through a different, inline
+  per-item error element `messages.ts` doesn't touch? Building a new
+  `validation.ts` runtime component before that check risks duplicating
+  `messages.ts` or guessing at a mechanism, exactly what ADR-002 exists
+  to prevent. **Next step: `/apex`** to verify live against Sample
+  Interactive Grids first; typed AST field can proceed in parallel via
+  `/parser` since it doesn't depend on the runtime finding.
+
+- **`lov` — narrow reference field BUILD NOW; full LOV definition
+  resolution NOT NOW.** Two different asks bundled under one name.
+  (1) A `selectList`/`radioGroup` item's *reference* to a named LOV
+  (the property already sits in each item's `raw` bag today) is cheap,
+  parser-only, and has the same diffing value as `branch`/`validation`
+  above — if a select list's LOV source changes, `apx-diff` should say
+  so by field, not "other metadata changed." **Next step: `/parser`** —
+  add e.g. `ApexItem.lovName` (gated to `selectList`/`radioGroup`/
+  `popupLov` item types), wire into `apx-diff`. (2) Resolving the LOV
+  *definition itself* (the actual list of values in
+  `shared-components/lovs.apx`) is a different, bigger thing: that file
+  sits outside `loadExport()`'s current scope entirely (confirmed:
+  `shared-components/**` — plugin definitions, themes, static files — is
+  never parsed today, only a resulting item-level reference to a plugin
+  or LOV is, per the concurrent-manager plugin finding above). Parsing
+  it would mean extending the generator's file-scope, a real
+  architecture change, not a field addition — and there is no concrete
+  consumer asking for the actual *values* yet, only the reference. Left
+  in Tier 2 ("needs care") rather than built now. Runtime PopupLOV
+  support is UNCHANGED and stays a stub in `unsupported.ts` — still zero
+  live ground truth for the actual open/search/select widget flow,
+  already correctly tracked in Tier 3 above; a typed reference field
+  does not change that.
+
+None of the three change the "zero ground truth" status of
+`RadioGroup`/`PopupLOV`/`Switch` runtime components in `unsupported.ts` —
+this round is exclusively about the parser layer plus one scoped
+live-verification step for `validation`.
+
 ## Fifth round: Application Model, package boundaries, verifier, showcase app
 
 A fifth round proposed a full architectural restructuring: an

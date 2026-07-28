@@ -330,6 +330,19 @@ to be consistent *about*).
   0 added, 0 removed, 0 changed, 55 unchanged (55 page-object/spec pairs
   from 56 pages — the global page, id 0, is excluded from generation by
   design, same as every other app in this corpus).
+- **`branch`/`validation`/`lov` scope decision**: this app's heavy,
+  concrete use of `branch` (6 pages), `validation` (34 pages), and LOVs
+  (11+ pages) prompted a Product Architect scope review — see
+  `docs/ecosystem-roadmap.md`, "Seventh round (2026-07-27)". Verdict:
+  `branch` and a narrow `lov` reference field are parser-only, build-now
+  (`/parser`); `validation`'s typed AST field is build-now too, but its
+  runtime component is deferred pending an `/apex` live-verification pass
+  against Sample Interactive Grids (already live-accessible) to check
+  whether `messages.ts`'s existing `expectError()` already covers
+  validation failures. Full LOV *definition* resolution
+  (`shared-components/lovs.apx`) stays out of scope — outside
+  `loadExport()`'s current file coverage, a bigger architecture change
+  than a field addition.
 
 ## Corpus size after this addition
 
