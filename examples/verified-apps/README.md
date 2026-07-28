@@ -1,9 +1,14 @@
-# Verified apps — real Oracle sample-app results
+# Verified apps — real APEX 26.1+ app results
 
 Generated `@apx/testgen` output (page objects + smoke specs) and results
-summaries for 13 real Oracle APEX 26.1+ sample applications this project
-has used to verify `@apx/parser` and `@apx/testkit` against a genuinely
-wide variety of real, structurally different apps.
+summaries for 45 real APEX 26.1+ applications this project has used to
+verify `@apx/parser` and `@apx/testkit` against a genuinely wide variety of
+real, structurally different apps: the original 13 Oracle sample-gallery
+apps, plus 32 more added in a later corpus-expansion pass — 11 independent
+apps from `ujnak/APEXlang-exports` (MIT), 18 apps from Oracle's own
+`github.com/oracle/apex` 26.1 branch (UPL-1.0), and 3 further independent
+apps (Apache-2.0/MIT). See `.ai/knowledge/verification.md` for the full
+provenance and license-check history of every app in this directory.
 
 ## What's here, and what's deliberately NOT here
 
@@ -19,18 +24,27 @@ Each app's folder contains:
   (`apx-coverage` output) and `self-diff-report.txt`
   (`apx-diff` output), copied verbatim.
 
-**The raw `.apx` export data is deliberately NOT included.** Redistribution
-terms for Oracle's actual sample *applications* — their real page content,
-demo data, and business logic — have not been resolved, unlike the
-APEXlang *format* itself (`docs/license-check.md` cleared writing an
-independent parser for the documented grammar; Oracle explicitly invites
-that). Committing only this project's own generated output — structural
-metadata (page/region/item ids, labels, region types) transformed by an
-independent tool, not a copy of Oracle's export — avoids that open
-question entirely. See `.ai/knowledge/verification.md` and
-`docs/grammar-assumptions.md`'s "Fixture policy" for the full reasoning.
+**The raw `.apx` export data is deliberately NOT included, for any app in
+this directory.** For the original 13 Oracle sample-gallery apps, this is
+because redistribution terms for Oracle's actual sample *applications* —
+their real page content, demo data, and business logic — have not been
+resolved, unlike the APEXlang *format* itself (`docs/license-check.md`
+cleared writing an independent parser for the documented grammar; Oracle
+explicitly invites that). For the 32 apps added later (11 `ujnak`, MIT; 18
+`oracle/apex` 26.1-branch, UPL-1.0; 3 further independent, Apache-2.0/MIT),
+the license question is already fully resolved for every one of them —
+raw exports are still kept out of this directory **for consistency with
+the rest of this corpus's handling**, not because of any remaining
+licensing question for those 32 specifically. Either way, committing only
+this project's own generated output — structural metadata (page/region/
+item ids, labels, region types) transformed by an independent tool, not a
+copy of any app's export — avoids the question entirely. See
+`.ai/knowledge/verification.md` and `docs/grammar-assumptions.md`'s
+"Fixture policy" for the full reasoning.
 
 ## Apps
+
+### Original 13 — Oracle sample-app gallery (licensing not fully resolved; kept local-only for that reason)
 
 | App | Pages | Regions | Live-verified |
 |---|---|---|---|
@@ -47,6 +61,53 @@ question entirely. See `.ai/knowledge/verification.md` and
 | `sample-master-detail` | 34 | 114 | No |
 | `sample-vector-search` | 27 | 125 | No |
 | `workflow-approvals` | 34 | 155 | No |
+
+### `ujnak/APEXlang-exports` — 11 apps (MIT)
+
+| App | Pages | Regions | Live-verified |
+|---|---|---|---|
+| `CSP-REPORT` | 3 | 3 | No |
+| `XLIFF-TRANSLATE` | 6 | 10 | No |
+| `draw-polygon-on-map` | 3 | 4 | No |
+| `driving-with-apex` | 3 | 4 | No |
+| `employee-management` | 3 | 5 | No |
+| `get-table-info-by-apex-db-dictionary` | 3 | 2 | No |
+| `menu-popup-with-action` | 6 | 12 | No |
+| `salary-management-agent` | 3 | 5 | No |
+| `sample-terminal-emulator` | 3 | 3 | No |
+| `test-button-show-as-disabled-261` | 3 | 2 | No |
+| `world-diner` | 3 | 3 | No |
+
+### `oracle/apex` 26.1 branch — 18 apps (UPL-1.0)
+
+| App | Pages | Regions | Live-verified |
+|---|---|---|---|
+| `apex-pwa-reference` | 16 | 260 | No |
+| `json-duality-views` | 12 | 39 | No |
+| `sample-data-loading` | 18 | 93 | No |
+| `sample-document-generator` (inner export dir `sample-docgen`) | 4 | 15 | No |
+| `sample-email-authentication` (inner export dir `ema`) | 16 | 42 | No |
+| `sample-file-upload-download` | 13 | 56 | No |
+| `sample-maps` | 17 | 61 | No |
+| `sample-reporting` | 42 | 210 | No |
+| `sample-rest-services` | 37 | 125 | No |
+| `sample-trees` | 11 | 35 | No |
+| `universal-theme-reference` (inner export dir `ut`) | 122 | 987 | No |
+| `customers` | 127 | 375 | No |
+| `opportunities` | 153 | 427 | No |
+| `poll` | 83 | 300 | No |
+| `qask` | 42 | 135 | No |
+| `strategic-planner` | 262 | 912 | No |
+| `team-calendar` | 51 | 176 | No |
+| `cloud-apps-rest-explorer` | 5 | 22 | No |
+
+### Independent apps beyond `ujnak`/`oracle-apex` — 3 apps
+
+| App | Pages | Regions | Live-verified |
+|---|---|---|---|
+| `cymbal-coffee-ops` (`cofin/oracledb-vertexai-demo`, Apache-2.0) | 9 | 18 | No |
+| `ai-procurement-agents` (`denioflavio/ai-procurement-agents`, MIT) | 11 | 15 | No |
+| `plsql-dynamic-content-home` (`denioflavio/apex-plsql-dynamic-content-home`, MIT) | 5 | 4 | No |
 
 Every app parses with **zero warnings** and regenerates **byte-identical**
 output every time — see each app's `RESULTS.md` for the full breakdown.
