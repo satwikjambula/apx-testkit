@@ -11,6 +11,48 @@ agents (Cursor, Claude Code, Copilot) alike, via MCP.**
 If apx-testkit saves you from hand-writing Playwright specs for Oracle
 APEX, **star the repo** ⭐ — it's the easiest way to help others find it.
 
+## New here? Start with the problem, not the pipeline
+
+If you've got an Oracle APEX app and someone — you, a teammate, a QA
+person, a client — is about to start testing it, you're probably in one of
+these spots: you have **zero automated tests** for the app and hand-writing
+a Playwright spec for every single page is a lot of repetitive work nobody
+wants to do first; or you just want a fast, repeatable answer to "does
+every page still load, do the form fields still round-trip, are the
+buttons still there" without re-deriving that by hand every time the app
+changes; or someone else now has to run these tests and understand what
+they check without reading this project's source first.
+
+**What apx-testkit actually does for you**: you export your app in
+Oracle's own APEXlang format, point apx-testkit at that export, and it
+writes real Playwright tests for you — one typed page object plus one
+smoke spec per page, generated deterministically. No AI model runs during
+generation; the same export always produces byte-identical test files, so
+you or a reviewer can read the diff and know exactly what changed, the same
+way you'd review any other generated code.
+
+**Why trust the output**: every assertion the generator emits is built on
+a documented, live-verified Oracle APEX JavaScript API (`apex.item()`,
+`apex.region()`) — never a CSS selector guessed by scraping the DOM. It
+doesn't cover every part of an APEX app yet, and it says so plainly — see
+the capability matrix and `docs/limitations.md` below for exactly what's
+covered today and what isn't.
+
+> **Two terms, translated once:** an **APEXlang export** is a text-based
+> snapshot of your app's pages, unique to Oracle APEX 26.1+, that Oracle
+> itself generates (from App Builder or VS Code) — not something
+> apx-testkit produces. **Playwright** is the browser-automation tool that
+> actually opens a real browser, clicks buttons, and fills in forms during
+> a test run; apx-testkit writes Playwright tests for you, it doesn't
+> replace it.
+
+Want the concrete, copy-pasteable walkthrough — "I have an app, what do I
+literally type, right now"? Go to
+[`docs/tutorial.md`, section 1](docs/tutorial.md#1-getting-started) — it
+walks the whole path end to end using a real, committed example
+(`examples/employee-page/`), and it's how someone new to this project
+should actually get started, not this README.
+
 ## What apx-testkit is
 
 apx-testkit generates a maintainable Playwright regression suite directly

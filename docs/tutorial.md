@@ -41,14 +41,44 @@ number of real apps, and honest about what doesn't work yet.
 
 ## 1. Getting started
 
+### Why this exists (short version — the fuller version is in the README)
+
+You have an Oracle APEX app, and someone — you, a teammate, a QA person —
+is about to start testing it. This tool turns your app's APEXlang export
+into a real, runnable Playwright suite: one typed page object plus one
+smoke spec per page, generated deterministically from your app's own
+metadata, never guessed from the DOM. See the README's
+["New here?"](../README.md#new-here-start-with-the-problem-not-the-pipeline)
+section for the fuller why/what/trust framing. Everything below is the
+concrete "what do I actually type" walkthrough.
+
 ### Prerequisites
 
-- Node 22
-- An APEXlang export of an Oracle APEX 26.1+ app (a folder containing
-  `application.apx` and a `pages/` subdirectory — that's what "Export to
-  APEXlang" from App Builder or VS Code produces). Don't have one yet? The
-  examples below use the project's own committed fixture, so you can follow
-  along without one.
+- **Node 22.**
+- An **APEXlang export** of an Oracle APEX 26.1+ app: a folder containing
+  `application.apx` and a `pages/` subdirectory of `.apx` text files. This
+  is a text-based snapshot of your app's pages that *Oracle itself*
+  generates — apx-testkit only ever reads it, never writes it (there is
+  deliberately no `.apx` writer — see the README's "Scope commitments").
+  Oracle's own App Builder User's Guide documents the format under
+  "Reading APEXlang Syntax," and both App Builder and VS Code's Oracle SQL
+  Developer extension expose an "Export to APEXlang" action for an
+  existing app.
+
+  **Honesty note, per this project's own verification discipline
+  (ADR-004):** this project has no live App Builder or workspace access
+  (see `.ai/knowledge/verification.md`), so the exact current menu wording
+  and click-path for "Export to APEXlang" have **not** been re-verified
+  live by this project — the paragraph above is sourced from Oracle's own
+  documentation and this project's prior notes, not first-hand
+  observation. If what you see in your own App Builder differs, trust
+  your own screen and Oracle's official docs over this paragraph, and
+  please file an issue so this gets corrected with real evidence.
+
+  **Don't have an export yet, or just want to see the tool work first?**
+  "Onboard your app in about 10 minutes" below uses this project's own
+  committed fixture, so you can follow along with zero APEX access at all,
+  and swap in your own export directory the moment you have one.
 
 ### Clone and build
 
@@ -66,20 +96,105 @@ CLI from here — `@apx/testkit` is a real runtime dependency of every
 generated file, and it needs to be built once (`dist/` doesn't ship
 pre-built).
 
-### Generate your first page object + spec
+### Onboard your app in about 10 minutes
 
+This is the literal answer to "I have an APEX app, a user is about to test
+it, what do I actually do." It uses the project's own committed fixture as
+the running example — source at
+`packages/generator/test/fixtures/reference-fixtures`, generated output
+already committed at `examples/employee-page/` so you can read the
+destination before running anything — and every command below was re-run
+fresh from a clean clone while writing this doc. The moment you have your
+own export, only step (b)'s first argument changes; everything else is
+identical.
+
+**(a) Get an APEXlang export of the app you want to test.** From your own
+app: use App Builder's or VS Code's "Export to APEXlang" action (see the
+honesty note above — verify the exact menu wording against your own App
+Builder version, not this doc). You'll end up with a folder shaped like
+this:
+```
+my-app-export/
+├── application.apx
+└── pages/
+    ├── p00001-home.apx
+    ├── p00003-employee.apx
+    └── ...
+```
+For this walkthrough, skip straight to (b) — the committed fixture at
+`packages/generator/test/fixtures/reference-fixtures` is already a real
+(minimal, one-page) export in exactly this shape.
+
+**(b) Run the generator against it.**
 ```bash
 node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/my-first-tests
 ```
-
 ```
 Generated 1 page object(s) + spec(s) (0 marked skip: auth required) into /tmp/my-first-tests
 ```
-
 Two files appeared: `p00003-employee.page.ts` (a typed page object) and
-`p00003-employee.spec.ts` (a smoke spec exercising it). Section 2 below
-covers every primitive these two files — and any spec you write by hand —
-are built from.
+`p00003-employee.spec.ts` (a smoke spec exercising it). Against your own
+export, swap the first argument for your export directory and `--out` for
+wherever you want the tests to land — the rest of the command is
+unchanged. Section 2 below covers every primitive these two files — and
+any spec you write by hand — are built from.
+
+**(c) What you now have, and why it matters.** Open
+`examples/employee-page/` in this repo — it's the exact, byte-identical
+output of the command above. In plain terms, for the one page
+(`Employee`) in this fixture, you now have a test that:
+
+- **loads the page and checks the browser console stayed clean** — catches
+  a page that throws a JavaScript error the moment it loads;
+- **checks the page title matches what the export declares** — catches a
+  page that silently redirected or failed to render;
+- **checks every form field (`pageItem`) the export declares is actually
+  present on the page** — catches a field a later change accidentally
+  removed or renamed;
+- **types into the Name field and reads it back** — catches a field that
+  looks present but is actually broken (disabled, wrong id, breaks on
+  input);
+- **checks every labeled button the export declares is actually present**
+  — catches a Save/Cancel/etc. button that disappeared.
+
+None of these know or care what your data means — they check that the
+*page itself* still renders and behaves the way its own metadata says it
+should. That's a floor, not a strategy (see "Why not just hand-write
+Playwright tests?" in the README): it doesn't replace testing your
+business logic, it replaces re-deriving "does this page still
+render/validate" by hand, per page, forever.
+
+**(d) Handing this to someone else to actually run.** What you hand them
+depends on what they need:
+- **Just the generated tests, to run against a real app** — give them the
+  generated `.page.ts`/`.spec.ts` files (or the export directory plus this
+  same one-line generator command, if they should regenerate it
+  themselves), the `package.json`/`playwright.config.ts` from "Wire it
+  into a runnable Playwright project" below, and the real base URL of the
+  running APEX app the export came from.
+- **The ability to regenerate as the app changes** — give them the export
+  directory and this repo (or `@apx/testkit`/`@apx/mcp`, once published)
+  — see "Auto-regenerate while you work" below.
+
+Either way, what they actually run is:
+```bash
+npm install --install-links   # see the note below "Wire it into a runnable
+                               # Playwright project" for why --install-links,
+                               # not plain npm install, matters here
+npx playwright install chromium   # once, if not already installed
+APEX_BASE_URL=https://their-real-instance.example.com/ords/r/workspace/app npx playwright test
+```
+and what they see is a pass/fail per check, per page — e.g. `5 passed` if
+every check in (c) holds against their real, running app.
+
+**Run the exact command above against this walkthrough's synthetic
+fixture, with no `APEX_BASE_URL` set, and all 5 tests correctly FAIL**
+with a DNS/connection error (`net::ERR_NAME_NOT_RESOLVED`) — confirmed by
+running it this way while writing this doc. That's expected, not a bug:
+this fixture doesn't correspond to any real running server anywhere. The
+tests only pass against the real app the export came from — see "Wire it
+into a runnable Playwright project" immediately below for the exact
+`package.json`/`playwright.config.ts` that points at your own app.
 
 ### Wire it into a runnable Playwright project
 
@@ -123,10 +238,22 @@ export default defineConfig({
 ```
 
 ```bash
-npm install
+npm install --install-links
 npx playwright install chromium   # once, if you haven't already
 npx playwright test
 ```
+
+**Use `npm install --install-links`, not plain `npm install`, here** —
+confirmed while writing this doc: a plain `npm install` with a `file:`
+dependency leaves `node_modules/@apx/testkit` as a *symlink* into your
+apx-testkit clone, and Node then resolves `@playwright/test` against
+*that clone's own* `node_modules` instead of your project's, which throws
+`Error: Requiring @playwright/test second time` the moment Playwright
+loads your config. `--install-links` (npm 7+) copies the package instead
+of symlinking it, which avoids this entirely. This is a real, reproducible
+gotcha in linking any unpublished workspace package this way, not specific
+to apx-testkit — worth knowing regardless of which local package you're
+linking.
 
 ### Auto-regenerate while you work
 
