@@ -12,22 +12,30 @@ layers (see ADR-001):
    component type parses into a node even if the typed projection below
    doesn't know what to do with it.
 2. **`ApexAppAst`** — the typed, canonical projection: `pages` (each with
-   `regions`/`items`/`buttons`/`dynamicActions`), `sourceFiles`, and
-   `unmodeled` (component types the typed layer skipped, for honesty
-   about coverage). See `packages/parser/src/ast.ts` for the full type
-   definitions and their doc comments — each typed field's doc comment
-   cites the specific EBNF production it was checked against and the
-   real data that confirmed it.
+   `regions`/`items`/`buttons`/`dynamicActions`/`branches`/`validations`/
+   `processes`/`computations`, and each region with its own `columns`/
+   `actions`), `sourceFiles`, and `unmodeled` (component types the typed
+   layer skipped, for honesty about coverage). See
+   `packages/parser/src/ast.ts` for the full type definitions and their
+   doc comments — each typed field's doc comment cites the specific EBNF
+   production it was checked against and the real data that confirmed it.
 
 ## Files
 
 - `src/ast.ts` — the type definitions (`ApexAppAst`, `ApexPage`,
   `ApexRegion`, `ApexItem`, `ApexButton`, `ApexDynamicAction`,
   `ApexCalendarSettings`, `ApexChartSettings`, `ApexBranch`,
-  `ApexValidation`, `ApexServerSideCondition` (shared by branch and
-  validation), `RawBag`/`RawValue`/`ComponentNode`). `ApexItem.lovName` is
-  a narrow named-LOV reference field, gated to `selectList`/
-  `radioGroup`/`popupLov` (see docs/ecosystem-roadmap.md "Seventh round").
+  `ApexValidation`, `ApexProcess`, `ApexComputation`, `ApexReportColumn`,
+  `ApexRegionAction`, `ApexServerSideCondition` (shared by branch/
+  validation/process/computation), `RawBag`/`RawValue`/`ComponentNode`).
+  `ApexItem.lovName` is a narrow named-LOV reference field, gated to
+  `selectList`/`radioGroup`/`popupLov` (see docs/ecosystem-roadmap.md
+  "Seventh round"). `ApexRegionAction` is deliberately named (not a bare
+  `Action`) to stay unambiguously distinct from the Dynamic-Action
+  `ApexDAAction` — the bare component-type name `action` is overloaded in
+  real APEXlang between two structurally different parent productions
+  (`dynamicAction`'s child vs. a region's row-level action/link); do not
+  conflate the two when touching either.
 - `src/parser.ts` — the tokenizer (`COMPONENT_OPEN`/`GROUP_OPEN`/
   `OBJ_PROP_OPEN`/`PROPERTY`/`FENCE_OPEN` regexes), the line-oriented
   recursive-descent `parseBody()`, `parseArray()` (has a documented
@@ -35,8 +43,17 @@ layers (see ADR-001):
   `docs/grammar-assumptions.md`), `tryFence()` for multiline
   `{lang, code}` fenced strings, and the `projectPages()`/`projectItem()`/
   `projectButton()`/`projectDAAction()`/`projectDynamicAction()`/
-  `projectBranch()`/`projectValidation()` functions that build the typed
-  layer from the generic tree.
+  `projectBranch()`/`projectValidation()`/`projectProcess()`/
+  `projectComputation()`/`projectColumn()`/`projectRegionAction()`
+  functions that build the typed layer from the generic tree.
+  `projectPageTarget()` is the one shared helper behind three of these —
+  `branch.behavior.target`, `column.link.target`, and
+  `action.behavior.target` all confirmed the SAME real, nested
+  `{ page, items, clearCache }` object shape despite the EBNF typing
+  `target` as an opaque `<value>` in every one of these productions (see
+  `docs/grammar-assumptions.md`'s `link.target`/`branch.target` findings)
+  — a genuine, recurring pattern across this grammar, not three
+  coincidentally-similar one-offs.
 - `src/index.ts` — public exports.
 
 ## Key helpers in `parser.ts`

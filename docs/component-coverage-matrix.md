@@ -303,6 +303,202 @@ live-verification check of whether `messages.ts`'s existing
 `apex.message`/`#APEX_ERROR_MESSAGE` wrapper already covers it (see
 docs/ecosystem-roadmap.md "Seventh round") — not blocked on that finding.
 
+## Processes
+
+`process <id> (...)` — page-processing PL/SQL or built-in DML rules. Typed
+as of the "Continuation" pass (`ApexPage.processes`) — see
+docs/grammar-assumptions.md's 2026-07-29 entry and
+docs/ecosystem-roadmap.md's "Continuation (same pass): the remaining 15
+unmodeled types" for the full grammar, the confirmed EBNF gap on the
+undocumented `target {}` group, and why there is deliberately no runtime
+component (same ADR-002 precedent as `branch`).
+
+| App | Processes |
+|---|---|
+| `strategic-planner` | 341 |
+| `opportunities` | 231 |
+| `customers` | 211 |
+| `poll` | 113 |
+| `team-calendar` | 95 |
+| `sample-workflow-approvals` | 77 |
+| `sample-master-detail` | 67 |
+| `concurrent-manager` | 61 |
+| `qask` | 59 |
+| `brookstrut` | 36 |
+| `sample-interactive-grids` | 31 |
+| `sample-application-search` | 28 |
+| `sample-rest-services` | 28 |
+| `sample-dynamic-actions` | 27 |
+| `sample-vector-search` | 27 |
+| `sample-collections` | 25 |
+| `sample-data-loading` | 22 |
+| `json-duality-views` | 21 |
+| `sample-calendar` | 19 |
+| `sample-email-authentication` | 19 |
+| `sample-trees` | 19 |
+| `cloud-apps-rest-explorer` | 18 |
+| `apextogo` | 17 |
+| `sample-file-upload-download` | 14 |
+| `XLIFF-TRANSLATE` | 13 |
+| `sample-reporting` | 12 |
+| `image-support-rte` | 9 |
+| `sample-cards` | 8 |
+| `sample-document-generator` | 8 |
+| `employee-management` | 7 |
+| `sample-charts` | 6 |
+| `CSP-REPORT` | 5 |
+| `get-table-info-by-apex-db-dictionary` | 5 |
+| `menu-popup-with-action` | 5 |
+| `sample-terminal-emulator` | 5 |
+| `test-button-show-as-disabled-261` | 5 |
+| `sample-maps` | 5 |
+| `universal-theme-reference` | 5 |
+| `draw-polygon-on-map` | 4 |
+| `driving-with-apex` | 4 |
+| `salary-management-agent` | 4 |
+| `world-diner` | 4 |
+| `cymbal-coffee-ops` | 4 |
+| `ai-procurement-agents` | 4 |
+| `apex-plsql-dynamic-content-home` | 4 |
+| **Total (45/46 apps)** | **1732** |
+
+Verification status: typed metadata only, no runtime component by design
+— the only externally observable effect (resulting page state after a DML
+process, or a post-process redirect) is already assertable today via
+existing `@apx/testkit` mechanisms with zero process-specific code.
+
+## Computations
+
+`computation <id> (...)` — item-value-setting rules (static value, SQL
+query, PL/SQL function body, or expression). Typed as of the
+"Continuation" pass (`ApexPage.computations`) — see
+docs/grammar-assumptions.md's 2026-07-29 entry. NOT the same construct as
+`computation-b` (a report/IG computed-column production nested inside a
+region's `savedReport` child — out of scope, see `ApexComputation`'s doc
+comment for the real contamination this distinction was cross-checked
+against before these counts were recorded).
+
+| App | Computations |
+|---|---|
+| `strategic-planner` | 165 |
+| `customers` | 29 |
+| `poll` | 29 |
+| `qask` | 29 |
+| `opportunities` | 28 |
+| `team-calendar` | 21 |
+| `sample-charts` | 17 |
+| `sample-workflow-approvals` | 15 |
+| `brookstrut` | 10 |
+| `sample-master-detail` | 7 |
+| `sample-data-loading` | 7 |
+| `sample-email-authentication` | 4 |
+| `apextogo` | 3 |
+| `cloud-apps-rest-explorer` | 3 |
+| `sample-vector-search` | 2 |
+| `json-duality-views` | 1 |
+| `sample-document-generator` | 1 |
+| `sample-rest-services` | 1 |
+| `sample-trees` | 1 |
+| **Total (19/46 apps)** | **373** |
+
+Verification status: typed metadata only, no runtime component by design
+— same reasoning as `process`/`branch`.
+
+## Report columns (`ApexRegion.columns`)
+
+`column <id> (...)` — classicReport/Interactive Report/Interactive Grid
+column definitions (label/heading, format, sort, link target), lexically
+nested inside a region. Typed as of the "Continuation" pass
+(`ApexRegion.columns`) — see docs/grammar-assumptions.md's 2026-07-29
+entry for the confirmed EBNF discrepancy on `columnName` never being a
+real body property (the identifier slot always carries it instead) and
+the `link.target` nested-object shape (same class of finding as
+`branch.target`). Deliberately NOT the chart-internal `axis`/`series`/
+`column` styling trio already rejected in an earlier round — a different,
+unrelated EBNF production, checked side by side to keep the two distinct.
+
+| App | Columns |
+|---|---|
+| `strategic-planner` | 3152 |
+| `opportunities` | 1374 |
+| `customers` | 977 |
+| `concurrent-manager` | 650 |
+| `sample-interactive-grids` | 484 |
+| `poll` | 450 |
+| `universal-theme-reference` | 352 |
+| `sample-master-detail` | 344 |
+| `brookstrut` | 336 |
+| `sample-reporting` | 312 |
+| `sample-data-loading` | 291 |
+| `team-calendar` | 282 |
+| `qask` | 254 |
+| `sample-workflow-approvals` | 250 |
+| `sample-rest-services` | 171 |
+| `sample-dynamic-actions` | 127 |
+| `sample-maps` | 90 |
+| `json-duality-views` | 89 |
+| `ai-procurement-agents` | 86 |
+| `sample-email-authentication` | 74 |
+| `sample-file-upload-download` | 66 |
+| `cloud-apps-rest-explorer` | 61 |
+| `apex-pwa-reference` | 56 |
+| `sample-calendar` | 52 |
+| `apextogo` | 51 |
+| `sample-charts` | 48 |
+| `sample-collections` | 40 |
+| `menu-popup-with-action` | 32 |
+| `image-support-rte` | 27 |
+| `XLIFF-TRANSLATE` | 26 |
+| `sample-trees` | 20 |
+| `sample-vector-search` | 14 |
+| `CSP-REPORT` | 14 |
+| `employee-management` | 10 |
+| `salary-management-agent` | 8 |
+| `world-diner` | 4 |
+| `sample-application-search` | 3 |
+| `sample-cards` | 3 |
+| `sample-document-generator` | 3 |
+| **Total (39/46 apps)** | **10683** |
+
+Verification status: typed metadata only. The single highest-volume
+construct typed in this pass — `classicReport` alone is present on 35/46
+apps, `interactiveReport` 29/46 — real `apx-diff` value (label/format/
+link-target changes are precisely "did the UI change" signal), no runtime
+component (no verified static-id-to-DOM convention for an individual
+column, a separate, already-tracked runtime gap).
+
+## Region actions (`ApexRegion.actions`)
+
+`action <id> (...)` — a stand-alone row-level action/link nested directly
+inside a Cards/List-family region. Typed as of the "Continuation" pass
+(`ApexRegion.actions`, deliberately named `ApexRegionAction`) — see
+docs/grammar-assumptions.md's 2026-07-29 entry for the confirmed
+distinction from the Dynamic-Action `action` (`ApexDAAction`, unaffected
+by this pass) and the confirmed-common `type`/`position` omission
+(implicit default, not asserted with full certainty).
+
+| App | Region actions |
+|---|---|
+| `strategic-planner` | 111 |
+| `sample-workflow-approvals` | 20 |
+| `apextogo` | 14 |
+| `sample-cards` | 14 |
+| `universal-theme-reference` | 10 |
+| `brookstrut` | 7 |
+| `sample-rest-services` | 5 |
+| `sample-document-generator` | 3 |
+| `sample-maps` | 2 |
+| `qask` | 2 |
+| `sample-application-search` | 1 |
+| `json-duality-views` | 1 |
+| `sample-reporting` | 1 |
+| `cloud-apps-rest-explorer` | 1 |
+| **Total (14/46 apps)** | **192** |
+
+Verification status: typed metadata only, no runtime component (the
+Dynamic-Action `action` variant, `ApexDAAction`, is unaffected and
+unrelated — see its own entry above).
+
 ## Item LOV references (`ApexItem.lovName`)
 
 A named-LOV *reference* on an item (`lov { type: sharedComponent, lov:

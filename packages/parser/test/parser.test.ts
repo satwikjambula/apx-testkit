@@ -845,6 +845,387 @@ describe('item.lovName (lov { type: sharedComponent, lov: @name })', () => {
   });
 });
 
+describe('typed process support (process <id> (...))', () => {
+  // Reproduces real structure found in Oracle's own "customers" starter app
+  // (github.com/oracle/apex, 26.1 branch, p00002-customer-details.apx:1801+):
+  // an autoRowFetch process with no condition, and an autoRowProcessing
+  // process (whose EBNF-undocumented `target { }` group is confirmed real
+  // but deliberately left in `raw`, not typed) gated on an authorization
+  // scheme rather than a serverSideCondition.
+  const apxWithProcesses = `page 2 (
+  name: Customer Details
+  alias: CUSTOMER-DETAILS
+
+  process fetch-row-from-eba-cust-customers (
+    name: Fetch Row from EBA_CUST_CUSTOMERS
+    type: autoRowFetch
+    source {
+      tableName: EBA_CUST_CUSTOMERS
+      pkColumn: ID
+      pkItem: P2_ID
+    }
+    execution {
+      sequence: 10
+      point: afterHeader
+    }
+    error {
+      errorMessage: Unable to fetch row.
+    }
+  )
+
+  process process-row-of-eba-cust-customers (
+    name: Process Row of EBA_CUST_CUSTOMERS
+    type: autoRowProcessing
+    target {
+      tableName: EBA_CUST_CUSTOMERS
+      pkColumn: ID
+      pkItem: P2_ID
+      returnKeyIntoItem: P2_ID
+    }
+    execution {
+      sequence: 20
+    }
+    security {
+      authorizationScheme: @contribution-rights
+    }
+  )
+)`;
+
+  it('parses with no warnings and removes process from unmodeled', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithProcesses });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.unmodeled).not.toContain('process');
+  });
+
+  it('always has a real identifier -- confirmed real (like validation, unlike branch)', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithProcesses });
+    expect(result.ast.pages[0].processes.map((p) => p.identifier)).toEqual([
+      'fetch-row-from-eba-cust-customers',
+      'process-row-of-eba-cust-customers',
+    ]);
+  });
+
+  it('projects type/sequence/point and reports a null condition when no serverSideCondition block exists', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithProcesses });
+    const [first] = result.ast.pages[0].processes;
+    expect(first.name).toBe('Fetch Row from EBA_CUST_CUSTOMERS');
+    expect(first.type).toBe('autoRowFetch');
+    expect(first.sequence).toBe(10);
+    expect(first.point).toBe('afterHeader');
+    expect(first.condition).toBeNull();
+  });
+
+  it('keeps the EBNF-undocumented target {} group in raw only, not typed', () => {
+    const result = parseApp({ 'p00002-customer-details.apx': apxWithProcesses });
+    const [, second] = result.ast.pages[0].processes;
+    expect(second.type).toBe('autoRowProcessing');
+    expect(second.condition).toBeNull();
+    expect(second.raw['target.tableName']).toBe('EBA_CUST_CUSTOMERS');
+    expect(second.raw['target.pkColumn']).toBe('ID');
+  });
+
+  it('projects a whenButtonPressed-gated process condition', () => {
+    const apx = `page 10 (
+  name: Request Submission
+  alias: REQUEST-SUBMISSION
+
+  process new (
+    name: New_1
+    type: executeCode
+    execution {
+      sequence: 10
+    }
+    serverSideCondition {
+      whenButtonPressed: @submit-request
+    }
+  )
+)`;
+    const result = parseApp({ 'p10.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [p] = result.ast.pages[0].processes;
+    expect(p.condition).toEqual({
+      whenButtonPressed: 'submit-request',
+      type: null,
+      item: null,
+      value: null,
+      plsqlExpression: null,
+    });
+  });
+});
+
+describe('typed computation support (computation <id> (...))', () => {
+  // Reproduces real structure found in Oracle's own "customers" starter app
+  // (p00001-dashboard.apx:3456+): an explicit staticValue computation, and
+  // (p00050-customer.apx:5058+) a real computation whose `computation {}`
+  // group has NO `type:` line at all -- only `sqlQuery` -- confirmed real,
+  // an implicit sqlQuerySingleValue default (see ApexComputation's doc
+  // comment).
+  const apxWithComputations = `page 1 (
+  name: Dashboard
+  alias: DASHBOARD
+
+  computation last-view (
+    itemName: LAST_VIEW
+    execution {
+      sequence: 10
+      point: beforeHeader
+    }
+    computation {
+      type: staticValue
+      staticValue: 1
+    }
+  )
+)`;
+
+  it('parses with no warnings and removes computation from unmodeled', () => {
+    const result = parseApp({ 'p00001-dashboard.apx': apxWithComputations });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.unmodeled).not.toContain('computation');
+  });
+
+  it('always has a real identifier -- confirmed real (like validation/process, unlike branch)', () => {
+    const result = parseApp({ 'p00001-dashboard.apx': apxWithComputations });
+    const [c] = result.ast.pages[0].computations;
+    expect(c.identifier).toBe('last-view');
+    expect(c.itemName).toBe('LAST_VIEW');
+    expect(c.sequence).toBe(10);
+    expect(c.type).toBe('staticValue');
+    expect(c.condition).toBeNull();
+  });
+
+  it('projects type as null when the computation {} group has no type line (confirmed real omission, implicit sqlQuerySingleValue default)', () => {
+    const apx = `page 50 (
+  name: Customer
+  alias: CUSTOMER
+
+  computation customer (
+    itemName: CUSTOMER
+    execution {
+      sequence: 10
+      point: beforeHeader
+    }
+    computation {
+      sqlQuery:
+        \`\`\`sql
+        select apex_escape.html(customer_name) from eba_cust_customers where id = :P50_ID
+        \`\`\`
+    }
+  )
+)`;
+    const result = parseApp({ 'p50.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [c] = result.ast.pages[0].computations;
+    expect(c.type).toBeNull();
+    expect(c.raw['computation.sqlQuery']).toEqual({
+      lang: 'sql',
+      code: 'select apex_escape.html(customer_name) from eba_cust_customers where id = :P50_ID',
+    });
+  });
+});
+
+describe('typed report column support (column <id> (...), nested inside a region)', () => {
+  // Reproduces real structure found in Oracle's own "opportunities" starter
+  // app (p00002-accounts.apx:740+): a link-type column whose `link.target`
+  // is a nested object (page/items/clearCache/action), the same real-
+  // data-vs-opaque-EBNF-<value> shape already confirmed for branch.target.
+  const apxWithColumns = `page 2 (
+  name: Accounts
+  alias: ACCOUNTS
+
+  region accounts-report (
+    name: Accounts
+    type: interactiveReport
+
+    column CUSTOMER_NAME (
+      type: link
+      heading {
+        heading: Account
+      }
+      layout {
+        sequence: 30
+      }
+      link {
+        target: {
+          page: 94
+          items: {
+            P94_ID: #ID#
+          }
+          clearCache: 94
+          action: resetPagination
+        }
+        linkText: #CUSTOMER_NAME#
+      }
+    )
+
+    column CUSTOMER_TERRITORY_ID (
+      type: hidden
+    )
+  )
+)`;
+
+  it('parses with no warnings and removes column from unmodeled', () => {
+    const result = parseApp({ 'p00002-accounts.apx': apxWithColumns });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.unmodeled).not.toContain('column');
+  });
+
+  it('the identifier IS the columnName -- confirmed real (columnName is never a real body property)', () => {
+    const result = parseApp({ 'p00002-accounts.apx': apxWithColumns });
+    const [region] = result.ast.pages[0].regions;
+    expect(region.columns.map((c) => c.identifier)).toEqual([
+      'CUSTOMER_NAME',
+      'CUSTOMER_TERRITORY_ID',
+    ]);
+    expect(region.columns[0]!.raw['columnName']).toBeUndefined();
+  });
+
+  it('projects heading/sequence/type and a nested link.target', () => {
+    const result = parseApp({ 'p00002-accounts.apx': apxWithColumns });
+    const [region] = result.ast.pages[0].regions;
+    const [first] = region.columns;
+    expect(first!.type).toBe('link');
+    expect(first!.heading).toBe('Account');
+    expect(first!.sequence).toBe(30);
+    expect(first!.linkTarget).toEqual({
+      page: 94,
+      items: { P94_ID: '#ID#' },
+      clearCache: '94',
+    });
+  });
+
+  it('reports a null linkTarget/heading for a hidden column with no link/heading group', () => {
+    const result = parseApp({ 'p00002-accounts.apx': apxWithColumns });
+    const [region] = result.ast.pages[0].regions;
+    const [, second] = region.columns;
+    expect(second!.type).toBe('hidden');
+    expect(second!.linkTarget).toBeNull();
+    expect(second!.heading).toBeNull();
+  });
+});
+
+describe('typed region action support (action <id> (...), nested inside Cards/List regions)', () => {
+  // Reproduces real structure found in Oracle's own "sample-cards" gallery
+  // app: a Cards-region action with an explicit `type` and a page-target
+  // redirect (p00002-blob-column.apx:118), a label-only action with NO
+  // `type`/`position` line at all (p00002-blob-column.apx:185, confirmed
+  // real omission), and (p00004-home.apx:151) a `redirectUrl`-type action
+  // using the flat `targetUrl` property instead of a nested target.
+  it('is distinct from the Dynamic-Action action -- a dynamicAction-nested action is NOT collected here', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+
+  dynamicAction refresh-on-click (
+    when {
+      event: click
+    }
+    action refresh-region (
+      action: refresh
+    )
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.pages[0].regions).toEqual([]);
+    expect(result.ast.pages[0].dynamicActions[0]!.actions[0]!.identifier).toBe('refresh-region');
+  });
+
+  it('parses with no warnings, removes action from unmodeled, and projects type/target', () => {
+    const apx = `page 2 (
+  name: Blob Column
+  alias: BLOB-COLUMN
+
+  region media-image (
+    name: Media Image
+    type: cards
+
+    action action (
+      type: fullCard
+      layout {
+        sequence: 10
+      }
+      behavior {
+        target: {
+          page: 14
+          items: {
+            P14_EMPNO: &EMPNO.
+          }
+          clearCache: 14
+        }
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p00002-blob-column.apx': apx });
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.unmodeled).not.toContain('action');
+    const [region] = result.ast.pages[0].regions;
+    const [action] = region.actions;
+    expect(action!.identifier).toBe('action');
+    expect(action!.kind).toBe('fullCard');
+    expect(action!.target).toEqual({ page: 14, items: { P14_EMPNO: '&EMPNO.' }, clearCache: '14' });
+    expect(action!.url).toBeNull();
+  });
+
+  it('projects a null kind when neither type nor position is set (confirmed real, label-only action)', () => {
+    const apx = `page 2 (
+  name: Blob Column
+  alias: BLOB-COLUMN
+
+  region media-image (
+    name: Media Image
+    type: cards
+
+    action action (
+      label: Edit
+      layout {
+        sequence: 10
+      }
+      behavior {
+        target: {
+          page: 14
+          items: {
+            P14_EMPNO: &EMPNO.
+          }
+        }
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p00002-blob-column.apx': apx });
+    const [region] = result.ast.pages[0].regions;
+    const [action] = region.actions;
+    expect(action!.label).toBe('Edit');
+    expect(action!.kind).toBeNull();
+  });
+
+  it('projects a flat url (behavior.targetUrl) for a redirectUrl action, with target null', () => {
+    const apx = `page 4 (
+  name: Home
+  alias: HOME
+
+  region categories (
+    name: Categories
+    type: cards
+
+    action action (
+      type: fullCard
+      behavior {
+        type: redirectUrl
+        targetUrl: #action$open-search?category=&NAME.
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p00004-home.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    const [action] = region.actions;
+    expect(action!.url).toBe('#action$open-search?category=&NAME.');
+    expect(action!.target).toBeNull();
+  });
+});
+
 describe('region.source.sql (bug: read the wrong raw key)', () => {
   // Reproduces a real bug found by cross-checking against Oracle's
   // official EBNF: the SQL source property is named `sqlQuery`, not

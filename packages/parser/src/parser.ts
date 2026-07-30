@@ -23,9 +23,10 @@
  */
 
 import type {
-  ApexAppAst, ApexBranch, ApexBranchTarget, ApexButton, ApexDAAction, ApexDynamicAction, ApexItem,
-  ApexPage, ApexRegion, ApexServerSideCondition, ApexValidation, ApexValidationError,
-  ComponentNode, Loc, RawBag, RawValue, RefValue,
+  ApexAppAst, ApexBranch, ApexBranchTarget, ApexButton, ApexColumnLinkTarget, ApexComputation,
+  ApexDAAction, ApexDynamicAction, ApexItem, ApexPage, ApexProcess, ApexRegion, ApexRegionAction,
+  ApexRegionActionTarget, ApexReportColumn, ApexServerSideCondition, ApexValidation,
+  ApexValidationError, ComponentNode, Loc, RawBag, RawValue, RefValue,
 } from './ast.js';
 
 export interface ParseIssue { message: string; loc: Loc; }
@@ -408,6 +409,80 @@ function projectBranch(n: ComponentNode): ApexBranch {
   };
 }
 
+function projectProcess(n: ComponentNode): ApexProcess {
+  return {
+    identifier: n.identifier ?? '(anonymous)',
+    name: str(n.props['name']),
+    type: str(n.props['type']),
+    sequence: num(n.props['execution.sequence']),
+    point: str(n.props['execution.point']),
+    condition: projectServerSideCondition(n.props),
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
+function projectComputation(n: ComponentNode): ApexComputation {
+  return {
+    identifier: n.identifier ?? '(anonymous)',
+    itemName: str(n.props['itemName']),
+    sequence: num(n.props['execution.sequence']),
+    type: str(n.props['computation.type']),
+    condition: projectServerSideCondition(n.props),
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
+/** Shared by `column.link.target`/`action.behavior.target` -- the same
+ * `{ page, items, clearCache }` nested-object shape already confirmed for
+ * `ApexBranchTarget` (see that type's doc comment), minus the `url`
+ * variant (columns never carry one; actions carry it as a separate FLAT
+ * `targetUrl` property instead -- see ApexRegionActionTarget's doc
+ * comment). */
+function projectPageTarget(props: RawBag, keyPrefix: string): { page: number | string | null; items: Record<string, string> | null; clearCache: string | null } | null {
+  const prefix = `${keyPrefix}.`;
+  const hasTarget = Object.keys(props).some((k) => k.startsWith(prefix));
+  if (!hasTarget) return null;
+  const clearCacheRaw = props[`${keyPrefix}.clearCache`];
+  return {
+    page: numOrStr(props[`${keyPrefix}.page`]),
+    items: targetItems(props, `${keyPrefix}.items`),
+    clearCache:
+      clearCacheRaw === undefined
+        ? null
+        : typeof clearCacheRaw === 'string' || typeof clearCacheRaw === 'number'
+          ? String(clearCacheRaw)
+          : null,
+  };
+}
+
+function projectColumn(n: ComponentNode): ApexReportColumn {
+  const linkTarget = projectPageTarget(n.props, 'link.target') as ApexColumnLinkTarget | null;
+  return {
+    identifier: n.identifier ?? '(anonymous)',
+    type: str(n.props['type']),
+    heading: str(n.props['heading.heading']),
+    sequence: num(n.props['layout.sequence']),
+    linkTarget,
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
+function projectRegionAction(n: ComponentNode): ApexRegionAction {
+  const target = projectPageTarget(n.props, 'behavior.target') as ApexRegionActionTarget | null;
+  return {
+    identifier: n.identifier ?? '(anonymous)',
+    label: str(n.props['label']),
+    kind: str(n.props['type']) ?? str(n.props['position']),
+    target,
+    url: str(n.props['behavior.targetUrl']),
+    loc: n.loc,
+    raw: n.props,
+  };
+}
+
 function projectValidation(n: ComponentNode): ApexValidation {
   const hasError = Object.keys(n.props).some((k) => k.startsWith('error.'));
   const error: ApexValidationError | null = hasError
@@ -477,6 +552,8 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
         htmlDomId: str(r.props['advanced.htmlDomId']),
         items: [],
         buttons: [],
+        columns: [],
+        actions: [],
         loc: r.loc,
         raw: r.props,
       };
@@ -488,6 +565,8 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
     const dynamicActions: ApexDynamicAction[] = [];
     const branches: ApexBranch[] = [];
     const validations: ApexValidation[] = [];
+    const processes: ApexProcess[] = [];
+    const computations: ApexComputation[] = [];
     for (const c of n.children) {
       if (ITEM_TYPES.has(c.type)) {
         const item = projectItem(c);
@@ -505,11 +584,15 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
         branches.push(projectBranch(c));
       } else if (c.type === 'validation') {
         validations.push(projectValidation(c));
+      } else if (c.type === 'process') {
+        processes.push(projectProcess(c));
+      } else if (c.type === 'computation') {
+        computations.push(projectComputation(c));
       } else if (c.type !== 'region') {
         unmodeled.add(c.type);
       }
     }
-    // Nested lexical items/buttons (docs-style) — also attach.
+    // Nested lexical items/buttons/columns/actions (docs-style) — also attach.
     for (const r of regionNodes) {
       for (const c of r.children) {
         if (ITEM_TYPES.has(c.type)) {
@@ -520,6 +603,10 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
           const button = projectButton(c);
           buttons.push(button);
           byId.get(r.identifier ?? '')?.buttons.push(button);
+        } else if (c.type === 'column') {
+          byId.get(r.identifier ?? '')?.columns.push(projectColumn(c));
+        } else if (c.type === 'action') {
+          byId.get(r.identifier ?? '')?.actions.push(projectRegionAction(c));
         } else unmodeled.add(c.type);
       }
     }
@@ -529,7 +616,7 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
       alias: str(n.props['alias']),
       name: str(n.props['name']),
       title: str(n.props['title']),
-      regions, items, buttons, dynamicActions, branches, validations,
+      regions, items, buttons, dynamicActions, branches, validations, processes, computations,
       loc: n.loc,
       raw: n.props,
     });

@@ -7,20 +7,23 @@
  *
  * Scope is deliberately honest about what the AST actually tracks today
  * (see docs/ecosystem-roadmap.md "needs parser extension first"): items,
- * regions, buttons, dynamic actions, branches, validations, and a handful
- * of page-level fields are typed and diffed field-by-field with old/new
+ * regions, buttons, dynamic actions, branches, validations, processes,
+ * computations, report columns, region actions, and a handful of
+ * page-level fields are typed and diffed field-by-field with old/new
  * values shown (branches and validations added in the "Seventh round"
- * pass -- see docs/grammar-assumptions.md). An item's LOV *reference*
- * (`ApexItem.lovName`) is also diffed field-by-field; the LOV
- * *definition* itself (`shared-components/lovs.apx`'s actual values) and
- * `process` remain untyped, living in `raw` bags. Rather than silently
- * missing changes to what's still untyped, every item/region/button/
- * dynamicAction/branch/validation/page also gets an order-independent
- * structural comparison of its full `raw` bag; if anything in there
- * differs, that's reported as "other metadata changed" WITHOUT claiming
- * to know what specifically changed. That's the honest signal this can
- * give for untyped constructs: "something changed here, go look," not a
- * specific claim this project cannot back up yet.
+ * pass; processes/computations/columns/region-actions added in the
+ * "Continuation" pass -- see docs/grammar-assumptions.md). An item's LOV
+ * *reference* (`ApexItem.lovName`) is also diffed field-by-field; the LOV
+ * *definition* itself (`shared-components/lovs.apx`'s actual values)
+ * remains untyped, living in `raw` bags. Rather than silently missing
+ * changes to what's still untyped, every item/region/button/
+ * dynamicAction/branch/validation/process/computation/column/
+ * regionAction/page also gets an order-independent structural comparison
+ * of its full `raw` bag; if anything in there differs, that's reported as
+ * "other metadata changed" WITHOUT claiming to know what specifically
+ * changed. That's the honest signal this can give for untyped constructs:
+ * "something changed here, go look," not a specific claim this project
+ * cannot back up yet.
  *
  * Each added/removed/changed page also lists the generated `.page.ts`/
  * `.spec.ts` filenames a regeneration would touch -- computed from the
@@ -34,11 +37,15 @@ import {
   parseApp,
   type ApexBranch,
   type ApexButton,
+  type ApexComputation,
   type ApexDAAction,
   type ApexDynamicAction,
   type ApexItem,
   type ApexPage,
+  type ApexProcess,
   type ApexRegion,
+  type ApexRegionAction,
+  type ApexReportColumn,
   type ApexValidation,
   type RawBag,
 } from '@apx/parser';
@@ -76,6 +83,8 @@ export interface PageDiff {
   dynamicActions: ComponentDiff[];
   branches: ComponentDiff[];
   validations: ComponentDiff[];
+  processes: ComponentDiff[];
+  computations: ComponentDiff[];
 }
 
 export interface DiffSummary {
@@ -127,6 +136,34 @@ function diffItemFields(a: ApexItem, b: ApexItem): string[] {
   return changes;
 }
 
+/** `column <id> (...)` -- see `ApexReportColumn`'s doc comment. */
+function diffColumnFields(a: ApexReportColumn, b: ApexReportColumn): string[] {
+  const changes: string[] = [];
+  if (a.type !== b.type) changes.push(`type: ${a.type ?? 'null'} -> ${b.type ?? 'null'}`);
+  if (a.heading !== b.heading) changes.push(`heading: ${JSON.stringify(a.heading)} -> ${JSON.stringify(b.heading)}`);
+  if (a.sequence !== b.sequence) changes.push(`sequence: ${a.sequence} -> ${b.sequence}`);
+  const linkA = JSON.stringify(a.linkTarget);
+  const linkB = JSON.stringify(b.linkTarget);
+  if (linkA !== linkB) changes.push(`linkTarget: ${linkA} -> ${linkB}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
+/** Region-nested `action <id> (...)` -- see `ApexRegionAction`'s doc
+ * comment (NOT the Dynamic-Action `action`, already diffed via
+ * `diffDAActionFields`). */
+function diffRegionActionFields(a: ApexRegionAction, b: ApexRegionAction): string[] {
+  const changes: string[] = [];
+  if (a.label !== b.label) changes.push(`label: ${JSON.stringify(a.label)} -> ${JSON.stringify(b.label)}`);
+  if (a.kind !== b.kind) changes.push(`kind: ${JSON.stringify(a.kind)} -> ${JSON.stringify(b.kind)}`);
+  const targetA = JSON.stringify(a.target);
+  const targetB = JSON.stringify(b.target);
+  if (targetA !== targetB) changes.push(`target: ${targetA} -> ${targetB}`);
+  if (a.url !== b.url) changes.push(`url: ${JSON.stringify(a.url)} -> ${JSON.stringify(b.url)}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
 function diffRegionFields(a: ApexRegion, b: ApexRegion): string[] {
   const changes: string[] = [];
   if (a.type !== b.type) changes.push(`type: ${a.type ?? 'null'} -> ${b.type ?? 'null'}`);
@@ -141,6 +178,20 @@ function diffRegionFields(a: ApexRegion, b: ApexRegion): string[] {
   const chartB = JSON.stringify(b.chartSettings);
   if (chartA !== chartB) changes.push(`chartSettings: ${chartA} -> ${chartB}`);
   if (a.htmlDomId !== b.htmlDomId) changes.push(`htmlDomId: ${JSON.stringify(a.htmlDomId)} -> ${JSON.stringify(b.htmlDomId)}`);
+
+  const columnDiffs = diffByIdentifier(a.columns, b.columns, diffColumnFields);
+  for (const d of columnDiffs) {
+    if (d.kind === 'added') changes.push(`column ${d.identifier} added`);
+    else if (d.kind === 'removed') changes.push(`column ${d.identifier} removed`);
+    else changes.push(`column ${d.identifier}: ${d.changes.join('; ')}`);
+  }
+  const actionDiffs = diffByIdentifier(a.actions, b.actions, diffRegionActionFields);
+  for (const d of actionDiffs) {
+    if (d.kind === 'added') changes.push(`action ${d.identifier} added`);
+    else if (d.kind === 'removed') changes.push(`action ${d.identifier} removed`);
+    else changes.push(`action ${d.identifier}: ${d.changes.join('; ')}`);
+  }
+
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }
@@ -233,6 +284,37 @@ function diffValidationFields(a: ApexValidation, b: ApexValidation): string[] {
   const errA = JSON.stringify(a.error);
   const errB = JSON.stringify(b.error);
   if (errA !== errB) changes.push(`error: ${errA} -> ${errB}`);
+  const condA = JSON.stringify(a.condition);
+  const condB = JSON.stringify(b.condition);
+  if (condA !== condB) changes.push(`condition: ${condA} -> ${condB}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
+/** `process <id> (...)` -- see `ApexProcess`'s doc comment. Reuses
+ * `diffByIdentifier` directly (every real process carries an identifier,
+ * unlike `branch`). */
+function diffProcessFields(a: ApexProcess, b: ApexProcess): string[] {
+  const changes: string[] = [];
+  if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
+  if (a.type !== b.type) changes.push(`type: ${JSON.stringify(a.type)} -> ${JSON.stringify(b.type)}`);
+  if (a.sequence !== b.sequence) changes.push(`sequence: ${a.sequence} -> ${b.sequence}`);
+  if (a.point !== b.point) changes.push(`point: ${JSON.stringify(a.point)} -> ${JSON.stringify(b.point)}`);
+  const condA = JSON.stringify(a.condition);
+  const condB = JSON.stringify(b.condition);
+  if (condA !== condB) changes.push(`condition: ${condA} -> ${condB}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
+
+/** `computation <id> (...)` -- see `ApexComputation`'s doc comment. Reuses
+ * `diffByIdentifier` directly (every real computation carries an
+ * identifier, unlike `branch`). */
+function diffComputationFields(a: ApexComputation, b: ApexComputation): string[] {
+  const changes: string[] = [];
+  if (a.itemName !== b.itemName) changes.push(`itemName: ${JSON.stringify(a.itemName)} -> ${JSON.stringify(b.itemName)}`);
+  if (a.type !== b.type) changes.push(`type: ${JSON.stringify(a.type)} -> ${JSON.stringify(b.type)}`);
+  if (a.sequence !== b.sequence) changes.push(`sequence: ${a.sequence} -> ${b.sequence}`);
   const condA = JSON.stringify(a.condition);
   const condB = JSON.stringify(b.condition);
   if (condA !== condB) changes.push(`condition: ${condA} -> ${condB}`);
@@ -333,6 +415,8 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
         dynamicActions: [],
         branches: [],
         validations: [],
+        processes: [],
+        computations: [],
       });
       continue;
     }
@@ -351,6 +435,8 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
         dynamicActions: [],
         branches: [],
         validations: [],
+        processes: [],
+        computations: [],
       });
       continue;
     }
@@ -362,6 +448,8 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
       const dynamicActions = diffByIdentifier(oldPage.dynamicActions, newPage.dynamicActions, diffDynamicActionFields);
       const branches = diffBranches(oldPage.branches, newPage.branches);
       const validations = diffByIdentifier(oldPage.validations, newPage.validations, diffValidationFields);
+      const processes = diffByIdentifier(oldPage.processes, newPage.processes, diffProcessFields);
+      const computations = diffByIdentifier(oldPage.computations, newPage.computations, diffComputationFields);
       const hasChanges =
         pageChanges.length > 0 ||
         items.length > 0 ||
@@ -369,7 +457,9 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
         buttons.length > 0 ||
         dynamicActions.length > 0 ||
         branches.length > 0 ||
-        validations.length > 0;
+        validations.length > 0 ||
+        processes.length > 0 ||
+        computations.length > 0;
       if (hasChanges) {
         summary.pagesChanged++;
         pages.push({
@@ -385,6 +475,8 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
           dynamicActions,
           branches,
           validations,
+          processes,
+          computations,
         });
       } else {
         summary.pagesUnchanged++;

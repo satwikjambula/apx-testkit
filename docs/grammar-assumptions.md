@@ -1193,6 +1193,191 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
     confirmed both new diff paths actually surface a change when one
     exists, not just stay silent on identical input.
 
+- **2026-07-29, `process`/`computation`/`column`/`action` typed AST fields
+  (Continuation-round follow-through, Compiler/Parser Engineer)** —
+  Product Architect's "Continuation (same pass): the remaining 15
+  unmodeled types" scope decision (`docs/ecosystem-roadmap.md`, Seventh
+  round) actioned the four items marked "BUILD NOW": `ApexPage.processes`,
+  `ApexPage.computations`, `ApexRegion.columns`, `ApexRegion.actions`
+  added to `packages/parser/src/ast.ts`, wired into `packages/parser/src/
+  parser.ts`'s `projectPages()`, and into `packages/generator/src/diff.ts`'s
+  field-by-field diffing (and `diff-cli.ts`'s printed output) in the same
+  change — not deferred, per this project's own repeated-gap history.
+  - **`ApexPage.processes` (`process <id> (...)`, EBNF `<process>`, FULL
+    production checked: name/type/executionChain/formRegion/editableRegion
+    direct properties, plus every group — genAI/source/execution/
+    successMessage/error/advanced/serverSideCondition/security/config/
+    comments)**. Real data: 1732 real processes across 45/46 apps in this
+    project's full corpus — the single highest app-count of any construct
+    typed so far (branch 27/46, validation 19/46 included). Always
+    carries a real identifier (1732/1732), unlike `branch`.
+  - **CONFIRMED EBNF GAP (real data wins, ADR-004)**: the EBNF's
+    `<process-group-block>` enumerates exactly ten groups, with NO `target`
+    group defined anywhere in the `process` production. Real data confirms
+    one anyway — `autoRowProcessing`/`formAutoRowProcessing` processes (117
+    + 93 real instances) carry a `target { tableName: ..., pkColumn: ...,
+    pkItem: ..., returnKeyIntoItem: ... }` group (confirmed live, Oracle's
+    own `customers` starter app, `p00002-customer-details.apx:1821`). Same
+    class of gap as `calendarSettings`/`branch.target` — deliberately left
+    UNTYPED (kept in `raw` only): no concrete consumer has asked for
+    `tableName`/`pkColumn` specifically, matching this project's
+    restrained-typing bar; the gap itself is the citable finding.
+  - **`process.point` is an OPEN string in the EBNF** (`<string-like-value>`,
+    no enum) — unlike `branch.execution.point`, which the grammar
+    enumerates to exactly 5 values. Real values observed: beforeHeader
+    (258), afterHeader (163), afterSubmit (11), ajaxCallback (9),
+    beforeRegions (8) — a real subset of the wider open set, not a
+    contradiction of the grammar's silence.
+  - **`ApexPage.computations` (`computation <id> (...)`, EBNF
+    `<computation-a>`, FULL production checked: direct property itemName,
+    plus every group — execution/computation/error/advanced/
+    serverSideCondition/security/config/comments)**. Real data: 373 real
+    computations across 19/46 apps. Always carries a real identifier
+    (373/373) and always carries `itemName` (373/373, 100%).
+  - **CONFIRMED EBNF DISCREPANCY**: every alternative in
+    `<computation-a-computation-property>` marks `type` "required,"
+    including as a stated precondition for `sqlQuery` itself. Real data
+    confirms `type` can be entirely ABSENT while `computation.sqlQuery` is
+    present alone (confirmed live, `customers` starter app,
+    `p00050-customer.apx:5058`) — `sqlQuerySingleValue` is the implicit
+    default when the group is present but `type` isn't set, the same
+    omission-means-default class of finding as `ApexChartSettings`'
+    bar-when-absent default. 149/373 real computations show this shape.
+  - **Contamination caught and corrected BEFORE being recorded, not
+    after**: an initial full-tree, position-blind survey pass (walking
+    every raw tree node named `computation` regardless of nesting
+    position) counted 375 instances across 20 apps, including
+    `sample-reporting` — traced directly to that app's own
+    `computation-b` instance (`p00001-interactive-report.apx:499`, a
+    DIFFERENT, unrelated production nested inside a `savedReport`
+    alongside `displayColumn`/`aggregate` siblings, confirmed via the
+    EBNF's own `saved-report-a-child-component` list). Re-verified against
+    this projection's own actual, position-scoped output (`page.
+    computations`, walking only real `ApexPage`/`ApexRegion` objects, not
+    a raw-tree grep-and-walk) before recording the real 373/19 figures
+    here — the discrepancy is recorded in `ApexComputation`'s own doc
+    comment in `ast.ts` too, not silently smoothed over. `computation-b`
+    itself is out of scope (no concrete consumer, nested inside the
+    already out-of-scope `savedReport`) and cannot be accidentally
+    captured by the real projection, since only a page's DIRECT children
+    are walked for `computation`, the same gating already used for
+    `branch`/`validation`.
+  - **`ApexRegion.columns` (`column <id> (...)`, SIX sibling EBNF
+    productions sharing the bare name `column` — `column-b` through
+    `column-g`, one family each for Interactive Grid, two near-identical
+    classicReport/tabular-form variants, a `show`-toggle variant, a
+    REST/JSON-duality-view variant with a `name` direct property instead
+    of `columnName`, and a richer cascading-LOV/validation variant — ALL
+    six confirmed `region-child-component` in the EBNF's own component
+    index, never `page-child-component`)**. Real data: 10,683 real columns
+    across 39/46 apps — the single highest-volume construct typed in this
+    batch (`classicReport` 35/46 apps, `interactiveReport` 29/46).
+  - **CONFIRMED EBNF DISCREPANCY, opposite direction from `branch`'s**:
+    every one of the six productions marks `columnName` (or `name` for
+    `column-f`) "required" as a body property line. NOT ONE of the 10,683
+    real columns in this corpus emits it as a body property — the
+    exporter ALWAYS uses the component-id syntax slot instead (`column
+    ENAME ( ... )`). Confirmed by direct inspection (0/10683 have a
+    `columnName`/`name` body property; 10683/10683 carry a real,
+    non-generic identifier instead) — where `branch`'s finding was "the
+    EBNF's optional identifier slot is never real," this one is "the
+    EBNF's declared-required BODY PROPERTY is never real," because the
+    same information is always carried by the identifier slot instead.
+  - **`column.link.target` reuses the identical nested-object shape
+    already confirmed for `branch.target`** (page/items/clearCache) — the
+    SAME real-data-vs-EBNF-opaque-`<value>` divergence already documented
+    for `link.target` in the `strategic-planner` entry above, now also
+    confirmed on a column specifically (Oracle's own `opportunities`
+    starter app, `p00002-accounts.apx:748`). No external-URL variant
+    exists for a column's link target (unlike `branch`/`action`).
+  - **`ApexRegion.actions` (`action <id> (...)`, deliberately named
+    `ApexRegionAction` to keep it unambiguously distinct from the
+    Dynamic-Action `action`/`ApexDAAction`)**. EBNF confirms TWO sibling
+    `region-child-component` productions sharing the bare name `action`:
+    `action-d` (Cards-region shape, `type` direct property:
+    button/fullCard/title/subtitle/media) and `action-e` (List/
+    template-driven shape, `position` direct property, open string) — both
+    confirmed structurally distinct from `action-c` (the Dynamic-Action
+    variant, parent production `dynamic-action-child-component`, already
+    typed as `ApexDAAction`, unaffected by this pass). Real data: 2403
+    real `action` component instances total in this corpus; 2211 are the
+    already-typed Dynamic-Action variant, 192 are this NEW region-nested
+    variant across 14/46 apps.
+  - **CONFIRMED-COMMON IMPLICIT DEFAULT (not asserted with full
+    certainty)**: `action-d`'s `type` is marked "required," but real data
+    shows it frequently OMITTED with only `label` present (confirmed live,
+    `sample-cards`, `p00002-blob-column.apx:185`) — 169/192 real
+    region-nested actions have neither `type` nor `position` set. Likely
+    an implicit `button` default (matching `action-d`'s own semantics),
+    the same class of finding as the Chart bar-default and the
+    computation `sqlQuerySingleValue` default above — but kept `null`
+    here rather than coerced, since this batch's evidence is real but
+    narrower than the Chart precedent's 65-region confirmation.
+  - **Region-nested action identifiers are always present but NOT
+    reliably unique** — a substantial fraction (23/192 in this corpus)
+    reuse the literal string `"action"` when the developer never renamed
+    it from Page Designer's own default; APEX auto-suffixes a second+
+    default-named action WITHIN THE SAME region (`action-2`, `action-3`,
+    ...) but the first stays the bare literal. A genuinely renamed action
+    carries a real, meaningful identifier instead (`edit`, `delete`,
+    `approve`, `claim`, `reject`, `terminate`, all confirmed real in
+    `strategic-planner`). Diffed via the same `diffByIdentifier` items/
+    buttons already use, scoped per-region (not per-page) specifically to
+    minimize collision risk, an honest, documented limitation rather than
+    a structural guarantee.
+  - **`Sawalhah/apexlang-view` cross-check**: fetched
+    `github.com/Sawalhah/apexlang-view/blob/main/src/parser.js` directly
+    (reference only, never imported/depended on). No construct-specific
+    handling exists anywhere in their `parser.js` for `process`,
+    `computation`, `column`, or `action` — their parser treats all four as
+    generic, untyped components the same way this project's own `raw` bag
+    already did before this pass. Nothing to cross-check convergence or
+    divergence against for any of the four; recorded as a checked-and-
+    negative finding, not a skipped one.
+  - **Wired into `apx-diff` in this same change** (`diffProcessFields`/
+    `diffComputationFields` via `diffByIdentifier` at the page level;
+    `diffColumnFields`/`diffRegionActionFields` via `diffByIdentifier`
+    nested PER-REGION inside `diffRegionFields`, the same pattern already
+    used for Dynamic-Action's nested `action` diffs inside
+    `diffDynamicActionFields`) — not deferred.
+  - **Regression tests**: `packages/parser/test/parser.test.ts`, four new
+    `describe` blocks (`typed process support`, `typed computation
+    support`, `typed report column support`, `typed region action
+    support`), covering the target-group-in-raw-only case, the
+    type-omitted-implicit-default case for both `computation` and
+    `action`, the nested `link.target`/`behavior.target` shapes, the flat
+    `behavior.targetUrl` variant, and an explicit test confirming a
+    dynamicAction-nested `action` is NOT collected as an `ApexRegionAction`
+    (keeping the two constructs' test coverage as clearly separated as
+    their types).
+  - **Zero-warnings sweep**: re-ran the full 46-app corpus sweep after this
+    change — 0 warnings, unchanged from the prior pass. `process`,
+    `computation`, `column`, `action` no longer appear in any app's
+    `ApexAppAst.unmodeled` (confirmed directly against the built parser's
+    own output, not a hand-count: 45/46 apps for `process`, 19/46 for
+    `computation`, 39/46 for `column`, 14/46 for `action` — all four figures
+    match the Product Architect's own independently-run "Continuation"
+    pass table EXACTLY (45/39/19/14), the same kind of independent-method
+    cross-check already performed for `branch`/`validation` in the entry
+    above, and a stronger match than that entry's own initial draft, which
+    needed a re-point-and-reverify pass before it agreed).
+  - **Determinism confirmed**: `examples/employee-page` regenerates
+    byte-identical (unaffected — no process/computation/column/action
+    constructs to exercise there); `strategic-planner`, `opportunities`,
+    and `customers` (the three largest/most complex apps in this corpus,
+    all of which heavily exercise all four new constructs) each
+    regenerated twice into scratch output, byte-identical both times;
+    `concurrent-manager` (56 pages, 61 processes, 650 columns) also
+    regenerated twice, byte-identical, and its own `apx-diff` self-diff
+    against itself stayed at 0 added/0 removed/0 changed/55 unchanged with
+    all four new diff paths wired in, confirming no spurious diffs on an
+    identical export; a synthetic two-export diff (hand-written fixture,
+    one process's `execution.point` changed, one computation's static
+    value changed, one column's heading/link-target changed, one region
+    action's target page changed) confirmed all four new diff paths
+    actually surface a change when one exists, not just stay silent on
+    identical input.
+
 ## Still open
 
 (the quoted, substitution-embedding property KEY item that lived here has
@@ -1268,6 +1453,19 @@ silently removed, per this project's correction discipline.)
       out-of-scope `shared-components/lovs.apx` LOV-definition file
       remains outside `loadExport()`'s scope entirely, unrelated to this
       list.
+
+      **CORRECTION (2026-07-29, Continuation-round follow-through)**:
+      `process`, `computation`, `column`, and `action` are typed as of this
+      pass — see the dated entry above ("`process`/`computation`/`column`/
+      `action` typed AST fields") — and no longer appear in any app's
+      `unmodeled` set either. The re-swept, current 11-type unmodeled set
+      across the same 46-app corpus: `axis`, `columnGroup`, `facet`,
+      `filter`, `layer`, `metaTag`, `pageGroup`, `parameter`, `savedReport`,
+      `searchSource`, `series` — matching exactly the Product Architect's
+      own "Genuine individual consideration, DEFER" and "FAST-TRACKED —
+      not worth it now" groups from `docs/ecosystem-roadmap.md`'s
+      "Continuation" pass, none of which this round's build-now decision
+      touched.
 
 ## Fixture policy
 
