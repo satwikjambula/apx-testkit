@@ -46,7 +46,18 @@ reviewing an existing one for correctness — not just new components.
       shape silently dropping data). Write a test for the exact failure
       shape, confirm it fails without the fix.
 - [ ] **Wire any new/changed typed field into `apx-diff`**
-      (`packages/generator/src/diff.ts`) in this same change.
+      (`packages/generator/src/diff.ts`) in this same change. This is now
+      automatically enforced, not just a manual reminder: this exact gap
+      has happened twice before (`calendarSettings`, then
+      `chartSettings`/`htmlDomId`), so
+      `packages/generator/test/diff-field-coverage.test.ts` builds a
+      fully-populated fixture per typed AST record and mutates every
+      non-excluded own field one at a time, asserting `apx-diff` reports a
+      change -- it fails loudly, by field name, the moment a new/changed
+      typed field has no diff handling, with zero new test code required
+      per field (data-driven off the fixture's own keys). Run
+      `cd packages/generator && npx vitest run test/diff-field-coverage.test.ts`
+      after adding the field to confirm it's picked up automatically.
 - [ ] **Add `vitest` regression tests** — the failing case, the passing
       case, and any type-gating condition.
 - [ ] **Run the zero-warnings sweep** across every real local export.

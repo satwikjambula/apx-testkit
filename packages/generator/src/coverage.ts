@@ -44,7 +44,7 @@ interface RawTouch {
  * ApexFacetsRegion, ApexInteractiveGridRegion, or ApexChartRegion), even
  * where their coverage is partial in other respects.
  */
-const UNTRACKABLE_REGION_TYPES = new Set(['tree', 'calendar', 'map']);
+export const UNTRACKABLE_REGION_TYPES = new Set(['tree', 'calendar', 'map']);
 
 export interface CategoryCoverage {
   total: number;

@@ -32,6 +32,18 @@
  * generator actually names things), closing the loop from "what changed"
  * to "which generated files need re-review" without any new
  * infrastructure.
+ *
+ * The per-type `diffXFields` functions and `diffPageContents` below are
+ * exported (beyond just `computeDiff`) specifically so
+ * `test/diff-field-coverage.test.ts` can call them directly with
+ * synthetic, fully-populated fixtures and mutate one field at a time --
+ * this is what catches a NEW typed AST field being added without a
+ * matching `if (a.field !== b.field)`/`JSON.stringify` line here (this has
+ * happened twice for real: `calendarSettings`, then `chartSettings`/
+ * `htmlDomId`, both silently un-diffed until noticed by hand). See that
+ * test file for the exact mechanism and its documented, deliberate
+ * exclusions (`identifier`/`loc`/`raw` and a couple of structurally
+ * redundant fields).
  */
 import {
   parseApp,
@@ -114,14 +126,14 @@ function canonical(value: unknown): unknown {
   return value;
 }
 
-function rawEqual(a: RawBag, b: RawBag): boolean {
+export function rawEqual(a: RawBag, b: RawBag): boolean {
   return JSON.stringify(canonical(a)) === JSON.stringify(canonical(b));
 }
 
-const RAW_CHANGED_NOTE =
+export const RAW_CHANGED_NOTE =
   'other metadata changed (raw properties differ -- may include LOV value/process changes, not individually tracked yet)';
 
-function diffItemFields(a: ApexItem, b: ApexItem): string[] {
+export function diffItemFields(a: ApexItem, b: ApexItem): string[] {
   const changes: string[] = [];
   if (a.type !== b.type) changes.push(`type: ${a.type ?? 'null'} -> ${b.type ?? 'null'}`);
   if (a.label !== b.label) changes.push(`label: ${JSON.stringify(a.label)} -> ${JSON.stringify(b.label)}`);
@@ -137,7 +149,7 @@ function diffItemFields(a: ApexItem, b: ApexItem): string[] {
 }
 
 /** `column <id> (...)` -- see `ApexReportColumn`'s doc comment. */
-function diffColumnFields(a: ApexReportColumn, b: ApexReportColumn): string[] {
+export function diffColumnFields(a: ApexReportColumn, b: ApexReportColumn): string[] {
   const changes: string[] = [];
   if (a.type !== b.type) changes.push(`type: ${a.type ?? 'null'} -> ${b.type ?? 'null'}`);
   if (a.heading !== b.heading) changes.push(`heading: ${JSON.stringify(a.heading)} -> ${JSON.stringify(b.heading)}`);
@@ -152,7 +164,7 @@ function diffColumnFields(a: ApexReportColumn, b: ApexReportColumn): string[] {
 /** Region-nested `action <id> (...)` -- see `ApexRegionAction`'s doc
  * comment (NOT the Dynamic-Action `action`, already diffed via
  * `diffDAActionFields`). */
-function diffRegionActionFields(a: ApexRegionAction, b: ApexRegionAction): string[] {
+export function diffRegionActionFields(a: ApexRegionAction, b: ApexRegionAction): string[] {
   const changes: string[] = [];
   if (a.label !== b.label) changes.push(`label: ${JSON.stringify(a.label)} -> ${JSON.stringify(b.label)}`);
   if (a.kind !== b.kind) changes.push(`kind: ${JSON.stringify(a.kind)} -> ${JSON.stringify(b.kind)}`);
@@ -164,7 +176,7 @@ function diffRegionActionFields(a: ApexRegionAction, b: ApexRegionAction): strin
   return changes;
 }
 
-function diffRegionFields(a: ApexRegion, b: ApexRegion): string[] {
+export function diffRegionFields(a: ApexRegion, b: ApexRegion): string[] {
   const changes: string[] = [];
   if (a.type !== b.type) changes.push(`type: ${a.type ?? 'null'} -> ${b.type ?? 'null'}`);
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
@@ -196,7 +208,7 @@ function diffRegionFields(a: ApexRegion, b: ApexRegion): string[] {
   return changes;
 }
 
-function diffButtonFields(a: ApexButton, b: ApexButton): string[] {
+export function diffButtonFields(a: ApexButton, b: ApexButton): string[] {
   const changes: string[] = [];
   if (a.label !== b.label) changes.push(`label: ${JSON.stringify(a.label)} -> ${JSON.stringify(b.label)}`);
   if (a.action !== b.action) changes.push(`action: ${JSON.stringify(a.action)} -> ${JSON.stringify(b.action)}`);
@@ -204,7 +216,7 @@ function diffButtonFields(a: ApexButton, b: ApexButton): string[] {
   return changes;
 }
 
-function diffDAActionFields(a: ApexDAAction, b: ApexDAAction): string[] {
+export function diffDAActionFields(a: ApexDAAction, b: ApexDAAction): string[] {
   const changes: string[] = [];
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
   if (a.action !== b.action) changes.push(`action: ${JSON.stringify(a.action)} -> ${JSON.stringify(b.action)}`);
@@ -215,7 +227,7 @@ function diffDAActionFields(a: ApexDAAction, b: ApexDAAction): string[] {
   return changes;
 }
 
-function diffDynamicActionFields(a: ApexDynamicAction, b: ApexDynamicAction): string[] {
+export function diffDynamicActionFields(a: ApexDynamicAction, b: ApexDynamicAction): string[] {
   const changes: string[] = [];
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
   if (a.when.selectionType !== b.when.selectionType) {
@@ -251,7 +263,7 @@ function diffDynamicActionFields(a: ApexDynamicAction, b: ApexDynamicAction): st
   return changes;
 }
 
-function diffByIdentifier<T extends { identifier: string; raw: RawBag }>(
+export function diffByIdentifier<T extends { identifier: string; raw: RawBag }>(
   oldList: readonly T[],
   newList: readonly T[],
   diffFields: (a: T, b: T) => string[],
@@ -275,7 +287,7 @@ function diffByIdentifier<T extends { identifier: string; raw: RawBag }>(
   return diffs.sort((a, b) => a.identifier.localeCompare(b.identifier));
 }
 
-function diffValidationFields(a: ApexValidation, b: ApexValidation): string[] {
+export function diffValidationFields(a: ApexValidation, b: ApexValidation): string[] {
   const changes: string[] = [];
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
   if (a.type !== b.type) changes.push(`type: ${JSON.stringify(a.type)} -> ${JSON.stringify(b.type)}`);
@@ -294,7 +306,7 @@ function diffValidationFields(a: ApexValidation, b: ApexValidation): string[] {
 /** `process <id> (...)` -- see `ApexProcess`'s doc comment. Reuses
  * `diffByIdentifier` directly (every real process carries an identifier,
  * unlike `branch`). */
-function diffProcessFields(a: ApexProcess, b: ApexProcess): string[] {
+export function diffProcessFields(a: ApexProcess, b: ApexProcess): string[] {
   const changes: string[] = [];
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
   if (a.type !== b.type) changes.push(`type: ${JSON.stringify(a.type)} -> ${JSON.stringify(b.type)}`);
@@ -310,7 +322,7 @@ function diffProcessFields(a: ApexProcess, b: ApexProcess): string[] {
 /** `computation <id> (...)` -- see `ApexComputation`'s doc comment. Reuses
  * `diffByIdentifier` directly (every real computation carries an
  * identifier, unlike `branch`). */
-function diffComputationFields(a: ApexComputation, b: ApexComputation): string[] {
+export function diffComputationFields(a: ApexComputation, b: ApexComputation): string[] {
   const changes: string[] = [];
   if (a.itemName !== b.itemName) changes.push(`itemName: ${JSON.stringify(a.itemName)} -> ${JSON.stringify(b.itemName)}`);
   if (a.type !== b.type) changes.push(`type: ${JSON.stringify(a.type)} -> ${JSON.stringify(b.type)}`);
@@ -322,7 +334,7 @@ function diffComputationFields(a: ApexComputation, b: ApexComputation): string[]
   return changes;
 }
 
-function diffBranchFields(a: ApexBranch, b: ApexBranch): string[] {
+export function diffBranchFields(a: ApexBranch, b: ApexBranch): string[] {
   const changes: string[] = [];
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
   if (a.sequence !== b.sequence) changes.push(`sequence: ${a.sequence} -> ${b.sequence}`);
@@ -351,7 +363,7 @@ function diffBranchFields(a: ApexBranch, b: ApexBranch): string[] {
  * when not, matching how anonymous branches are the norm, not the
  * exception -- 127/325 real branches have no `name` either).
  */
-function diffBranches(oldList: readonly ApexBranch[], newList: readonly ApexBranch[]): ComponentDiff[] {
+export function diffBranches(oldList: readonly ApexBranch[], newList: readonly ApexBranch[]): ComponentDiff[] {
   const diffs: ComponentDiff[] = [];
   const max = Math.max(oldList.length, newList.length);
   const label = (br: ApexBranch, idx: number): string => br.name ?? `branch #${idx}`;
@@ -368,7 +380,24 @@ function diffBranches(oldList: readonly ApexBranch[], newList: readonly ApexBran
   return diffs;
 }
 
-function diffPageFields(a: ApexPage, b: ApexPage): string[] {
+/**
+ * `page`'s own direct scalar properties (alias/name/title), plus
+ * `security.authentication`, read directly out of `raw` since it has no
+ * dedicated typed field. Every OTHER page-level construct (items, regions,
+ * buttons, dynamicActions, branches, validations, processes, computations)
+ * is intentionally NOT diffed here -- each gets its own dedicated top-level
+ * diff call inside `diffPageContents` below instead (a page can have
+ * hundreds of items across many regions; folding that into a single
+ * `changes: string[]` here would lose the per-construct add/removed/changed
+ * structure `PageDiff` exposes). The final `rawEqual` fallback below is
+ * still real and necessary despite that -- it catches anything about the
+ * PAGE ITSELF (not its children) that isn't one of the four fields above
+ * (e.g. `page.mode`/`includeInMenu`/other direct or grouped page
+ * properties never promoted to a typed field), matching the same
+ * raw-bag-fallback discipline every other diffed construct in this file
+ * already has.
+ */
+export function diffPageFields(a: ApexPage, b: ApexPage): string[] {
   const changes: string[] = [];
   if (a.alias !== b.alias) changes.push(`alias: ${JSON.stringify(a.alias)} -> ${JSON.stringify(b.alias)}`);
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
@@ -376,7 +405,43 @@ function diffPageFields(a: ApexPage, b: ApexPage): string[] {
   const authA = JSON.stringify(a.raw['security.authentication'] ?? null);
   const authB = JSON.stringify(b.raw['security.authentication'] ?? null);
   if (authA !== authB) changes.push(`security.authentication: ${authA} -> ${authB}`);
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
+}
+
+export interface PageContentsDiff {
+  pageChanges: string[];
+  items: ComponentDiff[];
+  regions: ComponentDiff[];
+  buttons: ComponentDiff[];
+  dynamicActions: ComponentDiff[];
+  branches: ComponentDiff[];
+  validations: ComponentDiff[];
+  processes: ComponentDiff[];
+  computations: ComponentDiff[];
+}
+
+/**
+ * Every top-level, per-page construct this file knows how to diff, in one
+ * place -- factored out of `computeDiff`'s per-page loop so it can be
+ * exercised directly (two `ApexPage` objects in, no export directory or
+ * filesystem needed) by `test/diff-field-coverage.test.ts`, which mutates
+ * one `ApexPage` field at a time and confirms a change surfaces somewhere
+ * in this return value. If a NEW page-level construct array is ever added
+ * to `ApexPage` without a matching call added here, that test fails.
+ */
+export function diffPageContents(a: ApexPage, b: ApexPage): PageContentsDiff {
+  return {
+    pageChanges: diffPageFields(a, b),
+    items: diffByIdentifier(a.items, b.items, diffItemFields),
+    regions: diffByIdentifier(a.regions, b.regions, diffRegionFields),
+    buttons: diffByIdentifier(a.buttons, b.buttons, diffButtonFields),
+    dynamicActions: diffByIdentifier(a.dynamicActions, b.dynamicActions, diffDynamicActionFields),
+    branches: diffBranches(a.branches, b.branches),
+    validations: diffByIdentifier(a.validations, b.validations, diffValidationFields),
+    processes: diffByIdentifier(a.processes, b.processes, diffProcessFields),
+    computations: diffByIdentifier(a.computations, b.computations, diffComputationFields),
+  };
 }
 
 export function computeDiff(oldExportDir: string, newExportDir: string): DiffReport {
@@ -441,15 +506,9 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
       continue;
     }
     if (oldPage && newPage) {
-      const pageChanges = diffPageFields(oldPage, newPage);
-      const items = diffByIdentifier(oldPage.items, newPage.items, diffItemFields);
-      const regions = diffByIdentifier(oldPage.regions, newPage.regions, diffRegionFields);
-      const buttons = diffByIdentifier(oldPage.buttons, newPage.buttons, diffButtonFields);
-      const dynamicActions = diffByIdentifier(oldPage.dynamicActions, newPage.dynamicActions, diffDynamicActionFields);
-      const branches = diffBranches(oldPage.branches, newPage.branches);
-      const validations = diffByIdentifier(oldPage.validations, newPage.validations, diffValidationFields);
-      const processes = diffByIdentifier(oldPage.processes, newPage.processes, diffProcessFields);
-      const computations = diffByIdentifier(oldPage.computations, newPage.computations, diffComputationFields);
+      const contents = diffPageContents(oldPage, newPage);
+      const { pageChanges, items, regions, buttons, dynamicActions, branches, validations, processes, computations } =
+        contents;
       const hasChanges =
         pageChanges.length > 0 ||
         items.length > 0 ||

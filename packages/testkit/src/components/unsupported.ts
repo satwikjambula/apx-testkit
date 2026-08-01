@@ -58,6 +58,32 @@ export const MapRegion = unsupportedComponent(
     'documentation alone.',
 );
 
+/**
+ * Single source of truth for which `ApexRegion.type` strings have NO
+ * `@apx/testkit` component at all -- keyed by the exact region-type string,
+ * pointing at the stub constructor that stands in for it. This is the SAME
+ * set `packages/generator/src/coverage.ts`'s `UNTRACKABLE_REGION_TYPES`
+ * must mirror exactly (see that file's own doc comment); a dedicated
+ * regression test in `packages/generator/test/` cross-references the two
+ * directly (exact set equality, plus confirming each entry still throws --
+ * i.e. hasn't quietly graduated) so they can no longer drift silently the
+ * way they did for Interactive Grid (graduated to a real component,
+ * removed from here, but left in `UNTRACKABLE_REGION_TYPES` for an entire
+ * prior session).
+ *
+ * Extend this ONLY when a region type gets a genuine, region-shaped
+ * `UnsupportedComponentError` stub here (i.e. it stands in for an
+ * `ApexRegion`, not an `ApexItem` -- Switch/RadioGroup/PopupLov/RichText/
+ * FileBrowse/Shuttle below are item-shaped, not region-shaped, and do NOT
+ * belong in this map) -- and update `coverage.ts`'s
+ * `UNTRACKABLE_REGION_TYPES` in the SAME change.
+ */
+export const REGION_STUB_TYPES: Readonly<Record<string, new (page: Page, id: string) => never>> = {
+  tree: TreeRegion,
+  calendar: Calendar,
+  map: MapRegion,
+};
+
 // Chart graduated from a stub to a real component -- see
 // components/chart.ts (ApexChartRegion), verified live against Oracle's
 // "Sample Charts" gallery app on THREE independent chart types. This

@@ -62,6 +62,7 @@ export {
   FileBrowse,
   Shuttle,
   triggerDynamicAction,
+  REGION_STUB_TYPES,
 } from './components/unsupported.js';
 
 export interface ApxFixtures {

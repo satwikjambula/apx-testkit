@@ -24,16 +24,28 @@ generation; it never authors assertions — determinism is the product").
   action, dynamic action trigger/condition/nested actions) and falls back
   to a whole-`raw`-object comparison (`RAW_CHANGED_NOTE`) for anything not
   individually typed yet. Cross-references which generated spec files are
-  affected by a given change.
+  affected by a given change. The per-type `diffXFields` functions and
+  `diffPageContents` are exported specifically so
+  `test/diff-field-coverage.test.ts` can drive them directly with
+  synthetic fixtures — this is the automated enforcement for the
+  `calendarSettings`/`chartSettings`+`htmlDomId` class of gap (a typed
+  field with no diff handling), not just a checklist item anymore; see
+  `.ai/checklists/parser-change.md`.
 - `src/coverage.ts` — cross-references a recorded touch log (from
   `@apx/testkit`'s `recordCoverageTouch`) against the AST to report which
   declared items/regions/buttons a test run actually exercised.
-  `UNTRACKABLE_REGION_TYPES` (currently `tree`/`calendar`/`map`) must be
-  kept in exact sync with the region-shaped stubs in
+  `UNTRACKABLE_REGION_TYPES` (currently `tree`/`calendar`/`map`, exported
+  for exactly this reason) must be kept in exact sync with
+  `REGION_STUB_TYPES`, the region-shaped stubs exported from
   `packages/testkit/src/components/unsupported.ts` — letting them drift
   has caused a real bug before (Interactive Grid's real, recorded
   coverage was silently excluded for an entire prior session after IG
   graduated to a real component but was never removed from this set).
+  This is now automatically enforced, not just a manual concern:
+  `test/coverage-unsupported-sync.test.ts` asserts exact set equality
+  between the two AND that every stub the set still claims is untrackable
+  genuinely still throws `UnsupportedComponentError` (hasn't quietly
+  graduated).
 - `src/lib.ts` — shared `loadExport()`/`generate()`/`inspect()`, also
   imported directly by `packages/mcp`.
 - `src/cli.ts` / `diff-cli.ts` / `coverage-cli.ts` — the three CLI

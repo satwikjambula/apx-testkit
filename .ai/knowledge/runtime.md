@@ -64,7 +64,14 @@ documentation alone.
   string is specific and current — "no live ground truth yet," not
   "TODO." **The contract**: if a component isn't here and isn't a real
   class elsewhere in `components/`, it doesn't exist. A component
-  graduates from here to a real class only per ADR-002.
+  graduates from here to a real class only per ADR-002. The
+  region-shaped stubs (`TreeRegion`/`Calendar`/`MapRegion`) are also
+  registered in this file's exported `REGION_STUB_TYPES` map, keyed by
+  `ApexRegion.type` string — the single source of truth
+  `packages/generator/src/coverage.ts`'s `UNTRACKABLE_REGION_TYPES` must
+  mirror exactly, cross-checked automatically by
+  `packages/generator/test/coverage-unsupported-sync.test.ts` (see
+  `.ai/knowledge/generator.md`).
 
 ## Fixtures (`src/fixtures/`)
 

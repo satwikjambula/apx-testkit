@@ -52,10 +52,16 @@ time — this is what makes `apx-diff` meaningful. Any change here gets
 verified by regenerating `packages/generator/test/fixtures/reference-fixtures`
 and diffing against the committed `examples/employee-page` output.
 `UNTRACKABLE_REGION_TYPES` in `coverage.ts` must be kept in exact sync
-with the stub list in `unsupported.ts` — letting these drift has silently
-excluded real, recorded coverage before (Interactive Grid's coverage was
-excluded for an entire prior session after it graduated to a real
-component but was never removed from that set).
+with `REGION_STUB_TYPES`, the region-shaped stub list exported from
+`unsupported.ts` — letting these drift has silently excluded real,
+recorded coverage before (Interactive Grid's coverage was excluded for an
+entire prior session after it graduated to a real component but was never
+removed from that set). This is now automatically enforced, not just a
+manual concern:
+`packages/generator/test/coverage-unsupported-sync.test.ts` asserts exact
+set equality between the two and that every entry still genuinely throws
+`UnsupportedComponentError` (hasn't quietly graduated) — it fails loudly
+the moment either file changes without the other.
 
 ## Every change requires
 
