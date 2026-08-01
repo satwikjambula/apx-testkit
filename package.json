@@ -1,6 +1,16 @@
 {
   "name": "apexlang-testkit",
   "private": true,
-  "workspaces": ["packages/*"],
-  "scripts": { "test": "npm run test --workspaces --if-present" }
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "test": "npm run test --workspaces --if-present",
+    "lint": "eslint packages"
+  },
+  "devDependencies": {
+    "eslint": "^9.39.5",
+    "typescript-eslint": "^8.65.0"
+  }
 }
