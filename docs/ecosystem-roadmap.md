@@ -1401,3 +1401,208 @@ schema migration of that existing file than new infrastructure. Not done
 this round because it wasn't asked for outright, and reshaping a file this
 project depends on for accurate history deserves its own deliberate pass,
 not a rushed addition alongside four other changes.
+
+## Eighth round (2026-08-01): fresh state-of-the-project triage, post generator-auto-assertion-wiring
+
+Prompted directly by the maintainer: what's genuinely left, checked fresh
+against the current docs rather than re-stated from memory. This session
+shipped the "Continuation" pass's `process`/`computation`/`column`/`action`
+typed AST fields (commit `9792cf6`), the `branch`/`validation`/`lov` fields
+from the Seventh round (`8b10b52`), two drift-detection regression tests
+guarding both against silently going stale again (`2847272`:
+`diff-field-coverage.test.ts` — every typed AST field now automatically
+gets an `apx-diff` assertion; `coverage-unsupported-sync.test.ts` — the
+untrackable-region-types set and `unsupported.ts`'s stub set can no longer
+silently drift apart), and ESLint + branch protection (`ea19d7c`). Every
+item on the maintainer's own "known open threads" list was re-verified
+against current docs rather than assumed still accurate — three had
+shifted since being written down.
+
+### Re-verified against current docs — corrections where the picture changed
+
+1. **Generator auto-assertion gap for `branch`/`validation`/`process`/
+   `computation`/`column`/`action`/`lov` — NOT ONE UNIFORM GAP, splits
+   three ways on inspection.** `branch`/`process`/`computation` have zero
+   client-JS hook (already decided, unchanged) — and checked freshly this
+   round: the only assertion shape an auto-generated test *could* take for
+   any of the three ("which branch/process fired," "what value the
+   computation set") is inherently data-dependent (which branch fires
+   depends on a runtime condition against live data; which DML a process
+   performs depends on session state) — squarely inside this project's own
+   **permanent, by-design** "data-dependent assertions are out of scope"
+   rule (`docs/limitations.md` Generator section, `README.md` Architecture
+   section). This is not an oversight sitting in a backlog — it's a
+   correctly-absent auto-assertion, same category as "the generator has no
+   way to know what data your instance holds." **Not worth building, ever,
+   for these three specifically** — different from Tier 3's "blocked
+   pending ground truth," this is "blocked pending a kind of ground truth
+   (live user data) the generator is explicitly designed never to depend
+   on." `lov`'s reference field has the same "nothing real to assert
+   against yet" shape (LOV values are out of scope — see #3 below), so it
+   sits in the same bucket for a different reason. That leaves **`column`
+   and `action`** as the only two of the seven with a *plausible* real
+   DOM-observable contract nobody has actually checked — see "build now"
+   below.
+2. **`validation` — confirmed still blocked on credentials, unchanged.**
+   Re-read the 2026-07-27/28 follow-up in full: the blocker is exactly as
+   recorded (zero credential values in this environment; an AI agent does
+   not type passwords into login forms under any instruction). Nothing
+   about this has resolved itself since — it cannot resolve itself without
+   a human or a differently-privileged session supplying real login
+   access. Tracked separately below, distinctly from "not worth it."
+3. **LOV values out of scope — confirmed unchanged.** No new consumer has
+   asked for `shared-components/lovs.apx` resolution since the Seventh
+   round's decision; still correctly deferred, not rejected.
+4. **Calendar and Map — confirmed unchanged: real static ground truth,
+   zero live verification, correct stubs.** `calendarSettings`/
+   `chartSettings`-equivalent typing already exists for Calendar
+   (`ApexRegion.calendarSettings`); Map still has no typed settings at all
+   (falls to `raw` — nobody has type-checked the `map`-region EBNF
+   production yet, a smaller, cheaper parser-only task nobody has actually
+   asked `/parser` to do). Both runtime stubs are correctly unbuilt. This
+   is an access blocker (a live `sample-calendar`/`sample-maps`-equivalent
+   URL), not a worth-it question — this doc's own Tier 1 sequencing note
+   already calls `sample-calendar` the highest-leverage open
+   live-verification target in the project "by a wide margin" if a URL
+   ever surfaces. Unchanged this round.
+5. **Interactive Report generic-only — confirmed unchanged, and still a
+   permanent constraint for the JS-API path specifically** (private
+   `_`-prefixed internals, `docs/quirks/26.1.json`
+   `interactive-report-private-methods`). What's still open and was
+   correctly flagged as a *different, unverified* path in an earlier
+   round: driving the actual visible UI (fill the search input, click a
+   sort header) via accessible locators instead of a JS API call. Given
+   `interactiveReport` sits at 29/46 apps — one of the highest app-counts
+   of any unverified-for-interaction region type — this is worth a real
+   discovery pass now rather than staying open indefinitely on the
+   strength of the app count alone. See "build now" below.
+6. **Region/button DOM identifier convention "still open" — PARTIALLY
+   STALE, needs correcting in place, not just re-affirming.** Checked the
+   actual current state rather than the phrase: the **region** side of
+   this has substantially moved since the phrase was last written —
+   `ApexRegion.htmlDomId` (ADR-003) now deterministically resolves the
+   runtime static id whenever the export sets it, live-confirmed on
+   Interactive Grid/Chart/Interactive Report and statically confirmed
+   present across 27+ region types in real export data (see
+   `docs/quirks/26.1.json` `region-id-not-static-id`). The remaining open
+   part is narrower than "region convention unknown" — it's specifically
+   "what's the id when `htmlDomId` is absent," which is genuinely
+   undiscoverable from static data alone (APEX-internal auto-generated
+   numeric id), not a parser gap waiting to be closed. The **button**
+   side, by contrast, has had **zero progress** — CLAUDE.md's "Outstanding
+   debts #1" is unchanged from the very first version of this project:
+   `button.ts` still sidesteps static ids entirely via accessible-role/
+   label locators, and the `REGION DISCOVERY`/`BUTTON DISCOVERY` console
+   capture this debt has asked for since M1 has still never been done.
+   Correcting the roadmap's own language: this is now two separable
+   questions at very different levels of resolution, not one open item —
+   button-id discovery is now the older and more neglected of the two.
+7. **`facet`/`pageGroup`/`savedReport` deferred pending a real consumer —
+   confirmed unchanged.** No new consumer has appeared for any of the
+   three since the Continuation round.
+8. **Tree-as-content — the 3-genuine-content-region finding is real, but
+   it's not new to this pass; the "only one non-representative instance"
+   objection was ALREADY retired**, visibly, in
+   `docs/component-coverage-matrix.md`'s `tree` row ("Corrected in an
+   earlier round... Tree IS a real, distinct content pattern"). What this
+   pass adds is checking whether that correction actually changes the
+   build verdict — it doesn't, for a different reason than the one
+   originally given. The old objection ("Tree isn't even real as content")
+   is gone. The bar Tree still fails is **rarity**: 4/46 apps total is the
+   same thin-evidence class this project already disqualified
+   `columnGroup` (3/46) and `metaTag` (1/46) on in the Continuation round
+   — "too thin a base to justify its own effort," applied consistently.
+   Runtime support additionally still has zero live ground truth
+   (Tier 3, unchanged). **Verdict unchanged (defer), reasoning corrected**:
+   not "doesn't exist," but "real, confirmed, still too rare relative to
+   this project's own bar for the other 15 types triaged in the same
+   pass."
+9. **Snapshot testing — confirmed unchanged.** Still Tier 2, still needs a
+   masking-policy design nobody has scoped, not touched this session.
+10. **M4 second user — confirmed unchanged.** Still open, still not
+    something engineering work alone produces.
+
+### A real gap this pass surfaced that wasn't on the seed list: doc drift
+
+`docs/support-matrix.md` (line 15, "`@apx/testkit` region.ts against
+Chart" row) still states the ORIGINAL, since-corrected claim —
+"`apex.region(id).widget()` confirmed to return `null` for charts" —
+directly contradicting `docs/quirks/26.1.json`'s corrected
+`chart-region-widget-returns-null` entry and this doc's own
+Chart-graduation entry above, both of which now correctly say the
+opposite (`widget()` returns a real element; `ApexChartRegion` exists and
+depends on it). This is exactly the "update documentation together, not
+piecemeal" failure `DESIGN_GUARDRAILS.md` names as a repeat offender —
+caught here, not fixed here (accuracy upkeep is Documentation & DX
+Engineer's job per this project's own division of labor, not a Product
+Architect scope decision). Flagged for that agent to correct in the same
+spirit as every other "update together" fix in this project's history.
+
+### Prioritized build-now list
+
+1. **Column/Action live-discovery pass** (Runtime & Test Automation
+   Engineer, then QA/Verification Engineer to verify). `column` is 39/46
+   apps — the single most load-bearing untyped-for-runtime construct left
+   after this session's parser work — and `action`'s parent regions
+   (Cards/List) are common enough (`cards` 12/46, `list` 29/46) to be
+   worth checking against the one live app already reachable without
+   credentials (UX Pattern Catalog). Check for a real, documented,
+   non-guessed DOM/API contract for column headers and row-level
+   action/link rendering before deciding runtime-component-or-not — per
+   ADR-002, this is a verification step, not a build commitment yet.
+2. **Interactive Report UI-locator-driven interaction discovery pass**
+   (Runtime & Test Automation Engineer). Not a retry of the already-closed
+   "does IR have a public JS API" question (confirmed no, permanently) —
+   a genuinely different question: can `report.search()`/`.sort()` be
+   built safely on accessible locators (fill the visible search box, click
+   a sort header) against the live, already-reachable UX Pattern Catalog
+   app. High app-count (29/46) justifies spending a discovery pass now.
+3. **Button DOM identifier discovery** (Runtime & Test Automation
+   Engineer). Re-prioritized above where it's implicitly sat since M1: the
+   region side of this exact question is now substantially resolved via
+   `htmlDomId`, which makes the button side's total lack of progress more
+   conspicuous, not less relevant. Capture the `REGION DISCOVERY`/
+   `BUTTON DISCOVERY` console output CLAUDE.md's debt #1 has asked for
+   since the beginning of this project.
+4. **Checkbox item-type live verification** (QA/Verification Engineer).
+   Carried over, unchanged status, still not done: 26/46 apps, not
+   stubbed, plausible same-mechanism verification as the six already-
+   verified item types (`apex.item()` round-trip). Cheapest real item on
+   this list — no new app needed, no new mechanism to discover, just
+   execution.
+5. **`docs/support-matrix.md` chart-widget correction** (Documentation
+   & DX Engineer). Not a build item — a factual-accuracy fix, flagged
+   above, routed to the agent who owns day-to-day doc accuracy.
+
+### Blocked-on-access (distinct from not-worth-it — needs a resource, not a design decision)
+
+- **`validation` runtime verification** — blocked on real login
+  credentials for Sample Interactive Grids page 31. Concrete reproduction
+  target already recorded (clear the `ENAME` cell in the `emp` grid, save,
+  compare `#APEX_ERROR_MESSAGE` vs. the grid's own error UI). Needs a
+  human, or a session with legitimate credential access, to run
+  `spike/tests/interactive-grid-demo.spec.ts`'s pattern extended to page
+  31 — not more design work.
+- **Calendar/Map runtime verification** — blocked on a live URL for
+  `sample-calendar`/`sample-maps` or any app with either component
+  reachable live. Static ground truth is already more than sufficient to
+  start from the moment access exists.
+
+### Defer — real signal, no forcing consumer yet (unchanged or corrected-but-same-verdict)
+
+- `facet` definition typing, `pageGroup`, `savedReport` — unchanged, no
+  consumer named yet.
+- LOV value resolution (`shared-components/lovs.apx`) — unchanged, out of
+  `loadExport()`'s scope, no consumer.
+- Tree-as-content (parser typing and runtime) — reasoning corrected (see
+  #8 above), verdict unchanged: real, confirmed, still too rare (4/46) to
+  clear this project's own consistency bar, and zero live ground truth for
+  runtime regardless.
+- Snapshot testing — needs a masking-policy design first, still unscoped.
+
+### Not-worth-it (reaffirmed this round, not new)
+
+- Generator auto-assertions for `branch`/`process`/`computation` — the
+  only possible assertion shape for each is inherently data-dependent,
+  which this project has permanently ruled out by design. This is a
+  correct absence, not a backlog item — see #1 above.
