@@ -153,6 +153,8 @@ real APEX export and regenerate deterministic tests itself; see
 
 The pipeline is four packages wired together, AST-first:
 
+<img width="4200" height="2600" alt="apx_architecture_docs_style" src="https://github.com/user-attachments/assets/d37ff414-3557-429a-b5a0-f4d642c822cc" />
+
 ```
 .apx export
     │
