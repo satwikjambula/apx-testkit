@@ -1,18 +1,31 @@
 #!/usr/bin/env node
 import { existsSync, writeFileSync } from 'node:fs';
 import { computeCoverage, type CategoryCoverage, type RegionCoverage } from './coverage.js';
+import { renderCoverageHtml } from './coverage-html.js';
 
 const args = process.argv.slice(2);
 const exportDir = args[0];
 const touchLogPath = args[1];
 const jsonIdx = args.indexOf('--json');
 const jsonOut = jsonIdx >= 0 ? args[jsonIdx + 1] : undefined;
+const htmlIdx = args.indexOf('--html');
+const htmlOut = htmlIdx >= 0 ? args[htmlIdx + 1] : undefined;
 
 if (!exportDir || !touchLogPath) {
-  console.error('Usage: apx-coverage <export-dir> <touch-log-path> [--json <report.json>]');
+  console.error('Usage: apx-coverage <export-dir> <touch-log-path> [--json <report.json>] [--html <report.html>]');
   console.error('  <touch-log-path> is the file pointed to by APX_COVERAGE_LOG when the suite ran.');
   console.error('  Set APX_COVERAGE_LOG=<path> before running your Playwright suite to record touches;');
   console.error('  @apx/testkit only records when that env var is set (zero overhead otherwise).');
+  console.error('  --html writes a self-contained heatmap/checklist HTML view of the same report --');
+  console.error('  see docs/tutorial.md 2.9 for what it looks like.');
+  process.exit(2);
+}
+if (jsonIdx >= 0 && !jsonOut) {
+  console.error('--json requires an output path, e.g. --json report.json');
+  process.exit(2);
+}
+if (htmlIdx >= 0 && !htmlOut) {
+  console.error('--html requires an output path, e.g. --html report.html');
   process.exit(2);
 }
 if (!existsSync(exportDir)) {
@@ -70,4 +83,9 @@ console.log(line('buttons:', report.overall.buttons));
 if (jsonOut) {
   writeFileSync(jsonOut, JSON.stringify(report, null, 2));
   console.log(`\nFull JSON report written to ${jsonOut}`);
+}
+
+if (htmlOut) {
+  writeFileSync(htmlOut, renderCoverageHtml(report));
+  console.log(`\nHTML coverage report written to ${htmlOut}`);
 }

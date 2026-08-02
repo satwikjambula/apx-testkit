@@ -333,7 +333,9 @@ waits (`callRegionMethodAndWaitForEvent`), a `--watch` CLI flag for editor
 auto-regeneration, and coverage mapping — set `APX_COVERAGE_LOG=<path>`
 before running your suite, then run `apx-coverage <export-dir>
 <touch-log-path>` to see which declared items/regions/buttons a run
-actually touched vs. missed. Still open: snapshot testing (needs a
+actually touched vs. missed (add `--html <report.html>` for a
+self-contained heatmap/checklist view of the same report, see
+docs/tutorial.md 2.9). Still open: snapshot testing (needs a
 masking-policy design), and Trees as content — the only Tree widget seen
 live so far is the universal left-nav reused for a login picker (see
 docs/ecosystem-roadmap.md), not a distinct page-content pattern.
