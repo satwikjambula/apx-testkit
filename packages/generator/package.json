@@ -25,6 +25,7 @@
     ".": "./dist/cli.js",
     "./lib": "./dist/lib.js",
     "./coverage": "./dist/coverage.js",
+    "./coverage-html": "./dist/coverage-html.js",
     "./diff": "./dist/diff.js"
   }
 }

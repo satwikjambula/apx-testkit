@@ -612,6 +612,43 @@ page 10: Mixed (MIXED)
   buttons: 0/0 (n/a)
 ```
 
+**Visual view (`--html`).** The terminal report above is text-only and easy
+to skim for one page, but tedious to scan across a large app. Add
+`--html <report.html>` (alongside, not instead of, the default text
+report) to get a self-contained HTML heatmap + checklist view of the
+exact same `CoverageReport` data — no new analysis, just a different
+rendering of what's already computed:
+
+```bash
+node /path/to/apx-testkit/packages/generator/dist/coverage-cli.js \
+  /path/to/your/export ./coverage.jsonl --html ./coverage-report.html
+```
+
+The output is one file, no external CSS/JS, safe to open directly from
+disk or attach as a CI artifact:
+
+- **Summary cards** at the top for overall items/regions/buttons
+  (touched/total + percentage), color-coded green (high coverage) through
+  red (low/zero) — gray for `n/a` (nothing declared).
+- **A per-page heatmap row** — one row per page, one colored cell per
+  category (items/regions/buttons), same color scale as the summary
+  cards, so you can spot which pages are weak at a glance without
+  expanding anything.
+- **A per-page checklist**, collapsed by default (click a page row to
+  expand): a ✓/✗ list of every untouched identifier per category (touched
+  identifiers are summarized as a single count — only untouched
+  identifiers are tracked by name in `CoverageReport`, so that's the only
+  granularity there is to show), plus untrackable regions listed
+  separately in their own line, same distinction as the text report.
+
+Same determinism guarantee as every other generated artifact in this
+project: the same `CoverageReport` always renders byte-identical HTML —
+safe to diff across runs. Both `renderCoverageHtml()` (a full standalone
+document) and `renderCoverageHtmlFragment()` (just the report content,
+for embedding into a host page's own DOM) are exported from
+`@apx/testgen/coverage-html` for programmatic use — e.g. a future CI
+dashboard that wants to embed this view directly instead of shelling out.
+
 ### 2.10 Regression detection
 
 **Status: VERIFIED**, and unlike everything else in this list, needs no
