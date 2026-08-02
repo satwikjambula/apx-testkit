@@ -29,6 +29,7 @@ number of real apps, and honest about what doesn't work yet.
    - [2.13 Chart](#213-chart)
    - [2.14 Report columns](#214-report-columns)
    - [2.15 Region actions (Cards/List row-level)](#215-region-actions-cardslist-row-level)
+   - [2.16 Documentation generation](#216-documentation-generation)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -1029,6 +1030,53 @@ const count = await regionActionCount(page, 'Edit'); // > 1 is the expected comm
   Row Action` link DOES navigate) showing this isn't a universal
   limitation of the mechanism, just unverified for Cards/List
   specifically.
+
+---
+
+### 2.16 Documentation generation
+
+**Status: VERIFIED**, and like regression detection (2.10), needs no live
+app at all — it's a pure read of the already-typed AST into Markdown:
+
+```bash
+node /path/to/apx-testkit/packages/generator/dist/docs-cli.js <export-dir> --out <docs-dir>
+```
+
+```
+Documented 1 page(s) into <docs-dir> (2 file(s) written, including index.md)
+```
+
+This writes one `<alias>.docs.md` per page plus a top-level `index.md`
+summary linking to each. Every fact rendered comes directly off the typed
+AST — items (type/label/required/source column/LOV), buttons (label/
+action/static id), regions (type, source table or SQL, calendar settings,
+chart settings, static-id override), region-nested columns and row-level
+actions, dynamic actions (trigger/condition/nested true-false actions),
+branches, validations, processes, and computations. Nothing here is new
+analysis — it's the same "already-computed structure, turned into a
+readable format" shape as `apx-diff` (2.10), not a fresh verification
+pass, so there's no live-app risk to reason about.
+
+The real, committed output for this tutorial's own `EMPLOYEE` page fixture
+is in `examples/employee-page/p00003-employee.docs.md` (plus
+`examples/employee-page/index.md`) — open it to see the exact current
+shape without running anything.
+
+**Region-owned items/buttons are documented once, under their region —
+not duplicated at page level.** A page-level "Page-level items"/"Page-level
+buttons" section lists only items/buttons NOT owned by any region (the
+same `layout.region`-unowned case `ApexPage.items`/`buttons` also carry
+alongside their owning region's own list — see `packages/parser/src/
+parser.ts`).
+
+**Explicitly out of scope** (see `docs/ecosystem-roadmap.md` "Ninth
+round", item 4, and GitHub issue #4) — deliberately NOT attempted here,
+not a gap to work around:
+- Business-process docs and navigation maps — need a cross-reference graph
+  this project doesn't have yet.
+- ER diagrams — need database schema/foreign-key information a `.apx`
+  export never carries at all; a genuinely different data source, not a
+  missing feature.
 
 ---
 

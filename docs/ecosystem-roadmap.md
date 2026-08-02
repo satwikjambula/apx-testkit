@@ -2059,10 +2059,19 @@ either.
   regions, buttons, now processes/computations/columns/actions) is a
   real, low-risk extension, similar in shape to the human-readable diff
   above — **plausible build-now candidate if scoped to exactly this**.
+  **DONE (GitHub issue #4)** — shipped as `apx-docs <export-dir> --out
+  <docs-dir>`, one deterministic Markdown file per page plus an `index.md`
+  summary, built entirely from data `apx-diff`/`apx-testgen` already
+  compute over: items/buttons/regions (including calendar/chart settings,
+  static-id override, nested columns and region actions), dynamic
+  actions, branches, validations, processes, computations. See
+  `packages/generator/src/docs.ts`, `docs/tutorial.md` §2.16, and
+  `examples/employee-page/p00003-employee.docs.md` for real output.
   Business-process docs and navigation maps need the same missing
   navigation/menu typed field and cross-reference graph as impact
   analysis and dependency-graph visualization above — **defer**, same
-  trigger. ER diagrams need database schema/foreign-key information this
+  trigger, and deliberately NOT folded into the shipped `apx-docs` above.
+  ER diagrams need database schema/foreign-key information this
   project has never parsed and isn't in scope for a `.apx`-export parser
   to begin with (a `.apx` export doesn't carry full DB schema) — **not
   this project's scope**, a genuinely different data source, not a

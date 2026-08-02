@@ -86,6 +86,11 @@ export function pageObjectFileName(page: ApexPage): string {
   return `${pageObjectBaseName(page)}.ts`;
 }
 
+/** Deterministic page id/alias -> generated docs filename, e.g. p00410-data-entry-simple-form.docs.md. Single source of truth for this naming scheme, shared by docs.ts (generateDocs) the same way specFileName/pageObjectFileName already are shared by lib.ts and diff.ts. */
+export function docsFileName(page: ApexPage): string {
+  return `p${String(page.id).padStart(5, '0')}-${(page.alias ?? '').toLowerCase()}.docs.md`;
+}
+
 function itemDoc(item: ApexItem): string {
   const bits = [item.type ?? 'unknown'];
   if (item.label) bits.push(`"${esc(item.label)}"`);

@@ -46,10 +46,28 @@ generation; it never authors assertions — determinism is the product").
   between the two AND that every stub the set still claims is untrackable
   genuinely still throws `UnsupportedComponentError` (hasn't quietly
   graduated).
+- `src/docs.ts` — Markdown documentation generated directly from the
+  already-typed AST (GitHub issue #4, `docs/ecosystem-roadmap.md` "Ninth
+  round" item 4) — reading already-typed data into a readable format, not
+  new analysis, the same shape as `diff.ts`'s templating layer. One
+  `<alias>.docs.md` per page (`docsFileName()` in `page-object.ts` — same
+  single-source-of-truth naming discipline `pageObjectFileName()`/
+  `specFileName()` already follow) plus a top-level `index.md` summary.
+  Documents items/buttons/regions (calendar/chart settings, static-id
+  override, nested columns and region actions), dynamic actions,
+  branches, validations, processes, computations — explicitly NOT
+  business-process docs/navigation maps or ER diagrams (need a
+  cross-reference graph and DB schema data this project doesn't have —
+  see the roadmap entry). `test/docs.test.ts` guards field-completeness
+  with a sentinel-value fixture (a field typed on the AST but never
+  rendered here would go unnoticed the same way `calendarSettings` once
+  did for `apx-diff` — see `diff-field-coverage.test.ts`'s doc comment for
+  the precedent this mirrors) plus a determinism check.
 - `src/lib.ts` — shared `loadExport()`/`generate()`/`inspect()`, also
   imported directly by `packages/mcp`.
-- `src/cli.ts` / `diff-cli.ts` / `coverage-cli.ts` — the three CLI
-  entrypoints (`apx-generate`/equivalent, `apx-diff`, `apx-coverage`).
+- `src/cli.ts` / `diff-cli.ts` / `coverage-cli.ts` / `docs-cli.ts` — the
+  four CLI entrypoints (`apx-generate`/equivalent, `apx-diff`,
+  `apx-coverage`, `apx-docs`).
 
 ## `packages/mcp` (`@apx/mcp`)
 
@@ -66,6 +84,9 @@ Same input must always produce byte-identical output. The release
 checklist (`.ai/checklists/release.md`) verifies this by regenerating
 `packages/generator/test/fixtures/reference-fixtures` and diffing against
 the committed `examples/employee-page` output — any difference is a
-regression until proven otherwise.
+regression until proven otherwise. `docs.ts` carries the identical
+contract (`test/docs.test.ts` asserts it directly, regenerating twice into
+separate directories and diffing byte-for-byte) — no timestamps, no
+ordering beyond the AST's own stable source order.
 
 ## Adding generator support for a new component — see `.ai/checklists/new-component.md`
