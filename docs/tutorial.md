@@ -666,6 +666,32 @@ what changed — and which generated test files to review — before
 regenerating tests. `--json <path>` gives the same report as structured
 data for scripting.
 
+**Human-readable mode**: `--format human` renders the same, already-computed
+`DiffReport` as prose instead of the indented `+`/`-`/`~` tree above — one
+sentence per added/removed/changed page, meant for a PR description or a
+Slack message rather than a terminal. Nothing new is computed; this is a
+templating layer over the exact same data the structured (default) output
+uses, so it never drifts from it.
+
+```bash
+node /path/to/apx-testkit/packages/generator/dist/diff-cli.js <old-export-dir> <new-export-dir> --format human
+```
+
+```
+Page 3: Employee (EMPLOYEE): Changed title: "Employee" -> "Employee Record", Added item P3_EMAIL, Changed item P3_ENAME (label: "Name" -> "Full Name"), Changed button save (label: "Save" -> "Save Changes"). Affects: p00003-employee.page.ts, p00003-employee.spec.ts.
+Page 7: Reports (REPORTS) -- added. Will generate: p00007-reports.page.ts, p00007-reports.spec.ts.
+
+Summary: 1 added, 0 removed, 0 changed, 0 unchanged
+```
+
+`--format structured` (the default, unchanged) and `--format human` are
+both driven off the same `computeDiff()` result — `--json <path>` still
+writes the full structured `DiffReport` regardless of which `--format` you
+picked for the console output, so scripting and prose reading aren't
+mutually exclusive. `formatDiffHuman()`/`formatPageHuman()` are also
+exported from `@apx/testgen/diff` for anything that wants prose output
+without shelling out to the CLI (e.g. a future CI comment bot).
+
 ---
 
 ### 2.11 Interactive Grid
