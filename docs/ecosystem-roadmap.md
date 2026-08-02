@@ -1025,6 +1025,79 @@ it. **Verdict: still deferred, not resolved; `validation`'s runtime
 component stays un-built until this specific reproduction happens with
 real login access.**
 
+### Resolution (2026-08-01): `/qa` live-verification pass — RESOLVED, corrects the deferred verdict above
+
+The blocker above was purely credential access, exactly as stated — not
+a deeper technical obstacle. Once `APX_LOGIN_TEST_USERNAME`/
+`APX_LOGIN_TEST_PASSWORD` became available (read from env vars at
+Playwright test-run time only, exactly as the prior pass required, never
+typed into a live browser field and never hardcoded), the concrete
+reproduction target this pass named — page 31 of Sample Interactive
+Grids, clear the Name cell, save, inspect `#APEX_ERROR_MESSAGE` vs. the
+grid's own error UI — was run live, twice, plus a second independent
+validation trigger (`comm-limit`) on the same page, per this project's
+own discipline of never generalizing from a single instance.
+
+**The actual answer is more precise than either side of the prior
+"deferred" framing anticipated — it is not a single yes/no, because
+Interactive Grid runs TWO structurally different validation mechanisms
+depending on validation type, both now confirmed live:**
+
+1. **Page-level SQL `validation()` components** (`comm-limit`,
+   `hire-date-in-past`) genuinely DO route through a real AJAX round
+   trip (`wwv_flow.ajax`, `interactiveGridAutoRowProcessing`) whose JSON
+   response carries `errors: [{ message, location: ["page","inline"],
+   ... }]`. `apex.message.showErrors()` IS called with those exact
+   objects, and `#APEX_ERROR_MESSAGE` DOES toggle to class `u-visible`
+   with the literal configured error text — for example, editing KING's
+   (empno 7839, SAL=5000) Commission to 10000 produced the response
+   `{"errors":[{"message":"Commission must be less than 1.5 times the
+   Salary", ..., "location":["page","inline"], "regionDomId":"emp",
+   "recordId":"7839"}]}`, and `document.getElementById
+   ('APEX_ERROR_MESSAGE').className` became `apex-page-error u-visible`.
+   **This directly CONTRADICTS the working hypothesis stated earlier in
+   this section** ("Interactive Grid validation failures are
+   structurally unlikely to route through the same `#APEX_ERROR_MESSAGE`
+   page banner... because IG saves are per-row AJAX operations... a
+   different code path"). Real evidence overrides that guess, per
+   ADR-004: `messages.ts`'s `expectError()` **already covers this case,
+   confirmed live, zero new runtime code needed.**
+2. **Column-level `valueRequired: true`** (ENAME/HIREDATE) is a
+   genuinely DIFFERENT, CLIENT-SIDE-only mechanism — confirmed via a
+   `page.on('request')` listener that saw **zero** POSTs to
+   `wwv_flow.ajax` when Save was clicked with CLARK's (empno 7782) Name
+   cell empty. Instead APEX calls `apex.message.alert('Correct errors
+   before saving.')` — a real, different, documented `apex.message` API
+   (a modal, `role="alertdialog"`, Universal Theme's
+   `.ui-dialog.ui-dialog--notification`), and marks the offending `<td
+   role="gridcell">` with class `is-error`. `#APEX_ERROR_MESSAGE` stays
+   `u-hidden` throughout. This matches the page's own bundled help text
+   exactly ("Required is the only validation done on the client by
+   default") and means **`expectError()` does NOT cover this specific
+   case** — a real, confirmed gap, not a guess.
+
+**Action taken, small and directly evidence-scoped, per this project's
+"build real capability the moment live evidence supports it" pattern**:
+added `alertDialog()`/`expectAlert()`/`dismissAlert()` to
+`packages/testkit/src/components/messages.ts` (exported from
+`packages/testkit/src/index.ts`) to cover mechanism 2 — no larger
+architecture change, just three small functions following the exact
+shape of the existing `expectSuccess`/`expectError` pair, built against
+the confirmed-live `role="alertdialog"` selector and confirmed `"OK"`
+accessible button name. Both mechanisms now have live spec coverage in
+`spike/tests/interactive-grid-validation-demo.spec.ts` (gated on
+`APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD`, run twice for
+determinism, confirmed non-destructive — both validation failure paths
+are REJECTED and never persisted, re-confirmed by reloading and checking
+the underlying data is unchanged).
+
+Full evidence, both mechanisms, reproduced twice each:
+`docs/quirks/26.1.json`'s `interactive-grid-validation-mechanism-split`
+entry (new). **Verdict: RESOLVED.** `validation`'s runtime coverage is
+now real and split correctly by mechanism — not "un-built," and not a
+single blanket component either; see `docs/component-coverage-matrix.md`
+and `README.md`'s capability matrix for the corresponding row updates.
+
 ### Continuation (same pass): the remaining 15 unmodeled types
 
 `branch`/`validation`/`lov` were 3 of the 17 real, corpus-confirmed
@@ -1443,13 +1516,22 @@ shifted since being written down.
    and `action`** as the only two of the seven with a *plausible* real
    DOM-observable contract nobody has actually checked — see "build now"
    below.
-2. **`validation` — confirmed still blocked on credentials, unchanged.**
-   Re-read the 2026-07-27/28 follow-up in full: the blocker is exactly as
+2. **`validation` — RESOLVED as of 2026-08-01, corrects this entry.**
+   At the time this round was written, the blocker was exactly as
    recorded (zero credential values in this environment; an AI agent does
-   not type passwords into login forms under any instruction). Nothing
-   about this has resolved itself since — it cannot resolve itself without
+   not type passwords into login forms under any instruction), and that
+   diagnosis was correct — it genuinely could not resolve itself without
    a human or a differently-privileged session supplying real login
-   access. Tracked separately below, distinctly from "not worth it."
+   access. That access was subsequently supplied (env vars only, per this
+   project's own discipline) and the reproduction this round called for
+   was completed: Interactive Grid validation splits into two mechanisms
+   (page-level SQL `validation()` DOES route through
+   `expectError()`/`#APEX_ERROR_MESSAGE`, confirmed live; column-level
+   `valueRequired` is client-side-only and needed a new
+   `expectAlert()`/`dismissAlert()` pair, now built). See the "Resolution
+   (2026-08-01)" subsection under the Seventh round follow-up above and
+   `docs/quirks/26.1.json`'s `interactive-grid-validation-mechanism-split`
+   entry for full evidence. No longer tracked as an open thread.
 3. **LOV values out of scope — confirmed unchanged.** No new consumer has
    asked for `shared-components/lovs.apx` resolution since the Seventh
    round's decision; still correctly deferred, not rejected.
@@ -1576,13 +1658,12 @@ spirit as every other "update together" fix in this project's history.
 
 ### Blocked-on-access (distinct from not-worth-it — needs a resource, not a design decision)
 
-- **`validation` runtime verification** — blocked on real login
-  credentials for Sample Interactive Grids page 31. Concrete reproduction
-  target already recorded (clear the `ENAME` cell in the `emp` grid, save,
-  compare `#APEX_ERROR_MESSAGE` vs. the grid's own error UI). Needs a
-  human, or a session with legitimate credential access, to run
-  `spike/tests/interactive-grid-demo.spec.ts`'s pattern extended to page
-  31 — not more design work.
+- ~~**`validation` runtime verification** — blocked on real login
+  credentials for Sample Interactive Grids page 31.~~ **RESOLVED
+  2026-08-01** — real login credentials became available; the
+  reproduction was run (`spike/tests/interactive-grid-validation-demo.spec.ts`).
+  See the "Resolution (2026-08-01)" subsection under the Seventh round
+  follow-up above. No longer blocked, no longer on this list.
 - **Calendar/Map runtime verification** — blocked on a live URL for
   `sample-calendar`/`sample-maps` or any app with either component
   reachable live. Static ground truth is already more than sufficient to

@@ -67,6 +67,9 @@ export {
   expectError,
   expectNoErrors,
   expectNoSuccessMessage,
+  alertDialog,
+  expectAlert,
+  dismissAlert,
 } from './components/messages.js';
 export {
   UnsupportedComponentError,

@@ -297,11 +297,22 @@ valueRequired }` group that lives directly on an item).
 | `sample-file-upload-download` | 1 |
 | **Total (19/46 apps)** | **340** |
 
-Verification status: typed metadata only. A runtime validation-failure-
-display component is explicitly DEFERRED pending a separate
-live-verification check of whether `messages.ts`'s existing
-`apex.message`/`#APEX_ERROR_MESSAGE` wrapper already covers it (see
-docs/ecosystem-roadmap.md "Seventh round") — not blocked on that finding.
+Verification status: typed metadata (`ApexPage.validations`) AND a real,
+live-verified runtime component, as of 2026-08-01 — resolves the prior
+"deferred pending live-verification check" note. Confirmed live against
+Sample Interactive Grids page 31 ("Validation") that Interactive Grid
+validation failures split into TWO real mechanisms, both now covered:
+page-level SQL `validation()` (`comm-limit`, `hire-date-in-past`) goes
+through the existing `apex.message`/`#APEX_ERROR_MESSAGE` wrapper
+(`expectError()` in `packages/testkit/src/components/messages.ts`, zero
+new code needed), while column-level `valueRequired` is a genuinely
+different CLIENT-SIDE check (`apex.message.alert()`, a modal, not the
+page banner) now covered by new `expectAlert()`/`dismissAlert()`
+helpers in the same file. See docs/ecosystem-roadmap.md's Seventh round
+"Resolution (2026-08-01)" subsection and
+docs/quirks/26.1.json's `interactive-grid-validation-mechanism-split`
+entry for full evidence. Live spec:
+`spike/tests/interactive-grid-validation-demo.spec.ts`.
 
 ## Processes
 
