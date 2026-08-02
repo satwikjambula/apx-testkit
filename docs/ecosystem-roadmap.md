@@ -2171,3 +2171,93 @@ commitment, needs foundational data this project has explicitly deferred
 building before it has a concrete consumer, or is a different product at
 a different scale than this project's current pre-alpha, one-user stage
 can justify as its next move.
+
+### CRUD-generation discovery pass, results (Runtime & Test Automation Engineer, 2026-08-01) — blocked, discovery only, generation deferred
+
+Item 3 above (GitHub issue #5) was picked up as scoped: a live discovery
+pass confirming primary-key detection and a save/delete-button
+identification convention over a real form-over-table page, before any
+generation code. Credentials check first, same discipline as every prior
+login-gated pass: `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` were
+checked (`env | grep APX_LOGIN_TEST`) and confirmed **unset** in this
+environment — Sample Interactive Grids / Sample Charts, the apps most
+likely to have a genuine credentialed CRUD-shaped page, were not
+reachable. Everything below was done against UX Pattern Catalog, the one
+live app reachable without login. Full evidence:
+`docs/quirks/26.1.json` `crud-generation-discovery-pass-blocked`.
+
+**(a) Primary-key detection — a real, confirmed AST gap, not just an
+access gap.** `region.source.tableName` (`ApexRegion.source.tableName`,
+`packages/parser/src/ast.ts:78`) is a real, typed field, always attempted.
+But no typed PK column/PK item field exists anywhere in the AST for a
+region — the only place a PK appears at all is `process.target {
+tableName, pkColumn, pkItem, returnKeyIntoItem }` on an
+`autoRowProcessing`/`formAutoRowProcessing` process, and that `target`
+group is *deliberately* left untyped (`raw` only, per `ast.ts:522-541` —
+cross-referenced against the official EBNF, which has no `target` group
+in the `process` production at all, a confirmed real grammar gap, not an
+oversight). A generator would have to scan `page.processes` for
+`type ∈ {autoRowProcessing, formAutoRowProcessing}` and read
+`raw['target.pkColumn']`/`raw['target.pkItem']` directly off a *different*
+AST node than the one holding the table name — an ad hoc raw-bag
+cross-reference, not the single, clean, typed contract confident
+generation would need.
+
+**(b) Save/delete-button identification — button-location half
+reconfirmed; the "does Save actually persist anything" half is a
+confirmed dead end on this app.** Reconfirmed live against
+`data-entry-simple-form` (page 410): the "Primary Action" (Save) button
+resolves via `page.getByRole('button', { name: 'Primary Action', exact:
+true })` to the same runtime id already on record from the Eighth round
+(`B6286693148755797`), stable across sessions — `button.ts`'s
+accessible-role/label strategy (per the already-confirmed
+`button-id-not-static-id` dead end) holds for a Save-labeled action
+specifically. No Delete button exists on any of this app's 9 reachable
+leaf pages, so that half is simply unattempted, not confirmed either way.
+More importantly: clicking that Save button does **not** produce anything
+a CRUD test could assert on — though pinning down exactly what it DOES
+do took a real in-place correction along the way (see
+`docs/quirks/26.1.json` `crud-generation-discovery-pass-blocked` for the
+full story): a first manual check concluded no navigation happens at all;
+that was wrong, caught by the live spike spec itself failing with
+"Execution context was destroyed, most likely because of a navigation."
+Confirmed correctly via `page.on('framenavigated')` +
+`page.waitForNavigation()`, run twice: Save triggers a REAL full-page
+POST-redirect-GET (`wwv_flow.accept` → 200 OK → a genuine browser
+navigation), redirecting back to the *identical* page URL — a "create
+another" pattern, not a redirect to a new saved-record URL. What survives
+the correction unchanged: the reloaded page's `P410_NAME` is blank again
+(not echoing the value this test itself supplied), the hidden `P410_ID`
+PK item is still blank (not switched into an "edit the record you just
+created" mode), and neither `#APEX_SUCCESS_MESSAGE` nor
+`#APEX_ERROR_MESSAGE` ever shows. The real blocker is narrower than
+"nothing happens" — it's that nothing CLIENT-OBSERVABLE distinguishes "a
+row was silently inserted with no visible confirmation" from "nothing was
+inserted at all," and a self-created-data CRUD assertion needs an
+observable round trip either way. Separately, every "Primary Row Action"
+link on `browse-interactive-report` points to the *identical* URL
+regardless of row (no per-record id in the href at all), and that URL
+itself 404s (confirmed via a real HTTP request, not just visual
+inspection). This extends, rather than contradicts, the project's own
+already-recorded finding that click-through effects on this specific app
+are "a confirmed dead end... decorative, non-functional demo affordances"
+(`region-action-cards-not-unique-inert`) — the same pattern applies to
+this page's Save action and to Interactive Report's row-action link here,
+not only to Cards/List row actions.
+
+**Verdict: STOP, per this issue's own explicit instruction.** Neither
+primitive is a reliable, confirmed contract yet — (a) is a real typed-AST
+gap (parser work, not runtime), and (b) could not be verified end-to-end
+anywhere reachable in this environment (the no-login app's forms are
+confirmed non-functional for this purpose; the credentialed apps that
+might behave differently were access-blocked). **No CRUD generation code
+was built.** This is treated as a legitimate, valuable outcome of the
+issue, not a failure to close it — forcing a generation feature on top of
+an unconfirmed PK contract and an unconfirmed persistence contract is
+exactly the trap ADR-002/ADR-004 exist to prevent. Re-run this discovery
+pass, and only then resume step 2 (the actual generation code), once
+either: a typed `pkColumn`/`pkItem` field lands from a page's
+`autoRowProcessing`/`formAutoRowProcessing` process target (a `/parser`
+task), *and* a real, reachable, credentialed form-over-table page (Sample
+Interactive Grids' underlying EMP form, or equivalent) is available to
+observe an actual create → PK-assigned → read-back round trip.
