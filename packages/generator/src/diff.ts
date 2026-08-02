@@ -447,6 +447,104 @@ export function diffPageContents(a: ApexPage, b: ApexPage): PageContentsDiff {
   };
 }
 
+/**
+ * Human-readable/prose formatting over an already-computed `DiffReport` --
+ * a templating layer, not new analysis (see docs/ecosystem-roadmap.md
+ * "Ninth round", "Human-readable export diff"). Every fact rendered here
+ * already exists on `DiffReport`/`PageDiff`/`ComponentDiff`; this only
+ * turns it into sentences instead of the CLI's indented `+`/`-`/`~` tree.
+ * Kept alongside the existing structured output (`diff-cli.ts`'s default
+ * behavior), never replacing it -- other tooling/tests may depend on the
+ * structured shape staying exactly as it is.
+ */
+const CATEGORY_LABELS: ReadonlyArray<{ key: keyof PageContentsDiff; label: string }> = [
+  { key: 'items', label: 'item' },
+  { key: 'regions', label: 'region' },
+  { key: 'buttons', label: 'button' },
+  { key: 'dynamicActions', label: 'dynamic action' },
+  { key: 'branches', label: 'branch' },
+  { key: 'validations', label: 'validation' },
+  { key: 'processes', label: 'process' },
+  { key: 'computations', label: 'computation' },
+];
+
+const VERB_BY_KIND: Record<ChangeKind, 'Added' | 'Removed' | 'Changed'> = {
+  added: 'Added',
+  removed: 'Removed',
+  changed: 'Changed',
+};
+
+/**
+ * One clause for a single added/removed/changed item/region/button/etc,
+ * e.g. `Added button SAVE` or `Changed item P3_ENAME (label: "Name" ->
+ * "Full Name")`. For 'changed', the already-computed field-level changes
+ * are folded in parenthetically rather than dropped -- losing that detail
+ * would make prose mode strictly less informative than structured mode,
+ * which this project's "never lose information" discipline (see
+ * DESIGN_GUARDRAILS.md) argues against.
+ */
+export function describeComponentChange(categoryLabel: string, d: ComponentDiff): string {
+  const base = `${VERB_BY_KIND[d.kind]} ${categoryLabel} ${d.identifier}`;
+  if (d.kind === 'changed' && d.changes.length > 0) return `${base} (${d.changes.join('; ')})`;
+  return base;
+}
+
+/**
+ * One prose sentence (or two, for added/removed pages) per `PageDiff`.
+ * `report.pages` only ever contains added/removed/changed pages
+ * (`computeDiff` never pushes an unchanged one), so every entry here has
+ * something to say.
+ */
+export function formatPageHuman(p: PageDiff): string {
+  const header = `Page ${p.id}: ${p.name ?? p.alias} (${p.alias})`;
+
+  if (p.kind === 'added') {
+    return `${header} -- added. Will generate: ${p.affectedFiles.join(', ')}.`;
+  }
+  if (p.kind === 'removed') {
+    return `${header} -- removed. No longer generates: ${p.affectedFiles.join(', ')}.`;
+  }
+
+  const clauses: string[] = [];
+  for (const change of p.pageChanges) clauses.push(`Changed ${change}`);
+  for (const { key, label } of CATEGORY_LABELS) {
+    for (const d of p[key] as ComponentDiff[]) {
+      clauses.push(describeComponentChange(label, d));
+    }
+  }
+
+  const body = clauses.length > 0 ? clauses.join(', ') : 'changed (see raw diff)';
+  return `${header}: ${body}. Affects: ${p.affectedFiles.join(', ')}.`;
+}
+
+/**
+ * The full report as prose -- one line per changed/added/removed page plus
+ * the same summary line the structured CLI output ends with. This is the
+ * function `--format human` in `diff-cli.ts` calls; also usable directly
+ * by anything importing `@apx/testgen/diff` (e.g. `@apx/mcp`, a future CI
+ * comment bot) without going through the CLI at all.
+ */
+export function formatDiffHuman(report: DiffReport): string {
+  const lines: string[] = [];
+  lines.push('Regression report (human-readable)');
+  lines.push(`  old: ${report.oldExportDir}`);
+  lines.push(`  new: ${report.newExportDir}`);
+  lines.push('');
+
+  if (report.pages.length === 0) {
+    lines.push('No page changes detected.');
+  } else {
+    for (const p of report.pages) lines.push(formatPageHuman(p));
+  }
+
+  lines.push('');
+  const s = report.summary;
+  lines.push(
+    `Summary: ${s.pagesAdded} added, ${s.pagesRemoved} removed, ${s.pagesChanged} changed, ${s.pagesUnchanged} unchanged`,
+  );
+  return lines.join('\n');
+}
+
 export function computeDiff(oldExportDir: string, newExportDir: string): DiffReport {
   const oldResult = parseApp(loadExport(resolve(oldExportDir)));
   const newResult = parseApp(loadExport(resolve(newExportDir)));

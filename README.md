@@ -257,7 +257,7 @@ not existing).
 | Region actions (row-level action/link in Cards/List regions) | ✅ `ApexRegion.actions` (`ApexRegionAction` — identifier/label/kind/target/url; distinct from the Dynamic-Action `action`) | 🚧 `region-action.ts` — presence-only, confirmed live for Cards' `action-d` shape (NOT unique per region — same label repeats once per record); List's `action-e` shape confirmed structurally different (menu-based), not wrapped. Click-through effects confirmed a DEAD END on the only live app available (every tested action is a non-functional placeholder) | ❌ not wired into generator yet |
 | Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
-| Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed) | — |
+| Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed; `--format human` for prose output alongside the default structured tree) | — |
 
 Full list of limitations in docs/limitations.md; a few of the stories
 behind specific rows:

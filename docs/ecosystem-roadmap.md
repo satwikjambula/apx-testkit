@@ -1881,16 +1881,21 @@ more careful split than the maintainer's own framing gives it.
 
 ### Genuinely close to buildable — low risk, real precedent, thin layer over what already exists
 
-- **Human-readable export diff, item 3.** `apx-diff` already computes
-  exactly the structured facts this asks for — per-page added/removed/
-  changed items, regions, buttons (old→new field values), and now
-  field-by-field diffs for `branch`/`validation`/`process`/`computation`/
-  `column`/`action`/`dynamicAction` (Seventh/Continuation rounds). Turning
-  that already-computed structure into a sentence ("Page 12: Added button
-  Save, Removed validation Salary Required, Changed LOV Department") is a
-  templating layer over existing output, not new analysis — zero new
-  ground-truth risk, no new Oracle API surface, nothing ADR-002 governs.
-  **Build now.**
+- **Human-readable export diff, item 3 — DONE.** Shipped as
+  `formatDiffHuman()`/`formatPageHuman()` in `packages/generator/src/diff.ts`
+  + a `--format human` flag on the `apx-diff` CLI (`diff-cli.ts`), alongside
+  the existing structured (default) output, which is byte-for-byte
+  unchanged. Pure templating over the already-computed `DiffReport` — one
+  prose sentence per added/removed/changed page (e.g. "Page 3: Employee
+  (EMPLOYEE): Changed title: ..., Added item P3_EMAIL, Changed item
+  P3_ENAME (label: ... -> ...), Changed button save (label: ... -> ...).
+  Affects: p00003-employee.page.ts, p00003-employee.spec.ts."), folding in
+  the already-computed field-level changes parenthetically rather than
+  dropping them — zero new ground-truth risk, no new Oracle API surface,
+  nothing ADR-002 governs, exactly as anticipated below. `--json <path>`
+  is unaffected by `--format` and still writes the full structured report
+  either way. See GitHub issue #1 and `docs/tutorial.md` 2.10 for the full
+  example and usage.
 - **Coverage visualization, item 5.** Same shape: `apx-coverage` already
   computes touched/untouched/untrackable per identifier. A heatmap or
   checklist view is a presentation layer over data that already exists —
