@@ -36,16 +36,16 @@ your own exports to reproduce or extend it.)
 |---|---|---|---|
 | `staticContent` | 46/46 | 2849 | N/A — not a widget region |
 | `breadcrumb` | 31/46 | 836 | N/A — not a widget region |
-| `classicReport` | 35/46 | 499 | Not verified — no dedicated component |
-| `interactiveReport` | 29/46 | 377 | **Verified** — generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues, focus, getViewName); search/sort/pagination confirmed private (`_`-prefixed); `expectRegionsResolve()` also confirmed live (ADR-003 htmlDomId-resolved where set) |
-| `list` | 29/46 | 192 | Not verified — no dedicated component |
+| `classicReport` | 35/46 | 499 | No region-level component (no `apex.region()` widget dispatch for this type), but its COLUMN HEADERS are now **verified** — `report-column.ts`'s `reportColumnHeader()`/`classicReportColumnById()`, confirmed live (Eighth round, 2026-08-01) against `item-detail-full`'s `child-records` region |
+| `interactiveReport` | 29/46 | 377 | **Verified** — generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues, focus, getViewName); search/sort/pagination confirmed private (`_`-prefixed) at the JS-widget-API level; `expectRegionsResolve()` also confirmed live (ADR-003 htmlDomId-resolved where set). UPDATE (Eighth round, 2026-08-01): search/sort ARE now verified through a genuinely different path — accessible-role UI locators, not the JS API — see `interactive-report.ts`/`report-column.ts` and `docs/quirks/26.1.json` `interactive-report-accessible-locator-search-sort`. Pagination still not verified (no live multi-page dataset available) |
+| `list` | 29/46 | 192 | Not verified — no dedicated region component. Its row-level actions were investigated (Eighth round, 2026-08-01, `faceted-search-content-row`): rendered behind a "Row Actions" menu, a confirmed-different DOM contract from Cards' `action-d` (see `region-action.ts` module doc) — not wrapped, see `docs/quirks/26.1.json` `region-action-cards-not-unique-inert` |
 | `chart` | 14/46 | 149 | **Verified** — `ApexChartRegion` (`getOption`/`setOption`, confirmed live on 3 chart types); generic `ApexRegion.refresh()` also confirmed. Static config typed: `ApexRegion.chartSettings.type` + `ApexRegion.htmlDomId`. Corrects an earlier wrong claim that `apex.region(id).widget()` returns `null` for charts — it does not (see `docs/quirks/26.1.json` `chart-region-widget-returns-null`). Also confirmed live: declared type ≠ runtime type in at least one case (`donut` reports as `pie` — `chart-declared-type-not-runtime-type`) |
 | `regionDisplaySelector` | 16/46 | 143 | Not verified |
 | `form` | 14/46 | 114 | N/A — items within forms verified individually via `item.ts` |
 | `dynamicContent` | 11/46 | 104 | Not verified, no dedicated component. Promoted from the long-tail catch-all row to its own line in an earlier round — no longer a rare type (11/46 apps, 104 instances) |
 | `themeTemplateComponent/contentRow` | 9/46 | 93 | Not verified — see the `themeTemplateComponent/*` aggregate note below the table |
 | `interactiveGrid` | 11/46 | 101 | **Verified** — `ApexInteractiveGridRegion` (getActions, getViews, getCurrentView, getCurrentViewId, getSelectedRecords); auto-generated `getCurrentViewId()` check when `htmlDomId` is set |
-| `cards` | 12/46 | 61 | **Verified** — `ApexCardsRegion` (pagination, selection); `getRecords`/`getModel` confirmed broken |
+| `cards` | 12/46 | 61 | **Verified** — `ApexCardsRegion` (pagination, selection); `getRecords`/`getModel` confirmed broken. Row-level actions ALSO verified for presence (Eighth round, 2026-08-01, `region-action.ts`) — click-through effects confirmed a dead end on this app, presence-only, see `docs/quirks/26.1.json` `region-action-cards-not-unique-inert` |
 | `plugin/componentInstructions` | 1/46 | 53 | Not verified — see the `plugin/*` aggregate note below the table |
 | `plSqlDynamicContent` | 11/46 | 52 | Not verified, no dedicated component. Also promoted to its own line in an earlier round (11/46 apps, 52 instances) |
 | `plugin/sourceDisplay` | 8/46 | 49 | Not verified — `plugin/*` aggregate |
@@ -460,12 +460,22 @@ unrelated EBNF production, checked side by side to keep the two distinct.
 | `sample-document-generator` | 3 |
 | **Total (39/46 apps)** | **10683** |
 
-Verification status: typed metadata only. The single highest-volume
-construct typed in this pass — `classicReport` alone is present on 35/46
-apps, `interactiveReport` 29/46 — real `apx-diff` value (label/format/
-link-target changes are precisely "did the UI change" signal), no runtime
-component (no verified static-id-to-DOM convention for an individual
-column, a separate, already-tracked runtime gap).
+Verification status: typed metadata AND a real runtime component, as of
+the Eighth round (2026-08-01) live-discovery pass —
+`packages/testkit/src/components/report-column.ts`. Confirmed live against
+both `classicReport` (`item-detail-full`) and `interactiveReport`
+(`browse-interactive-report`) regions in UX Pattern Catalog:
+`reportColumnHeader()`/`expectReportColumnHeadersPresent()` (accessible
+`columnheader` role, works for both region types) and
+`classicReportColumnById()` (classicReport ONLY — the column's DOM id
+equals the `.apx` identifier verbatim, a column-level extension of
+ADR-003's region-level `htmlDomId` finding; `interactiveReport`'s column
+DOM id is a confirmed-undiscoverable internal numeric id, the same
+"layer 3" class of finding as region ids without `htmlDomId`). Sort-state
+assertions (`aria-sort`) for Interactive Report columns live in
+`interactive-report.ts` — see that component's own coverage entry. See
+docs/quirks/26.1.json (`classic-report-column-id-verbatim`,
+`interactive-report-column-id-internal`) for full evidence.
 
 ## Region actions (`ApexRegion.actions`)
 
@@ -495,9 +505,22 @@ by this pass) and the confirmed-common `type`/`position` omission
 | `cloud-apps-rest-explorer` | 1 |
 | **Total (14/46 apps)** | **192** |
 
-Verification status: typed metadata only, no runtime component (the
-Dynamic-Action `action` variant, `ApexDAAction`, is unaffected and
-unrelated — see its own entry above).
+Verification status: typed metadata AND a real, but deliberately
+RESTRAINED, runtime component, as of the Eighth round (2026-08-01)
+live-discovery pass — `packages/testkit/src/components/region-action.ts`.
+Confirmed live against a Cards region (`faceted-search-cards`) and a List
+region (`faceted-search-content-row`) in UX Pattern Catalog:
+`regionActionLocator()`/`expectRegionActionPresent()` cover PRESENCE only
+(the Cards `action-d` direct-link/button rendering; confirmed NOT unique
+per region — the same label repeats once per record, with no confirmed
+way to scope to a specific record). Click-through EFFECTS are explicitly
+NOT asserted — confirmed a dead end on this app (every tested action, both
+Cards and List, is a non-functional placeholder: no navigation, no
+network activity). List's `action-e` variant renders behind a "Row
+Actions" menu, a confirmed-different two-step DOM contract, deliberately
+not wrapped in this pass. The Dynamic-Action `action` variant,
+`ApexDAAction`, is unaffected and unrelated — see its own entry above. See
+docs/quirks/26.1.json `region-action-cards-not-unique-inert`.
 
 ## Item LOV references (`ApexItem.lovName`)
 

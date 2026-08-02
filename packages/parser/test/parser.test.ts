@@ -448,6 +448,56 @@ describe('region.htmlDomId (advanced { htmlDomId: ... })', () => {
   });
 });
 
+describe('button.htmlDomId (advanced { htmlDomId: ... })', () => {
+  // Confirmed against the official EBNF's button-advanced-property
+  // production -- the SAME advanced { htmlDomId } shape already confirmed
+  // for regions (ADR-003), applied to buttons. UNLIKE the region case, no
+  // real button anywhere in this project's local corpus (46+ real
+  // exports) has ever been found to actually set this -- see the doc
+  // comment on ApexButton.htmlDomId and docs/quirks/26.1.json
+  // `button-id-not-static-id`. These tests cover the field mechanically
+  // (populated + absent), matching the same shape already tested for
+  // region.htmlDomId, not a live-verified positive case.
+  it('projects an explicit htmlDomId override when present', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region employee (
+    type: form
+    button save (
+      label: Save
+      action: submit
+      advanced {
+        htmlDomId: mySaveButton
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [button] = result.ast.pages[0].regions[0].buttons;
+    expect(button.htmlDomId).toBe('mySaveButton');
+  });
+
+  it('is null when no advanced { } group is present -- the confirmed-common real-world case', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region employee (
+    type: form
+    button save (
+      label: Save
+      action: submit
+    )
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [button] = result.ast.pages[0].regions[0].buttons;
+    expect(button.htmlDomId).toBeNull();
+  });
+});
+
 describe('multi-line array parsing (bug: first element dropped)', () => {
   // Reproduces a real, wide-reaching bug found via a calendar region's
   // `calendarViewsAndNavigation` array: when '[' is the LAST character on

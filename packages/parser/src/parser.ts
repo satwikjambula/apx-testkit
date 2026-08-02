@@ -313,6 +313,7 @@ function projectButton(n: ComponentNode): ApexButton {
     identifier: n.identifier ?? '(anonymous)',
     label: str(n.props['label']),
     action: str(n.props['behavior.action']) ?? str(n.props['action']),
+    htmlDomId: str(n.props['advanced.htmlDomId']),
     loc: n.loc,
     raw: n.props,
   };

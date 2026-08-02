@@ -212,6 +212,9 @@ export function diffButtonFields(a: ApexButton, b: ApexButton): string[] {
   const changes: string[] = [];
   if (a.label !== b.label) changes.push(`label: ${JSON.stringify(a.label)} -> ${JSON.stringify(b.label)}`);
   if (a.action !== b.action) changes.push(`action: ${JSON.stringify(a.action)} -> ${JSON.stringify(b.action)}`);
+  if (a.htmlDomId !== b.htmlDomId) {
+    changes.push(`htmlDomId: ${JSON.stringify(a.htmlDomId)} -> ${JSON.stringify(b.htmlDomId)}`);
+  }
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }

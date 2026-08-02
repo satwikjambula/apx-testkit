@@ -27,6 +27,8 @@ number of real apps, and honest about what doesn't work yet.
    - [2.11 Interactive Grid](#211-interactive-grid)
    - [2.12 Dynamic Actions (metadata only)](#212-dynamic-actions-metadata-only)
    - [2.13 Chart](#213-chart)
+   - [2.14 Report columns](#214-report-columns)
+   - [2.15 Region actions (Cards/List row-level)](#215-region-actions-cardslist-row-level)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -465,17 +467,17 @@ await facets.hideFacet('some-facet-id');
 
 ### 2.6 Interactive Report
 
-**Status: generic `ApexRegion` only — no dedicated component.** This is a
-real finding, not an oversight: Interactive Report's search/sort/pagination
-internals are implemented as `_`-prefixed methods on the underlying widget
-instance (`_search`, `_paginate`, `_reset`, `_download`, ...) — private by
-jQuery-UI-widget-factory convention. The only PUBLIC instance methods
-beyond the generic region API are `refresh`, `openDialogChat`,
-`openInlineChat`, `closeChat` (APEX 26.1 ships an AI chat integration on
-IR). There is no safe, documented way to drive IR search/sort/pagination
-via a JS method call — use the generic `ApexRegion` for what it does
-support, and drive search/pagination through the actual UI (fill the
-search field, click pagination links) for anything else:
+**Status: generic `ApexRegion` for the JS API; VERIFIED UI-locator-driven
+search/sort via `interactive-report.ts`.** This is a real finding, not an
+oversight: Interactive Report's search/sort/pagination internals ARE
+implemented as `_`-prefixed methods on the underlying widget instance
+(`_search`, `_paginate`, `_reset`, `_download`, ...) — private by
+jQuery-UI-widget-factory convention, confirmed still true, not
+re-litigated. The only PUBLIC instance methods beyond the generic region
+API are `refresh`, `openDialogChat`, `openInlineChat`, `closeChat` (APEX
+26.1 ships an AI chat integration on IR). There is no safe, documented way
+to drive IR search/sort/pagination via a JS method call — use the generic
+`ApexRegion` for what it does support:
 
 ```ts
 import { ApexRegion } from '@apx/testkit';
@@ -485,6 +487,37 @@ await report.refresh();
 await report.getViewName();      // 'REPORT', 'CHART', etc.
 await report.getSessionState();
 ```
+
+**Search and sort ARE covered, through a genuinely different path** —
+driving the actual visible UI via Playwright accessible-role locators
+(`interactive-report.ts`), confirmed live against the same app/page
+(Eighth round, 2026-08-01):
+
+```ts
+import { getColumnSortState, searchInteractiveReport, sortReportColumn } from '@apx/testkit';
+
+const regionId = 'R11643575732369775'; // real runtime static id, see 2.3's caveat
+
+// Unquoted multi-word terms match ANY word (OR) -- confirmed live,
+// "Item 2" unquoted matched every row because "Item" alone is common to
+// all of them. Quote for exact-phrase matching:
+await searchInteractiveReport(page, regionId, '"Item 2"');
+
+await sortReportColumn(page, regionId, 'Priority', 'ascending');
+await getColumnSortState(page, 'Priority'); // 'ascending' | 'descending' | null, reads aria-sort
+```
+
+`sortReportColumn()` ALWAYS force-clicks the column header's sort-trigger
+link — confirmed live and reproducible on 3 independent columns: APEX's
+own `stickyTableHeader` widget renders an always-present visual clone of
+the header row, exactly overlapping the real one from the moment the page
+loads (no scroll needed), which fails Playwright's default actionability
+check but correctly forwards clicks to the same handler when forced.
+Pagination is NOT covered — a real accessible `Pagination` region exists,
+but no live multi-page dataset was available to verify next/prev click
+behavior; see docs/quirks/26.1.json
+`interactive-report-accessible-locator-search-sort` for full evidence, and
+2.14 for column header locators specifically.
 
 ### 2.7 Navigation & console
 
@@ -840,6 +873,100 @@ assumption, not a safe generalization — see docs/quirks/26.1.json
 which two values (`pie`, `area`) are confirmed to match their declared
 type directly.
 
+### 2.14 Report columns
+
+**Status: VERIFIED, two genuinely different DOM-id contracts.**
+`report-column.ts`, confirmed live against TWO independently typed report
+region types on the same live app (UX Pattern Catalog) — `classicReport`
+(`item-detail-full`) and `interactiveReport` (`browse-interactive-report`).
+
+```ts
+import { classicReportColumnById, expectReportColumnHeadersPresent, reportColumnHeader } from '@apx/testkit';
+
+// Works identically on classicReport AND interactiveReport -- keyed by
+// heading TEXT via the accessible `columnheader` role, no DOM id needed.
+await expectReportColumnHeadersPresent(page, ['Name', 'Type', 'Owner']);
+const header = reportColumnHeader(page, 'Name');
+await header.getAttribute('aria-sort'); // interactiveReport only -- see 2.6
+
+// classicReport ONLY -- the column's DOM id equals the .apx column's
+// identifier VERBATIM, confirmed live on all 5 columns of a real region,
+// cross-checked directly against the .apx export's own `column
+// CHILD_RECORD_NAME ( ... )` declarations. Scoped internally around a
+// confirmed sticky-header-widget duplicate-id issue -- do not build a
+// plain `page.locator('#' + id)` yourself, use this function.
+const cell = classicReportColumnById(page, 'CHILD_RECORD_NAME');
+```
+
+**Two different, non-interchangeable DOM-id contracts, confirmed live —
+do not conflate them:**
+- `classicReport`: the `<th>`'s own `id` IS the `.apx` column identifier,
+  verbatim, always (confirmed: 5/5 real columns on `item-detail-full`
+  matched exactly). No sort affordance exists on this region type (no
+  wrapping `<a>`, no `aria-sort`) — a real, structural difference from
+  Interactive Report, not a gap.
+- `interactiveReport`: the `<th>`'s own `id` is an APEX-internal
+  auto-generated numeric id (e.g. `C11643982695369779`) with **no**
+  corresponding field anywhere in the static export — confirmed
+  genuinely undiscoverable (export identifiers were `TITLE`/`CATEGORY`/
+  etc., runtime ids were unrelated numeric strings). Use
+  `reportColumnHeader()` (accessible role, no id needed) for this region
+  type instead.
+
+**A generator auto-assertion was attempted and reverted** — see
+docs/quirks/26.1.json `interactive-report-column-heading-not-always-own-
+header`: a real Interactive Report column (`DESCRIPTION`, a non-hidden,
+`plainText`-typed column with a declared heading) has NO matching runtime
+`columnheader` at all — its content is folded into the `Title` column's
+own cell instead (a real IR "primary column group" rendering pattern).
+Auto-deriving the full heading list from `.apx` metadata alone would have
+shipped a smoke test guaranteed to fail on real data; this was caught
+live before being committed. The functions above remain real and
+verified for a caller who supplies a deliberately curated, live-confirmed
+list of headings — see `spike/tests/report-column-demo.spec.ts`.
+
+### 2.15 Region actions (Cards/List row-level)
+
+**Status: VERIFIED for presence; click-through effects are a confirmed
+dead end on the only live app available.** `region-action.ts`, confirmed
+live against a Cards region (`faceted-search-cards`) and a List region
+(`faceted-search-content-row`).
+
+```ts
+import { expectRegionActionPresent, regionActionCount, regionActionLocator } from '@apx/testkit';
+
+// Cards' action-d shape only (see caveats below) -- an accessible link,
+// name = the action's .apx label.
+await expectRegionActionPresent(page, 'Edit', 1);
+const count = await regionActionCount(page, 'Edit'); // > 1 is the expected common case
+```
+
+**Read before using:**
+- The action's `label` is **NOT unique per region** — confirmed live, the
+  same label repeats once per rendered record (24 `Edit` links on one
+  Cards region, one per card), with no confirmed way to scope to a
+  specific record from `.apx` metadata alone. `regionActionLocator()`
+  returns all of them; callers needing a specific row must scope further
+  themselves (`.nth(i)`, or an ancestor container holding identifying
+  text).
+- List/Content Row regions (`action-e`) render row actions COMPLETELY
+  DIFFERENTLY — confirmed live, behind a single, also-non-unique "Row
+  Actions" button per row that opens a menu whose `menuitem`-role entries
+  carry the real labels. This two-step contract is deliberately **not**
+  wrapped by `regionActionLocator()` — a genuinely different DOM shape,
+  not a bug.
+- **No click-through effect assertion is shipped.** Confirmed a dead end
+  on this app: every action tested (Cards' `Edit` link, a Cards title
+  link, List's `Row Action 1`/`2`/`3` menu items) has no real navigation
+  target and produces zero observable effect on click — this reference
+  app ships decorative, non-functional demo affordances for this
+  component family. See docs/quirks/26.1.json
+  `region-action-cards-not-unique-inert` for the full evidence, including
+  a real counter-example on the SAME app (Interactive Report's `Primary
+  Row Action` link DOES navigate) showing this isn't a universal
+  limitation of the mechanism, just unverified for Cards/List
+  specifically.
+
 ---
 
 ## 3. Page types & patterns
@@ -858,10 +985,21 @@ already do exactly this — see the example in section 1.
 ### 3.2 Reports
 
 Interactive Report pages: use the generic `ApexRegion` (2.3/2.6) for
-refresh and view-name checks. There is currently no generated assertion
-for report content (row counts, search results) — that's an open item
-(see docs/ecosystem-roadmap.md); write it by hand with `ApexRegion` plus
-whatever `apex.item()`-backed search field the report exposes.
+refresh and view-name checks, plus `interactive-report.ts` (2.6) for
+search/sort via UI locators, and `report-column.ts` (2.14) for column
+header presence/id assertions — all confirmed live. classicReport pages:
+`report-column.ts` (2.14) covers column presence and (classicReport only)
+a verified DOM-id convention; there is no dedicated classicReport region
+component (no `apex.region()` widget dispatch for this type at all).
+None of this is wired into the GENERATOR yet — write it by hand, the same
+way `spike/tests/report-column-demo.spec.ts`/`interactive-report-demo.spec.ts`
+do (a generator auto-assertion for report content was attempted and
+reverted after a real live counter-example, see docs/quirks/26.1.json
+`interactive-report-column-heading-not-always-own-header`). No assertion
+exists for actual row counts/search RESULTS beyond what
+`searchInteractiveReport()` lets you check yourself with regular
+Playwright locators against the rendered rows — that remains an open item
+(see docs/ecosystem-roadmap.md).
 
 ### 3.3 Cards & faceted search pages
 
@@ -987,9 +1125,21 @@ headline gaps:
   otherwise undiscoverable from the export alone (confirmed on 66/97 real
   chart regions in Oracle's "Sample Charts" app). Construct it by hand
   with the real static id when `htmlDomId` is absent.
-- **Region *assertions*** (as opposed to the `ApexRegion` API, which
-  exists) — the region-identifier-to-DOM convention is still open, so the
-  generator doesn't emit region-presence checks yet.
+- **Region *assertions* for most region types** (as opposed to the
+  `ApexRegion` API, which exists) — CORRECTED: the generator DOES emit
+  region resolve-checks for `interactiveReport`/`cards`/`facetedSearch`,
+  and report-column-heading presence assertions exist in `@apx/testkit`
+  (2.14) — the open part is narrower now: most OTHER region types still
+  have no verified DOM convention, and the generator doesn't auto-derive
+  a report's full column-heading list (attempted, reverted — see 2.14).
+- **Interactive Report pagination** — a real, accessible `Pagination`
+  region exists, but no live multi-page dataset was available to verify
+  next/prev click behavior; not wrapped as a result (2.6).
+- **Region action (Cards/List) click-through effects** — presence is
+  verified (2.15), but no click produces an observable effect on the only
+  live app available (confirmed decorative/non-functional demo
+  affordances) — a real app with a functionally wired Cards/List action
+  would be needed to verify this further.
 - **`required` item behavior** — no required item exists in any
   ground-truth app used so far, so "required items reject empty submit"
   isn't asserted anywhere yet.

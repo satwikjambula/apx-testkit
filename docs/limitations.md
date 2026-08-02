@@ -17,13 +17,36 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   identifier (`basic-editing` in the export, `emp` at runtime) — see
   docs/quirks/26.1.json `region-id-not-static-id`. Construct it by hand
   with the real static id, discovered from the live DOM.
-- **Region assertions don't exist.** The region identifier -> DOM convention
-  is still an open ledger item (see docs/grammar-assumptions.md "Still
-  open") — no selector guess has been committed. `@apx/testkit`'s
-  `probeRegions()`/`refreshRegion()` only report what apex.region()'s own
-  widget API resolves, which is known to miss non-widget regions
-  (staticContent, form). Confirmed concretely divergent for Interactive
-  Grid (see above) — open whether other region types can also diverge.
+- **Region assertions don't exist for arbitrary region types** — the
+  region identifier -> DOM convention is still an open ledger item for
+  most types (see docs/grammar-assumptions.md "Still open") — no selector
+  guess has been committed. `@apx/testkit`'s `probeRegions()`/
+  `refreshRegion()` only report what apex.region()'s own widget API
+  resolves, which is known to miss non-widget regions (staticContent,
+  form). Confirmed concretely divergent for Interactive Grid (see above)
+  — open whether other region types can also diverge. UPDATE (stale line,
+  corrected in place): `expectRegionsResolve()` DOES exist and is
+  auto-wired into generated specs for `interactiveReport`/`cards`/
+  `facetedSearch` specifically (see `lib.ts`'s `RESOLVABLE_REGION_TYPES`)
+  — this bullet's "don't exist" framing predates that and is narrower than
+  it reads; "most types" is the accurate scope now. Report COLUMN headers
+  (a level below the region itself) are also now covered —
+  `report-column.ts`'s `reportColumnHeader()`/
+  `expectReportColumnHeadersPresent()`, confirmed live on classicReport
+  AND interactiveReport (Eighth round, 2026-08-01) — but a generator
+  auto-assertion deriving the full heading list from `.apx` metadata was
+  attempted and REVERTED: a real Interactive Report counter-example (a
+  declared, non-hidden column with no matching runtime header, folded
+  into another column's cell) would have shipped a guaranteed-failing
+  test. See docs/quirks/26.1.json
+  `interactive-report-column-heading-not-always-own-header`. Interactive
+  Report's search/sort are also now reachable, through UI locators rather
+  than the (confirmed-private) JS widget API — `interactive-report.ts`,
+  same round. Cards/List row-level actions (`ApexRegion.actions`) are
+  reachable for PRESENCE only — `region-action.ts` — click-through effects
+  are a confirmed dead end on the one live app available (non-functional
+  placeholder affordances); see docs/quirks/26.1.json
+  `region-action-cards-not-unique-inert`.
 - **Pages with `security.pageAccessProtection: argumentsMustHaveChecksum`
   cannot be reached via `gotoApexPage()`'s bare-goto navigation**, even
   immediately after a verified login. Confirmed live: only real in-app link
@@ -51,6 +74,16 @@ workaround isn't obvious; that's exactly the signal M4 needs.
 - **Button assertions use accessible-role/label locators, not a verified
   static-id convention.** Works today for ordinary labeled buttons; not
   verified for icon-only buttons or heavily template-customized ones.
+  UPDATE (Eighth round, 2026-08-01): the "static-id convention" question
+  has real, confirmed evidence now, not just an open question — the EBNF
+  confirms `button.advanced.htmlDomId`/`staticId` exist (the SAME
+  mechanism ADR-003 already established for regions, now typed as
+  `ApexButton.htmlDomId`), but a full grep of every button in this
+  project's entire local corpus (46+ real exports) found ZERO that ever
+  set either field; live-confirmed the runtime id in that (universal, so
+  far) case is an internal `B<numeric>` id, undiscoverable from export
+  data. `button.ts`'s locator strategy is unchanged as a direct result —
+  see docs/quirks/26.1.json `button-id-not-static-id`.
 
 ## Item coverage
 
@@ -104,9 +137,23 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   environment this project has been developed in. `spike/tests-generated/`
   may lag the current generator template until someone with real export
   access regenerates it.
-- **No page-object/spec support for Interactive Report search, pagination,
-  or Interactive Grid** — an `ir.ts` component was deliberately not built;
-  there's no verified DOM contract for it yet.
+- **No page-object/spec (generator) support for Interactive Report
+  search/sort/pagination or Interactive Grid.** UPDATE (Eighth round,
+  2026-08-01): `@apx/testkit` itself DOES now have a verified component
+  for IR search/sort — `interactive-report.ts` (`searchInteractiveReport`/
+  `sortReportColumn`/`getColumnSortState`), confirmed live via UI
+  locators (not the confirmed-private JS widget API). The gap this bullet
+  describes is narrower than it used to be: the GENERATOR doesn't
+  auto-wire either capability into generated specs (search/sort are
+  mutating, state-changing operations — auto-firing them in every
+  generated smoke spec wasn't judged safe to add without further review;
+  a column-heading PRESENCE auto-assertion was attempted separately and
+  reverted after a real live counter-example, see docs/quirks/26.1.json
+  `interactive-report-column-heading-not-always-own-header`).
+  Pagination remains genuinely unverified — no live multi-page dataset
+  was available to check next/prev click behavior against. Interactive
+  Grid's generator gap is unrelated and unchanged — see the `htmlDomId`
+  bullet above.
 - **Data-dependent assertions are out of scope, permanently, by design** —
   the generator has no way to know what data your instance holds.
 

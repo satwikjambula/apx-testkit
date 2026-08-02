@@ -43,6 +43,24 @@ export { ApexFacetsRegion } from './components/faceted-search.js';
 export { ApexInteractiveGridRegion } from './components/interactive-grid.js';
 export { ApexChartRegion } from './components/chart.js';
 export {
+  reportColumnHeader,
+  reportColumnHeadersPresent,
+  expectReportColumnHeadersPresent,
+  classicReportColumnById,
+  type ReportColumnPresence,
+} from './components/report-column.js';
+export {
+  interactiveReportSearchBox,
+  searchInteractiveReport,
+  getColumnSortState,
+  sortReportColumn,
+} from './components/interactive-report.js';
+export {
+  regionActionLocator,
+  regionActionCount,
+  expectRegionActionPresent,
+} from './components/region-action.js';
+export {
   successMessage,
   errorMessage,
   expectSuccess,

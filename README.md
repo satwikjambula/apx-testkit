@@ -266,10 +266,10 @@ not existing).
 |---|---|---|---|
 | Page (alias/name/title) | ✅ | ✅ `gotoApexPage`/`normalizeTitle` | ✅ load + title |
 | pageItem (text/number/select/date/hidden) | ✅ | ✅ `ApexItem` | ✅ presence + round-trip |
-| Button | ✅ (label/action) | 🚧 accessible-role locator, no verified id convention; ✅ `expectButtonsPresent()`/`buttonsPresent()` confirmed live against 9 real buttons (Sample Charts, Area page) | ✅ click methods + an auto-generated non-mutating presence assertion per page, for every labeled button |
+| Button | ✅ (label/action) + `ApexButton.htmlDomId` (typed but confirmed UNSET on every real button in this project's corpus — see below) | 🚧 accessible-role locator, no verified id convention; ✅ `expectButtonsPresent()`/`buttonsPresent()` confirmed live against 9 real buttons (Sample Charts, Area page) | ✅ click methods + an auto-generated non-mutating presence assertion per page, for every labeled button |
 | Region (generic) | ✅ (type/name/source) | ✅ `ApexRegion` — confirmed on 3 widget types; `expectRegionsResolve()` confirmed live for Interactive Report/Cards/Faceted Search (ADR-003 htmlDomId-resolved where set) | ✅ auto-generated resolve-check per page for Interactive Report/Cards/Faceted Search regions, with explicit skip notes for other types |
-| Interactive Report | ✅ | 🚧 `ApexRegion` only — search/sort/pagination confirmed private, no public API | ❌ |
-| Cards | ✅ | ✅ `ApexCardsRegion` — `getRecords()`/`getModel()` confirmed broken | ❌ not wired into generator yet |
+| Interactive Report | ✅ | 🚧 `ApexRegion` — search/sort/pagination confirmed private on the JS widget API, no public API there; ✅ search/sort ARE verified through a genuinely different path — `interactive-report.ts`'s UI-locator-driven `searchInteractiveReport()`/`sortReportColumn()`/`getColumnSortState()`, confirmed live (quoted-phrase vs. unquoted-OR search semantics documented; sort requires a documented `{ force: true }` click due to a confirmed `stickyTableHeader` DOM overlap). Pagination not verified — no live multi-page dataset available | ❌ (column-heading auto-assertion was attempted and reverted — see Report columns row) |
+| Cards | ✅ | ✅ `ApexCardsRegion` — `getRecords()`/`getModel()` confirmed broken; row-level actions also verified for presence (see Region actions row) | ❌ not wired into generator yet |
 | Faceted Search | ✅ | ✅ `ApexFacetsRegion` | ❌ not wired into generator yet |
 | Page messages (success/error) | N/A (global, not page metadata) | ✅ `messages.ts` | ❌ not wired into generator yet |
 | Checkbox | ✅ (type string) | ❌ not tested live | ❌ |
@@ -285,8 +285,8 @@ not existing).
 | LOV references (`selectList`/`radioGroup`/`popupLov` only) | ✅ `ApexItem.lovName` — narrow reference to the named LOV; the LOV's actual list of values (`shared-components/lovs.apx`) remains out of scope | — | ❌ not wired into generator yet |
 | Processes (page-processing PL/SQL or built-in DML) | ✅ `ApexPage.processes` (name/type/sequence/point, condition) | N/A — no runtime hook exists; the only observable effect (resulting page state) is already assertable via existing mechanisms | ❌ not wired into generator yet |
 | Computations (item-value-setting rules) | ✅ `ApexPage.computations` (itemName/sequence/type, condition) | N/A — same reasoning as Processes | ❌ not wired into generator yet |
-| Report columns (classicReport/IR/IG column definitions) | ✅ `ApexRegion.columns` (identifier/type/heading/sequence, link target) | ❌ no verified static-id-to-DOM convention for an individual column | ❌ not wired into generator yet |
-| Region actions (row-level action/link in Cards/List regions) | ✅ `ApexRegion.actions` (`ApexRegionAction` — identifier/label/kind/target/url; distinct from the Dynamic-Action `action`) | ❌ no runtime component | ❌ not wired into generator yet |
+| Report columns (classicReport/IR/IG column definitions) | ✅ `ApexRegion.columns` (identifier/type/heading/sequence, link target) | ✅ `report-column.ts` — `reportColumnHeader()`/`expectReportColumnHeadersPresent()` confirmed live on classicReport AND interactiveReport; `classicReportColumnById()` confirmed live: DOM id === `.apx` identifier verbatim (classicReport only — interactiveReport's column id is a confirmed-internal, undiscoverable numeric id) | ❌ a generator auto-assertion was built and then REVERTED — a real Interactive Report counter-example (a declared, non-hidden column heading with no matching runtime `columnheader`, folded into another column's cell instead) would have shipped a guaranteed-failing test; see docs/quirks/26.1.json `interactive-report-column-heading-not-always-own-header` |
+| Region actions (row-level action/link in Cards/List regions) | ✅ `ApexRegion.actions` (`ApexRegionAction` — identifier/label/kind/target/url; distinct from the Dynamic-Action `action`) | 🚧 `region-action.ts` — presence-only, confirmed live for Cards' `action-d` shape (NOT unique per region — same label repeats once per record); List's `action-e` shape confirmed structurally different (menu-based), not wrapped. Click-through effects confirmed a DEAD END on the only live app available (every tested action is a non-functional placeholder) | ❌ not wired into generator yet |
 | Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
 | Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed) | — |
@@ -294,11 +294,16 @@ not existing).
 Full list of limitations in docs/limitations.md; a few of the stories
 behind specific rows:
 
-- **Region/button assertions don't exist yet.** The DOM identifier
-  convention is still an open discovery item (see
-  docs/grammar-assumptions.md "Still open"); button *click methods* work
-  today via accessible-role/label locators as a deliberate interim
-  workaround, not a verified static-id convention.
+- **CORRECTED — this line was stale.** Region resolve-checks
+  (`expectRegionsResolve()`) and report-column-heading assertions
+  (`expectReportColumnHeadersPresent()`) both exist and are live-verified
+  (see the capability matrix above); what remains genuinely open is
+  narrower: a verified BUTTON static-id convention specifically (button
+  *click methods* work today via accessible-role/label locators as a
+  deliberate, still-current choice — see `docs/quirks/26.1.json`
+  `button-id-not-static-id`: the mechanism exists in the EBNF, mirroring
+  regions, but is confirmed unset on every real button in this project's
+  corpus so far, so nothing safer to build against exists yet).
 - **`auth.ts` is partially verified, not fully closed out.** Field ids
   (P101_USERNAME/P101_PASSWORD) confirmed live against a second real APEX
   app with a real login page. Found and fixed a real race condition: the
@@ -321,12 +326,17 @@ behind specific rows:
 - **Interactive Grid support exists (`ApexInteractiveGridRegion`) but is
   hand-wired only** — the generator cannot auto-construct it, since the
   region's runtime static id can differ from its `.apx` identifier
-  (confirmed live). **Interactive Report only has the generic `ApexRegion`
-  methods** (search/sort/pagination are confirmed private on the widget
-  instance — see the capability matrix above). No `required`-item
-  assertion, no data-dependent assertions — the last one is permanent, by
-  design; the generator has no way to know what data your
-  instance holds.
+  (confirmed live). **Interactive Report's JS widget API only has the
+  generic `ApexRegion` methods** (search/sort/pagination are confirmed
+  private there) — but search/sort ARE reachable through a different,
+  UI-locator-driven path (`interactive-report.ts`, see the capability
+  matrix above), also hand-wired only: a generator auto-assertion for
+  report column headings was built and reverted after a real live
+  counter-example (see `docs/quirks/26.1.json`
+  `interactive-report-column-heading-not-always-own-header`). No
+  `required`-item assertion, no data-dependent assertions — the last one
+  is permanent, by design; the generator has no way to know what data
+  your instance holds.
 
 ## Roadmap
 

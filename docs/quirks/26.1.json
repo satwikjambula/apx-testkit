@@ -1,6 +1,6 @@
 {
   "apexVersion": "26.1",
-  "lastUpdated": "2026-07-27",
+  "lastUpdated": "2026-08-01",
   "note": "Every entry here was found by direct live verification against a real running APEX 26.1 instance, not inferred from documentation. This is a structured index of facts already documented in prose across docs/grammar-assumptions.md and inline source comments -- see the 'source' field on each entry for the full story. This file is documentation, not (yet) wired into any runtime warning mechanism -- see docs/ecosystem-roadmap.md for why that's a deliberate scoping decision, not an oversight.",
   "quirks": [
     {
@@ -42,8 +42,8 @@
       "issue": "Search/sort/pagination internals are implemented as _-prefixed methods on the underlying widget instance (jQuery-UI-widget-factory convention) -- there is no public, documented way to drive them via a JS method call.",
       "evidence": "Enumerated the widget instance's full prototype method list live: only refresh, openDialogChat, openInlineChat, closeChat are public (non-underscore). Everything else (_search, _paginate, _reset, _download, ...) is private by convention. Separately, apex.region(id).call(action) -- the generic action-dispatch API -- was tested with a dozen plausible action names (refresh, search, getViews, getCurrentView, reset, collapse, ...) and rejected every one with \"Call not supported.\"",
       "reproducedAgainst": "UX Pattern Catalog app (browse-interactive-report page)",
-      "workaround": "Use the generic ApexRegion methods (refresh, getViewName, getSessionState) for what they support. Drive search/sort/pagination through the actual UI (fill the visible search input, click pagination links) via Playwright locators -- not a JS API call.",
-      "status": "confirmed, permanent constraint (not a bug to fix, a real API boundary)",
+      "workaround": "Use the generic ApexRegion methods (refresh, getViewName, getSessionState) for what they support. Drive search/sort/pagination through the actual UI (fill the visible search input, click column-header sort links) via Playwright locators -- not a JS API call. UPDATE (Eighth round, 2026-08-01): this is now IMPLEMENTED, not just a suggestion -- see packages/testkit/src/components/interactive-report.ts (searchInteractiveReport/sortReportColumn/getColumnSortState), confirmed live against the same app/page. See the new 'interactive-report-accessible-locator-search-sort' entry for the evidence. Pagination specifically remains unimplemented -- no live multi-page dataset was available to verify next/prev click behavior.",
+      "status": "confirmed, permanent constraint (not a bug to fix, a real API boundary) -- UI-driven workaround now built and verified, see 'interactive-report-accessible-locator-search-sort'",
       "rootCauseDiagnosed": true,
       "source": "packages/testkit/src/components/region.ts, docs/grammar-assumptions.md"
     },
@@ -156,6 +156,72 @@
       "status": "confirmed live -- this specific page has no functioning server-side validation to observe, despite the required-field visual marker",
       "rootCauseDiagnosed": true,
       "source": "packages/testkit/src/components/messages.ts, docs/ecosystem-roadmap.md Seventh round (2026-07-27) follow-up"
+    },
+    {
+      "id": "interactive-report-accessible-locator-search-sort",
+      "component": "Interactive Report (packages/testkit/src/components/interactive-report.ts)",
+      "issue": "Search box and column-header sort ARE reliably drivable through the visible UI via Playwright accessible-role locators, distinct from the already-confirmed-private JS widget API (see 'interactive-report-private-methods') -- but with two real behavioral quirks that must be handled explicitly, not assumed away: (1) an unquoted multi-word search term matches ANY word (OR), not the whole phrase; (2) clicking a column header's sort-trigger link fails Playwright's default actionability check every time, because APEX's own stickyTableHeader widget renders an always-present, absolutely-positioned visual clone of the header row directly on top of the real one, at a higher z-index, from the moment the page loads (no scrolling needed to reproduce).",
+      "evidence": "Confirmed via real Playwright automation (not just the browser MCP pane) against UX Pattern Catalog's browse-interactive-report page. Search: getByRole('searchbox', { name: 'Row Search' }).fill('Item 2') + press('Enter') fired a real QUICK_FILTER AJAX action (confirmed via page.waitForResponse and a genuine apexbeforerefresh/apexafterrefresh event pair on the region's own DOM element) but returned all 48 rows unfiltered, because the word 'Item' alone appears in every row's title; the SAME search with the term quoted ('\"Item 2\"') correctly narrowed to 11 rows (Item 2, Item 20-29). Sort: a plain headerLink.click() on the Category, Title, and Priority column headers timed out 3/3 times with Playwright reporting '<a> from <div id=\"stickyTableHeader_1\" class=\"...js-stickyTableHeader...\"> subtree intercepts pointer events'; page.evaluate() confirmed the sticky clone's getBoundingClientRect() exactly overlaps the real <th> (same x/y/width/height) with display:block/visibility:visible/position:absolute/zIndex:300 immediately after navigation, no scroll performed. Force-clicking the REAL header link ({ force: true }) reliably opened the sort menu and updated aria-sort on the real <th> to 'ascending'/'descending' as expected, confirmed on 3 independent columns, each checked twice (ascending then descending).",
+      "reproducedAgainst": "UX Pattern Catalog app (browse-interactive-report page), region id R11643575732369775 (no advanced { htmlDomId } override; export identifier is 'interactive-report', a different string -- read off the live DOM, not derivable from the export)",
+      "workaround": "Use searchInteractiveReport()/sortReportColumn()/getColumnSortState() from interactive-report.ts. searchInteractiveReport() does not auto-quote -- callers wanting exact-phrase matching must pass the quotes themselves. sortReportColumn() always force-clicks the header link and documents why.",
+      "status": "confirmed live, working, shipped",
+      "rootCauseDiagnosed": true,
+      "source": "packages/testkit/src/components/interactive-report.ts, spike/tests/interactive-report-demo.spec.ts"
+    },
+    {
+      "id": "classic-report-column-id-verbatim",
+      "component": "classicReport column headers (packages/testkit/src/components/report-column.ts)",
+      "issue": "A classicReport column's <th> DOM id equals the .apx column's identifier verbatim, with no override field needed (an even stronger, column-level extension of ADR-003's region-level htmlDomId finding) -- but a plain '#identifier' locator hits a Playwright strict-mode violation, because APEX's stickyTableHeader widget duplicates the SAME id onto its own clone <th>, unlike Interactive Report's sticky clone (which uses a structurally different, non-accessible-role container and does not collide on id).",
+      "evidence": "Cross-checked live DOM against the real .apx export (item-detail-full page, child-records region): the export declares 'column CHILD_RECORD_NAME ( ... )' / 'column CHILD_RECORD_TYPE ( ... )' / 'column OWNER_NAME ( ... )' / 'column CHILD_RECORD_STATUS ( ... )' / 'column DUE_DATE ( ... )'; the live DOM has <th id=\"CHILD_RECORD_NAME\">, <th id=\"CHILD_RECORD_TYPE\">, etc., matching exactly, for all 5 columns. Separately confirmed via document.querySelectorAll('#CHILD_RECORD_NAME') that TWO elements share this id: one inside table#report_table_R6216196640130009_orig (the real table) and one inside table#report_table_R6216196640130009 (the sticky clone, class t-fht-thead js-stickyTableHeader), both reporting offsetParent !== null (visible). Scoping to table[id$=\"_orig\"] #CHILD_RECORD_NAME resolved to exactly 1 element with the correct text. Also confirmed classicReport columns carry no sort affordance at all (no wrapping <a>, no aria-sort attribute) -- a real, structural difference from Interactive Report, not a gap.",
+      "reproducedAgainst": "UX Pattern Catalog app (item-detail-full page, child-records region, classicReport type)",
+      "workaround": "Use classicReportColumnById() from report-column.ts, which scopes to table[id$=\"_orig\"] to avoid the sticky-clone duplicate. Use reportColumnHeader() (accessible-role locator) for presence/label assertions instead -- it is NOT affected by the duplicate-id issue, since the sticky clone is not exposed via the accessibility tree.",
+      "status": "confirmed live, working (with the documented scoping fix), shipped",
+      "rootCauseDiagnosed": true,
+      "source": "packages/testkit/src/components/report-column.ts, spike/tests/report-column-demo.spec.ts"
+    },
+    {
+      "id": "interactive-report-column-id-internal",
+      "component": "interactiveReport column headers (packages/testkit/src/components/report-column.ts)",
+      "issue": "Unlike classicReport (see 'classic-report-column-id-verbatim'), an Interactive Report column's <th> DOM id is an APEX-internal auto-generated numeric id with no corresponding field anywhere in the static .apx export -- genuinely undiscoverable from export data alone, the same 'layer 3' class of finding ADR-003 already established for regions without htmlDomId.",
+      "evidence": "Cross-checked live DOM against the real .apx export (browse-interactive-report page): export column identifiers are TITLE/CATEGORY/PRIORITY/FLAG_1..4/UPDATED_ON/etc.; live DOM ids are C11643982695369779/C11644187233369781/C11644419072369784/etc. -- no relationship. Confirmed document.getElementById('TITLE') (the export identifier) resolves to nothing; the real id only discoverable live, e.g. via getByRole('columnheader', { name: 'Title' }).getAttribute('id').",
+      "reproducedAgainst": "UX Pattern Catalog app (browse-interactive-report page, interactive-report region)",
+      "workaround": "Use reportColumnHeader()/reportColumnHeadersPresent() (accessible-role locators keyed by heading TEXT, not id) for Interactive Report columns -- never attempt to construct the DOM id from .apx data for this region type.",
+      "status": "confirmed live, genuinely undiscoverable from static data -- not a parser gap",
+      "rootCauseDiagnosed": true,
+      "source": "packages/testkit/src/components/report-column.ts, spike/tests/report-column-demo.spec.ts"
+    },
+    {
+      "id": "region-action-cards-not-unique-inert",
+      "component": "Region action (ApexRegionAction -- Cards/List row-level action, packages/testkit/src/components/region-action.ts)",
+      "issue": "A Cards region's row action (action-d) IS reachable via an accessible link role with the action's label as its accessible name -- but (1) the label is NOT unique per region, repeating once per rendered record, with no confirmed way to scope to a specific record from .apx metadata alone; and (2) on the only live app available, every tested row action (Cards 'Edit' link, a Cards title link, List's 'Row Action 1/2/3' menu items) is a non-functional placeholder -- href=\"#\" or no href, zero network requests, zero URL change, zero console activity on click.",
+      "evidence": "faceted-search-cards: page.getByRole('link', { name: 'Edit', exact: true }) resolved to 24 elements (one per card); clicking .first() produced no URL change, no wwv_flow.* network request, no console output. The card title link ('Item 1', href=\"#\") behaved identically. faceted-search-content-row (List/action-e): row actions are NOT rendered as direct same-labeled links -- each row instead has ONE 'Row Actions' button (itself non-unique, 15 instances) that opens a menu whose menuitem-role entries ('Row Action 1'/'2'/'3') are the actual actions; clicking one produced the same zero-effect result. Contrast checked on the SAME app: Interactive Report's structurally similar 'Primary Row Action' link (48 instances, also non-unique) DOES have a real href and DOES navigate (confirmed: URL changed to a real, if broken, target page) -- so click-driven navigation via a row action is not impossible in principle, just unverified for the Cards/List family specifically.",
+      "reproducedAgainst": "UX Pattern Catalog app (faceted-search-cards and faceted-search-content-row pages)",
+      "workaround": "Use regionActionLocator()/expectRegionActionPresent() for presence-only assertions (matching, checkable, count-tolerant). Do NOT assert click-through effects (navigation/dialog/DOM change) for this component family -- no verified, working example exists yet on any live app this project has access to. List/action-e's menu-based rendering is a confirmed-different DOM contract, deliberately not wrapped in this pass.",
+      "status": "presence confirmed live and shipped; click-effect verification confirmed BLOCKED (dead links on the only live app available, not a testkit gap)",
+      "rootCauseDiagnosed": true,
+      "source": "packages/testkit/src/components/region-action.ts, spike/tests/region-action-demo.spec.ts"
+    },
+    {
+      "id": "button-id-not-static-id",
+      "component": "Button (ApexButton.htmlDomId, packages/parser/src/ast.ts; packages/testkit/src/components/button.ts unchanged)",
+      "issue": "The official EBNF confirms button.advanced.htmlDomId/staticId exist (button-advanced-property production) -- the SAME advanced-group mechanism already confirmed for regions (ADR-003) -- but no button anywhere in this project's local corpus (46+ real exports, including a full grep of every page of UX Pattern Catalog, the app used for the live check below) has ever been found to set either field. When absent, the runtime DOM id is an APEX-internal auto-generated id of the form B<numeric>, structurally identical to region's R<numeric> fallback, with no corresponding field anywhere in the static export -- genuinely undiscoverable from export data alone, the button-level analog of 'region-id-not-static-id'.",
+      "evidence": "grep -rn \"staticId\" across the full local UX Pattern Catalog export (46+ pages): zero occurrences anywhere. grep -rn \"htmlDomId\" found exactly 3 occurrences project-wide, all three on regions (active-facets, primary_items_list), none on a button. Live: document ids for 'Primary Action' buttons on 3 different pages (browse-interactive-report, faceted-search-cards, data-entry-simple-form) were B9441596513426189/B9407603832418760/B6286693148755797 -- all match /^B\\d+$/, none related to the button's .apx identifier (primary-action) or buttonName (PRIMARY_ACTION).",
+      "reproducedAgainst": "UX Pattern Catalog app (browse-interactive-report, faceted-search-cards, data-entry-simple-form pages); full local export grepped for the field's absence",
+      "workaround": "None needed for button.ts's existing behavior -- it already uses accessible-role/label locators (buttonByLabel), which do not depend on the DOM id at all. ApexButton.htmlDomId is typed now so a future button that DOES set a custom Static ID is captured and diffable; do not build a htmlDomId-based button locator until a real button that sets one exists to verify the resolution convention against (ADR-002).",
+      "status": "confirmed live and via full-corpus static grep -- genuinely undiscoverable/unset in every real button seen so far, not a parser gap",
+      "rootCauseDiagnosed": true,
+      "source": "packages/parser/src/ast.ts (ApexButton.htmlDomId), spike/tests/button-htmldomid-demo.spec.ts"
+    },
+    {
+      "id": "interactive-report-column-heading-not-always-own-header",
+      "component": "interactiveReport column headers (packages/testkit/src/components/report-column.ts; packages/generator/src/lib.ts)",
+      "issue": "A report column's declared `heading.heading` is NOT a reliable predictor of whether it renders its own `columnheader`-role <th> on Interactive Report -- confirmed live, a real counter-example on the SAME app/page already used as this pass's positive ground truth. This blocked an attempted generator auto-assertion (see workaround) that would otherwise have silently shipped a test guaranteed to fail on real data.",
+      "evidence": "browse-interactive-report declares 14 columns with a heading, but only 9 real `columnheader`-role elements exist at runtime: BADGE_STATE/META/OVERLINE are `type: hidden` (expected, no header -- consistent with classicReport's rule) but DESCRIPTION (`type: plainText`, NOT hidden) and ICON (`type: themeTemplateComponent/avatar`, NOT hidden) ALSO have zero matching `columnheader` elements (confirmed via page.getByRole('columnheader', { name, exact: true }).count() === 0 for both) -- their content is instead folded into the 'Title' column's own cell (icon + title + secondary text rendered together, visible directly in the live report), a real Interactive Report 'primary column group' rendering pattern with no equivalent in classicReport's simpler per-column <th> model.",
+      "reproducedAgainst": "UX Pattern Catalog app (browse-interactive-report page, interactive-report region)",
+      "workaround": "Do NOT auto-generate expectReportColumnHeadersPresent() from the full list of a region's declared column headings for interactiveReport -- an attempt to do exactly this in packages/generator/src/lib.ts was built, caught by this live counter-example before being committed, and reverted. reportColumnHeader()/expectReportColumnHeadersPresent() remain real, verified, SHIP-WORTHY capabilities for a caller who supplies a deliberately curated, live-confirmed list of headings (as spike/tests/report-column-demo.spec.ts and interactive-report-demo.spec.ts do) -- the gap is specifically in auto-deriving that list from static .apx metadata alone for Interactive Report. classicReport did not exhibit this problem in the one region checked (5/5 non-hidden columns had their own <th>, exact match) but was not re-tested broadly enough to auto-wire either, out of caution given this exact class of finding.",
+      "status": "confirmed live -- real gap, generator auto-wiring correctly NOT shipped",
+      "rootCauseDiagnosed": true,
+      "source": "packages/generator/src/lib.ts (reverted attempt), packages/testkit/src/components/report-column.ts, docs/ecosystem-roadmap.md Eighth round"
     }
   ]
 }

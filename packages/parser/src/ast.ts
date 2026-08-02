@@ -199,6 +199,38 @@ export interface ApexButton {
   identifier: string;
   label: string | null;
   action: string | null;
+  /**
+   * `advanced { htmlDomId: ... }` -- confirmed against the official EBNF's
+   * `button-advanced-property` production (`docs.oracle.com/.../apexlang.ebnf`
+   * `<button-advanced-property> ::= "htmlDomId" ... | "staticId" ...`), the
+   * SAME `advanced` group shape and property name already confirmed for
+   * regions (`ApexRegion.htmlDomId`, ADR-003) -- structurally, not just by
+   * naming coincidence, this is the identical mechanism applied to a
+   * different component type.
+   *
+   * UNLIKE the region case, this has NOT been positively live-verified with
+   * a real button that actually sets it: a full sweep of every button
+   * across this project's entire local corpus (46+ real exports, including
+   * every page of UX Pattern Catalog -- the app used for the live check
+   * below) found ZERO occurrences of `advanced { htmlDomId }` or
+   * `advanced { staticId }` on any button, anywhere. What IS confirmed
+   * live (UX Pattern Catalog, 3 pages, 7 buttons: Primary/Secondary Action
+   * on `browse-interactive-report`/`faceted-search-cards`, Primary
+   * Action/Cancel on `data-entry-simple-form`): when this field is `null`
+   * (every button checked), the runtime DOM id is an APEX-internal
+   * auto-generated id of the form `B<numeric>` (e.g. `B9442031345426189`)
+   * -- structurally identical to region's `R<numeric>` fallback pattern --
+   * with NO corresponding field anywhere in the static export, genuinely
+   * undiscoverable from export data alone. This field is typed now so a
+   * future button that DOES set a custom Static ID in Page Designer is
+   * captured and diffable -- but `button.ts`'s accessible-role/label
+   * locator strategy is deliberately UNCHANGED by this addition: extending
+   * it to prefer `htmlDomId` when present would need a real button that
+   * sets one to verify against (ADR-002), which does not exist anywhere in
+   * this project's corpus yet. See docs/quirks/26.1.json
+   * `button-id-not-static-id` and docs/ecosystem-roadmap.md.
+   */
+  htmlDomId: string | null;
   loc: Loc;
   raw: RawBag;
 }

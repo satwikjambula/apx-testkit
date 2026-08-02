@@ -1606,3 +1606,144 @@ spirit as every other "update together" fix in this project's history.
   only possible assertion shape for each is inherently data-dependent,
   which this project has permanently ruled out by design. This is a
   correct absence, not a backlog item — see #1 above.
+
+### Build-now list, results (Runtime & Test Automation Engineer, 2026-08-01)
+
+Credentials check first: `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD`
+were **unset** in this environment — Sample Interactive Grids and Sample
+Charts (the two live apps needing login) were not reachable this pass.
+Everything below was done against UX Pattern Catalog, the one live app
+reachable without login. This is a credentials gap, not a design decision
+— re-run `validation` runtime verification (still separately blocked, see
+above) and any future login-gated pass the moment real credentials are
+available.
+
+1. **Column live-discovery — REAL CAPABILITY, BUILT, with a genuine
+   generator-wiring near-miss caught and reverted.**
+   `packages/testkit/src/components/report-column.ts` (new). Confirmed
+   live on TWO region types: `classicReport` (`item-detail-full`,
+   `child-records` region) and `interactiveReport`
+   (`browse-interactive-report`). Two genuinely different DOM-id contracts
+   confirmed, not one:
+   - `classicReport`: a column's `<th>` id equals the `.apx` column's
+     `identifier` VERBATIM, no override needed — a column-level extension
+     of ADR-003's region-level `htmlDomId` finding, and a stronger one
+     (works for every column checked with no special-case field at all).
+     `classicReportColumnById()` wraps this, scoped around a real,
+     confirmed sticky-header-widget duplicate-id issue (APEX's
+     `stickyTableHeader` clone reuses the SAME `<th>` id as the real
+     column, causing a Playwright strict-mode violation on a naive `#id`
+     locator — fixed by scoping to `table[id$="_orig"]`).
+   - `interactiveReport`: a column's `<th>` id is an APEX-internal
+     auto-generated numeric id (`C<numeric>`) with no corresponding field
+     anywhere in the static export — confirmed genuinely undiscoverable,
+     the column-level analog of region's `htmlDomId`-absent "layer 3"
+     case.
+   - `reportColumnHeader()`/`expectReportColumnHeadersPresent()`
+     (accessible `columnheader` role, keyed by heading TEXT) work
+     identically on both region types and don't need the DOM id at all.
+   - **A generator auto-assertion (`expectReportColumnHeadersPresent()`
+     wired into every generated page's smoke spec, keyed off
+     `ApexReportColumn.heading`) was built, then CAUGHT AND REVERTED**
+     before being committed: live-testing the generated output against
+     the real `browse-interactive-report` page found that 2 of its 14
+     declared column headings (`DESCRIPTION`, `ICON` — both non-hidden
+     types) do NOT get their own `columnheader` element at runtime; their
+     content is folded into the `Title` column's own cell instead (a real
+     Interactive Report "primary column group" rendering pattern,
+     confirmed live, with no equivalent in classicReport's simpler
+     per-column model). Auto-generating this assertion from
+     `heading.heading` alone would have shipped a smoke test guaranteed
+     to fail on real data — caught before commit, not after. See
+     docs/quirks/26.1.json `interactive-report-column-heading-not-always-
+     own-header`. The hand-driven testkit functions are unaffected and
+     shipped — the gap is specifically in auto-deriving the full heading
+     list from static metadata for `interactiveReport`.
+   - Sort capability (see #3) lives in `interactive-report.ts`, not here
+     — `classicReport` columns confirmed to carry NO sort affordance at
+     all (no `<a>`, no `aria-sort`), a real structural difference, not a
+     gap.
+2. **Region action (Cards/List row-level action) live-discovery — REAL
+   CAPABILITY (presence only), CONFIRMED DEAD END (click effects).**
+   `packages/testkit/src/components/region-action.ts` (new). Confirmed
+   live against Cards (`faceted-search-cards`) and List
+   (`faceted-search-content-row`). Cards' `action-d` shape renders as a
+   real accessible `link`, name = the action's label — but NOT unique per
+   region (the same label repeats once per record, no confirmed way to
+   scope to a specific record from `.apx` metadata alone). List's
+   `action-e` shape is confirmed STRUCTURALLY DIFFERENT — actions render
+   behind a single "Row Actions" menu-trigger button per row, not as
+   direct same-labeled elements — deliberately not wrapped this pass.
+   Click-through EFFECTS are a confirmed dead end on this app: every
+   action tested (Cards' `Edit` link, a Cards title link, List's `Row
+   Action 1`/`2`/`3` menu items) has no real `href`/target and produces
+   zero observable effect (no navigation, no network activity, no console
+   output) — this app ships decorative, non-functional demo affordances
+   for this component family specifically (contrast: Interactive Report's
+   structurally similar `Primary Row Action` link, on the SAME app, DOES
+   navigate for real). No click-effect assertion is shipped as a result —
+   presence only (`regionActionLocator()`/`expectRegionActionPresent()`).
+   See docs/quirks/26.1.json `region-action-cards-not-unique-inert`.
+3. **Interactive Report accessible-locator discovery — REAL CAPABILITY,
+   BUILT.** `packages/testkit/src/components/interactive-report.ts`
+   (new). Does NOT re-litigate the closed "no public JS API" question
+   (`docs/quirks/26.1.json` `interactive-report-private-methods`,
+   corrected in place to point at this new entry) — drives the same
+   features through the visible UI instead. Search
+   (`searchInteractiveReport()`): confirmed live, a real `QUICK_FILTER`
+   AJAX action + `apexbeforerefresh`/`apexafterrefresh` event pair (same
+   lifecycle-event pattern already established for Facets). Real semantic
+   quirk documented: an unquoted multi-word term matches ANY word (OR) —
+   confirmed live, `Item 2` unquoted matched all 48 rows because "Item"
+   alone appears everywhere; the quoted form (`"Item 2"`) correctly
+   narrowed to 11. Sort (`sortReportColumn()`/`getColumnSortState()`):
+   confirmed live on 3 independent columns (Title/Category/Priority),
+   `aria-sort` updates correctly both directions. A real, reproducible DOM
+   quirk requires `{ force: true }` on the header-link click every time:
+   APEX's own `stickyTableHeader` widget renders an always-present,
+   exactly-overlapping visual clone of the header row (confirmed via
+   `getBoundingClientRect()`, no scroll needed to reproduce) that fails
+   Playwright's actionability check but correctly forwards clicks to the
+   same handler when forced. Pagination: only PARTIALLY confirmed — a real
+   accessible `region` (`aria-label="Pagination"`) with a range label
+   exists, but the only live dataset available (48 rows) fits on one page,
+   so next/prev click behavior was never observed; no pagination wrapper
+   shipped as a result, an honest open gap, not a guess. See
+   docs/quirks/26.1.json `interactive-report-accessible-locator-search-
+   sort`.
+4. **Button DOM identifier discovery — CONFIRMED DEAD END (extends
+   ADR-003 to buttons, finds it unset everywhere).** `ApexButton.htmlDomId`
+   typed (`packages/parser/src/ast.ts`), wired into `apx-diff`, 2 new
+   parser tests. The official EBNF confirms `button.advanced.htmlDomId`/
+   `staticId` exist — the SAME `advanced`-group mechanism ADR-003 already
+   established for regions, structurally, not by naming coincidence. But:
+   a full grep of the ENTIRE local corpus (46+ real exports, every page of
+   UX Pattern Catalog specifically checked) found ZERO buttons anywhere
+   that set either field. Live-confirmed (3 pages, UX Pattern Catalog):
+   when absent, the runtime DOM id is an APEX-internal `B<numeric>` id
+   (e.g. `B9442031345426189`), structurally identical to region's
+   `R<numeric>` fallback, undiscoverable from export data. `button.ts`'s
+   accessible-role/label locator strategy is UNCHANGED — there is no
+   positive (htmlDomId-set) example anywhere in this project's corpus to
+   verify a resolution convention against (ADR-002), so none was built.
+   The `REGION DISCOVERY`/`BUTTON DISCOVERY` console-capture debt
+   CLAUDE.md has asked for since M1 is now effectively answered for
+   buttons: the region side already resolved via `htmlDomId`; the button
+   side resolves to "the mechanism is real and identical, but unused in
+   every real button this project has ever seen" — a confirmed, not
+   merely neglected, dead end. See docs/quirks/26.1.json
+   `button-id-not-static-id`.
+
+All four: live spike specs added (`spike/tests/report-column-demo.spec.ts`,
+`region-action-demo.spec.ts`, `interactive-report-demo.spec.ts`,
+`button-htmldomid-demo.spec.ts`), run twice against the real live app,
+14/14 passing both times (no login required, public app). Full regression
+sweep (build, test, spike typecheck, determinism against
+`examples/employee-page`, zero-warnings parse of the full local UX Pattern
+Catalog export, `npm run lint`) — all clean. `docs/component-coverage-
+matrix.md`, `docs/support-matrix.md`, and `README.md`'s capability matrix
+updated together for all four; `docs/tutorial.md` not extended this round
+(no new numbered walkthrough section — these are targeted capability
+additions to existing region-type coverage, not a new top-level
+component the tutorial's structure calls for its own section on; flagged
+for Documentation & DX Engineer to confirm rather than assumed).
