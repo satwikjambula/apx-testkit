@@ -11,97 +11,38 @@ agents (Cursor, Claude Code, Copilot) alike, via MCP.**
 If apx-testkit saves you from hand-writing Playwright specs for Oracle
 APEX, **star the repo** ⭐ — it's the easiest way to help others find it.
 
-## New here? Start with the problem, not the pipeline
-
-If you've got an Oracle APEX app and someone — you, a teammate, a QA
-person, a client — is about to start testing it, you're probably in one of
-these spots: you have **zero automated tests** for the app and hand-writing
-a Playwright spec for every single page is a lot of repetitive work nobody
-wants to do first; or you just want a fast, repeatable answer to "does
-every page still load, do the form fields still round-trip, are the
-buttons still there" without re-deriving that by hand every time the app
-changes; or someone else now has to run these tests and understand what
-they check without reading this project's source first.
-
-**What apx-testkit actually does for you**: you export your app in
-Oracle's own APEXlang format, point apx-testkit at that export, and it
-writes real Playwright tests for you — one typed page object plus one
-smoke spec per page, generated deterministically. No AI model runs during
-generation; the same export always produces byte-identical test files, so
-you or a reviewer can read the diff and know exactly what changed, the same
-way you'd review any other generated code.
-
-**Why trust the output**: every assertion the generator emits is built on
-a documented, live-verified Oracle APEX JavaScript API (`apex.item()`,
-`apex.region()`) — never a CSS selector guessed by scraping the DOM. It
-doesn't cover every part of an APEX app yet, and it says so plainly — see
-the capability matrix and `docs/limitations.md` below for exactly what's
-covered today and what isn't.
-
-> **Two terms, translated once:** an **APEXlang export** is a text-based
-> snapshot of your app's pages, unique to Oracle APEX 26.1+, that Oracle
-> itself generates (from App Builder or VS Code) — not something
-> apx-testkit produces. **Playwright** is the browser-automation tool that
-> actually opens a real browser, clicks buttons, and fills in forms during
-> a test run; apx-testkit writes Playwright tests for you, it doesn't
-> replace it.
-
-Want the concrete, copy-pasteable walkthrough — "I have an app, what do I
-literally type, right now"? Go to
-[`docs/tutorial.md`, section 1](docs/tutorial.md#1-getting-started) — it
-walks the whole path end to end using a real, committed example
-(`examples/employee-page/`), and it's how someone new to this project
-should actually get started, not this README.
-
-## What apx-testkit is
-
-apx-testkit generates a maintainable Playwright regression suite directly
-from an Oracle APEX 26.1+ application's APEXlang (`.apx`) export — and,
-because it ships an MCP server alongside the parser and generator, an AI
-coding agent can drive that same pipeline natively as part of its own
-workflow, not just a human running a CLI. That MCP server
-(`@apx/mcp`) is the actual differentiator here: point Cursor, Claude Code,
-or any other MCP-capable agent at it and it can inspect a real APEX export
-and regenerate deterministic tests itself — see
-docs/editor-integration.md.
-
-```mermaid
-flowchart LR
-    A["Oracle APEX export<br/>(.apx files)"] --> P["@apx/parser<br/>typed, lossless AST"]
-    P --> G["@apx/testgen<br/>PageObject + spec generation<br/>apx-diff / apx-coverage"]
-    P --> T["@apx/testkit<br/>Playwright fixtures +<br/>live-verified components"]
-    G --> T
-    G --> M["@apx/mcp<br/>MCP server"]
-    M -->|stdio| AI["Cursor / Claude Code /<br/>Copilot agent mode / Windsurf"]
-    T --> Tests["Generated + hand-written<br/>Playwright specs"]
-    G --> Tests
-```
-
-The pipeline is four pieces wired together:
-
-1. **A parser** (`@apx/parser`) — `.apx` source in, a typed, read-only JSON
-   AST out. Unrecognized constructs are preserved in `raw` bags and reported
-   as warnings, never silently dropped.
-2. **A generator** (`@apx/testgen`) — that AST in, a typed PageObject
-   (`.page.ts`) plus a smoke spec (`.spec.ts`) that exercises it, per page,
-   deterministically out.
-3. **A testkit** (`@apx/testkit`) — the Playwright fixtures and component
-   helpers (built on `apex.item()`/`apex.region()`, never raw CSS selectors)
-   that both the generated code and hand-written specs import from.
-4. **An MCP server** (`@apx/mcp`) — exposes the parser + generator to any
-   MCP-capable agentic tool (Cursor, Claude Code, Copilot agent mode,
-   Windsurf) over stdio, so an AI assistant regenerates tests as part of
-   its own workflow instead of hand-authoring them.
-
-### See it run
-
 ![apx-testgen turning a .apx export into a typed page object + spec, in one command](docs/demo.gif)
 
 Real terminal recording — `apx-testgen` against the committed synthetic
 fixture, nothing staged. Regenerate it yourself from `docs/demo.tape` with
 [VHS](https://github.com/charmbracelet/vhs) (`vhs docs/demo.tape`).
 
-## Quick example (30 seconds)
+## Quick Start
+
+```bash
+git clone https://github.com/satwikjambula/apx-testkit.git
+cd apx-testkit
+npm install   # required even if you only use the CLI — @apx/testkit is a
+              # real runtime dependency of generated specs, not just a
+              # type-checking convenience
+(cd packages/parser && npx tsc -p tsconfig.json)
+(cd packages/testkit && npx tsc -p tsconfig.json)
+(cd packages/generator && npx tsc -p tsconfig.json)
+node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/my-first-tests
+```
+
+That last command runs the generator against this project's own
+committed, real (minimal, one-page) APEXlang export fixture and writes a
+typed page object + a smoke spec. See "Example output" below for exactly
+what comes out, or open `examples/employee-page/` — the byte-identical
+committed result of this same command.
+
+Full walkthrough — wiring the output into a runnable Playwright project,
+pointing it at your own app's export, handing it to someone else to run —
+is in [`docs/tutorial.md`](docs/tutorial.md#1-getting-started); every
+command in it was verified fresh from a clean clone.
+
+## Example output
 
 Given a page in an APEXlang export:
 
@@ -151,29 +92,59 @@ nothing hand-edited) is in `examples/employee-page/`. Regenerate every time
 the `.apx` changes and review both diffs — the `.apx` diff and the
 regenerated-test diff — side by side in the same PR.
 
-## Why not just hand-write Playwright tests?
+## Why it exists
 
+Testing an Oracle APEX app usually means hand-writing a Playwright spec
+for every page — repetitive work nobody wants to do first — or shipping
+with zero automated answer to "does every page still load, do the fields
+round-trip, are the buttons still there." apx-testkit generates that
+answer from data you already have: point it at your app's own **APEXlang
+export** (a text-based snapshot of your app's pages, unique to Oracle APEX
+26.1+, that Oracle itself generates — apx-testkit only ever reads it,
+never writes it) and it writes one typed page object plus one smoke
+**Playwright** spec per page, deterministically. No AI model runs during
+generation — same export in, byte-identical files out, so a reviewer can
+read the diff and know exactly what changed, the same way they'd review
+any other generated code.
+
+Every assertion the generator emits is built on a documented,
+live-verified Oracle APEX JavaScript API (`apex.item()`, `apex.region()`)
+— never a CSS selector guessed by scraping the DOM. It doesn't cover
+every part of an APEX app yet, and says so plainly — see the capability
+matrix below and `docs/limitations.md`.
+
+It also ships an MCP server (`@apx/mcp`) alongside the parser and
+generator, so an AI coding agent can drive the same pipeline natively as
+part of its own workflow instead of a human running a CLI — point Cursor,
+Claude Code, or any other MCP-capable agent at it and it can inspect a
+real APEX export and regenerate deterministic tests itself; see
+`docs/editor-integration.md`.
+
+**Why not just hand-write Playwright tests?**
 - **Deterministic, so it's diffable.** Same `.apx` input -> byte-identical
-  output (verified in CI's determinism gate). When a page changes, the
-  regenerated diff sits next to the `.apx` diff in the same review — nobody
-  has to guess what changed or re-derive it by hand.
+  output (verified in CI's determinism gate). The regenerated diff sits
+  next to the `.apx` diff in the same review — nobody has to guess what
+  changed or re-derive it by hand.
 - **The DOM lives in one place.** Generated code never contains a raw CSS
   selector — only `@apx/testkit` primitives built on documented
   `apex.item()`/`apex.region()` APIs. When APEX's DOM changes across a
-  release, you fix it once in the testkit; every generated suite inherits
-  the fix without hand-editing.
+  release, fix it once in the testkit; every generated suite inherits the
+  fix without hand-editing.
 - **Catches "the AI agent broke this page" the same day.** With agents now
   editing `.apx` files directly, the risk isn't a human typo — it's an
   autonomous edit nobody reviewed for rendering/validation breakage. A
   regenerated smoke suite is the safety net that would have caught it.
 - **Zero LLM calls in the test loop.** Generation is metadata -> template,
-  not model -> guess. The assertions are identical every run — the opposite
-  trade-off from an AI test-writer, and the reason this stays CI-stable.
+  not model -> guess. The assertions are identical every run — the
+  opposite trade-off from an AI test-writer, and the reason this stays
+  CI-stable.
 - **The floor is a floor, not a strategy.** This doesn't replace test
   authorship for business logic — it replaces "does the page still
   render/validate correctly" as a repetitive hand-written chore.
 
 ## Architecture
+
+The pipeline is four packages wired together, AST-first:
 
 ```
 .apx export
@@ -214,8 +185,8 @@ regenerated-test diff — side by side in the same PR.
 Repo layout: `packages/parser`, `packages/testkit`, `packages/generator`,
 `packages/mcp`. `spike/` is a runnable Playwright project against a live
 public reference app (UX Pattern Catalog); `examples/` is real generator
-output, committed, so you can read the current output shape without running
-anything.
+output, committed, so you can read the current output shape without
+running anything.
 
 Scope commitments: APEX 26.1+ only. No linter (APEX Advisor/SQLcl own that
 role). No `.apx` writer (SQLcl owns import — a writer invites round-trip
@@ -223,23 +194,11 @@ corruption bugs). Interactive Grid has a real, live-verified component
 (`ApexInteractiveGridRegion`) but the generator cannot auto-wire it up —
 see the capability matrix below.
 
-### Running it locally
-
-```
-npm install   # once, at repo root — @apx/testkit is a real runtime
-              # dependency of generated/hand-written specs, not just a
-              # type-checking convenience
-node packages/generator/dist/cli.js <export-dir> --out <tests-dir>
-cd spike && npm install && npm test
-```
-
-New here? docs/tutorial.md walks through this step by step, including
-wiring the output into your own Playwright project — every command in it
-was verified fresh from a clean clone.
-
-`npm install && npm run test --workspaces` runs the unit tests (the parser's
-integration test and the full spike suite both need a real APEX
-export/instance and skip cleanly without one).
+**Running the test suite:** `npm install && npm run test --workspaces`
+runs the unit tests (the parser's integration test and the full spike
+suite both need a real APEX export/instance and skip cleanly without
+one). To run the spike suite itself: `cd spike && npm install && npm
+test`.
 
 ## Current status
 

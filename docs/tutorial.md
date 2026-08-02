@@ -50,9 +50,9 @@ is about to start testing it. This tool turns your app's APEXlang export
 into a real, runnable Playwright suite: one typed page object plus one
 smoke spec per page, generated deterministically from your app's own
 metadata, never guessed from the DOM. See the README's
-["New here?"](../README.md#new-here-start-with-the-problem-not-the-pipeline)
-section for the fuller why/what/trust framing. Everything below is the
-concrete "what do I actually type" walkthrough.
+["Why it exists"](../README.md#why-it-exists) section for the fuller
+why/what/trust framing. Everything below is the concrete "what do I
+actually type" walkthrough.
 
 ### Prerequisites
 
