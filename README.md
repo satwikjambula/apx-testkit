@@ -17,6 +17,13 @@ Real terminal recording — `apx-testgen` against the committed synthetic
 fixture, nothing staged. Regenerate it yourself from `docs/demo.tape` with
 [VHS](https://github.com/charmbracelet/vhs) (`vhs docs/demo.tape`).
 
+![a testkit-driven Playwright spec typing into a real Interactive Report search box and sorting a column against a live Oracle APEX app](docs/browser-demo.gif)
+
+Real browser recording — apx-testkit-generated assertions driving
+Playwright against a live Oracle APEX app, nothing staged. Regeneration
+steps (a real Playwright video capture converted with ffmpeg) are
+documented in [`docs/browser-demo.md`](docs/browser-demo.md).
+
 ## Quick Start
 
 ```bash
