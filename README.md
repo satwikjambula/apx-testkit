@@ -166,8 +166,10 @@ The pipeline is four packages wired together, AST-first:
 @apx/testgen   — AST -> per page: <alias>.page.ts (PageObject) +
                  <alias>.spec.ts (smoke spec exercising it)
                  deterministic: same AST in -> byte-identical files out
-                 also: --watch (auto-regen on .apx change) and the
-                 apx-coverage CLI (touch log -> coverage report)
+                 also: --watch (auto-regen on .apx change), the
+                 apx-coverage CLI (touch log -> coverage report), the
+                 apx-diff CLI (pure AST-to-AST regression report), and the
+                 apx-docs CLI (AST -> per-page Markdown docs, no live app)
     ▼
 @apx/testkit   — the primitives BOTH generated and hand-written specs
                  import: item.ts (apex.item, VERIFIED), region.ts
@@ -258,6 +260,7 @@ not existing).
 | Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
 | Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed; `--format human` for prose output alongside the default structured tree) | — |
+| Documentation generation (`apx-docs`) | — | ✅ (pure AST read, no live app needed) | — |
 
 Full list of limitations in docs/limitations.md; a few of the stories
 behind specific rows:
@@ -335,10 +338,16 @@ before running your suite, then run `apx-coverage <export-dir>
 <touch-log-path>` to see which declared items/regions/buttons a run
 actually touched vs. missed (add `--html <report.html>` for a
 self-contained heatmap/checklist view of the same report, see
-docs/tutorial.md 2.9). Still open: snapshot testing (needs a
-masking-policy design), and Trees as content — the only Tree widget seen
-live so far is the universal left-nav reused for a login picker (see
-docs/ecosystem-roadmap.md), not a distinct page-content pattern.
+docs/tutorial.md 2.9). Also done: `apx-docs <export-dir> --out
+<docs-dir>` generates deterministic Markdown page/region documentation
+(items, buttons, regions — including calendar/chart settings, columns,
+row-level actions — dynamic actions, branches, validations, processes,
+computations) straight from the already-typed AST, no live app needed;
+see `docs/tutorial.md` §2.16 and `examples/employee-page/` for real
+output. Still open: snapshot testing (needs a masking-policy design), and
+Trees as content — the only Tree widget seen live so far is the universal
+left-nav reused for a login picker (see docs/ecosystem-roadmap.md), not a
+distinct page-content pattern.
 
 ---
 
