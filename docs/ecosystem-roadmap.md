@@ -1828,3 +1828,341 @@ updated together for all four; `docs/tutorial.md` not extended this round
 additions to existing region-type coverage, not a new top-level
 component the tutorial's structure calls for its own section on; flagged
 for Documentation & DX Engineer to confirm rather than assumed).
+
+## Ninth round (2026-08-01): 20-item maintainer wishlist + plugin API pitch — Product Architect triage
+
+A 20-idea proposal, plus a specific plugin-architecture pitch the
+maintainer frames as "the biggest differentiator," was submitted with an
+explicit priority order and a suggested 10-step build sequence. Evaluated
+against this project's actual current state (still M3-engineering-
+complete / M4-launch-prep-done, still short a second real user, still
+short a second *live* app — Eighth round, above), not a stale mental
+model, and against the same evidence-over-assumption bar applied in every
+prior round. Several items duplicate or extend work already done; several
+directly conflict with commitments this project has already made,
+explicitly, more than once; several repeat a pattern (organizational/
+architectural surface built ahead of real capability) this project has
+rejected before, by name, for the Analysis Engineer proposal (Tier 3
+above); and one — the closest-to-buildable item on the list — deserves a
+more careful split than the maintainer's own framing gives it.
+
+### Already decided against — this proposal would reverse a standing, documented commitment
+
+- **Metadata linting (`apx lint`), item 2.** README.md and
+  `docs/support-matrix.md` both state, plainly: "No linter — APEX Advisor
+  and SQLcl own that role." This is not an oversight to route around —
+  it's a scope decision the Third round flagged explicitly ("Scope
+  conflict worth resolving explicitly, not drifting into") and nobody has
+  revisited since. Several of the maintainer's own examples (unused LOVs,
+  unused processes) also require dependency/cross-reference data this
+  project doesn't have yet — LOV *value* resolution is explicitly out of
+  scope (Seventh round), and "unused" detection for anything needs the
+  same kind of cross-page reference graph the rejected Analysis Engineer
+  would have needed. Other examples (missing help text, items without
+  labels, regions without titles, pages with no authorization) are
+  genuinely cheap AST presence/absence checks with no dependency-graph
+  requirement — but shipping even the cheap subset under an `apx lint`
+  banner still reverses the stated commitment. **Verdict: not now.** If
+  the maintainer wants to reverse "no linter," that has to be a deliberate
+  call made once, on its own, not something that accretes feature-by-
+  feature under a different name. Revisit only if the maintainer
+  explicitly decides to walk back the README/support-matrix commitment —
+  that's a real option, but it's a decision, not a default.
+- **VS Code extension, item 9.** Already decided, and shipped, in the
+  opposite direction: "VS Code/Cursor integration that regenerates on
+  export change — DONE... Shipped as a `--watch` flag... **not** a VS
+  Code extension — consistent with `docs/editor-integration.md`'s
+  existing 'no traditional VS Code extension' decision" (Tier 1, above).
+  Proposing a VS Code extension again, without addressing why the
+  existing decision was made, isn't a fresh idea to evaluate — it's
+  litigating a closed one. **Verdict: not now**, revisit only by directly
+  engaging `docs/editor-integration.md`'s stated reasoning, not by
+  re-adding it to a wishlist.
+
+### Genuinely close to buildable — low risk, real precedent, thin layer over what already exists
+
+- **Human-readable export diff, item 3.** `apx-diff` already computes
+  exactly the structured facts this asks for — per-page added/removed/
+  changed items, regions, buttons (old→new field values), and now
+  field-by-field diffs for `branch`/`validation`/`process`/`computation`/
+  `column`/`action`/`dynamicAction` (Seventh/Continuation rounds). Turning
+  that already-computed structure into a sentence ("Page 12: Added button
+  Save, Removed validation Salary Required, Changed LOV Department") is a
+  templating layer over existing output, not new analysis — zero new
+  ground-truth risk, no new Oracle API surface, nothing ADR-002 governs.
+  **Build now.**
+- **Coverage visualization, item 5.** Same shape: `apx-coverage` already
+  computes touched/untouched/untrackable per identifier. A heatmap or
+  checklist view is a presentation layer over data that already exists —
+  the maintainer's own framing ("the coverage data already computed")
+  is accurate and is exactly the bar this project uses elsewhere for
+  "buildable now." **Build now.**
+- **A scoped-down CI dashboard, from the larger item 16 pitch.** The full
+  `apx report` bundling coverage/diffs/screenshots/perf/failures/a11y/
+  parser-warnings is premature — three of those seven inputs
+  (screenshots, perf, a11y) don't exist yet (see below). But
+  coverage + diff + parser-warning-summary in one HTML output is three
+  already-real data sources with nothing new to verify. Worth scoping as
+  a small standalone item, not as the full seven-input bundle the
+  proposal describes — the smaller version is buildable now; the full
+  version isn't until its missing inputs exist.
+
+### The CRUD / Dynamic Action / Interactive Grid "recorder" idea (item 1) — three sub-questions, three different verdicts, not one
+
+This is the most concrete item on the list and deserves to be treated
+that way, not folded into one "test generation" bucket the way the
+proposal frames it. It splits cleanly on evidence:
+
+1. **Basic CRUD generation (create→verify→edit→verify→delete→verify) over
+   a plain form-over-table page.** This does **not** automatically run
+   into README's "no data-dependent assertions" rule — that rule is about
+   the generator not knowing what data your *instance already holds*
+   (existing rows, existing filter results). A CRUD test that creates a
+   record with a value the *test itself* supplies, then asserts that same
+   self-supplied value comes back, is closed-loop and self-consistent —
+   a genuinely different case from "which branch fires" or "what a
+   process does," which depend on live session/data state the generator
+   can never know statically (correctly ruled out, permanently, Eighth
+   round). What actually blocks a *confident* CRUD generator today is
+   narrower and more concrete: reliable primary-key detection, and a
+   verified save/delete-button identification convention — Round 3
+   already flagged both as open ("primary-key detection and reliable
+   save/delete-button identification... need more verification before a
+   full CRUD suite could be generated with confidence"). Since then, real
+   primitives this would lean on have actually landed: `region.source.
+   tableName` (typed), report-column DOM discovery for `classicReport`
+   (`<th>` id = column identifier verbatim — Eighth round), button
+   locators via accessible role/label (already the shipped strategy,
+   `htmlDomId` confirmed a dead end for buttons specifically — Eighth
+   round), and `messages.ts`'s save-confirmation assertions. **Verdict:
+   legitimate build-now candidate, narrowly scoped** — but as a discovery-
+   then-build pass (confirm PK/save/delete conventions live against a
+   real form-over-table page first, per ADR-002/004), not a ship-it item,
+   and explicitly scoped to self-created-data assertions only.
+2. **Dynamic Action test generation, same item.** This is blocked on an
+   open question this project has already investigated and found no
+   answer to: "no known generic, documented JS API to trigger a *named*
+   Dynamic Action programmatically... flag as 'may not be feasible via
+   any public API'" (Tier 3, "zero ground truth"). Typed DA metadata
+   exists (`ApexPage.dynamicActions`) and makes DAs diffable — it does
+   not make them triggerable. This isn't a "not now," it's a "possibly
+   not ever via a public API, and nobody has actually run the discovery
+   pass to find out." **Verdict: needs its own small, dedicated discovery
+   pass before any generation work is scoped** — don't bundle it with
+   CRUD generation as if it's at the same readiness level, because it
+   isn't.
+3. **Interactive Grid "recorder" (edit row/save/verify), same item.**
+   Better positioned than it was even one round ago — IG graduated to a
+   real, live-verified component (Tier 1) and IG validation triggering is
+   now fully resolved (two mechanisms, both confirmed — Seventh round
+   resolution). But row-edit/save affordances specifically were never
+   part of that verification, and `grid.addRow()`-shaped methods are the
+   explicit Tier 3 "zero ground truth" entry ("cannot be verified without
+   an app that has one" — an app now exists, this just hasn't been
+   attempted). **Verdict: needs its own live discovery pass** against
+   Sample Interactive Grids (credentials-gated, same as the
+   already-resolved validation pass), following the same UI-locator
+   precedent Interactive Report's search/sort discovery used — not
+   "build the recorder," but "go check what's actually there first."
+
+None of these three should ship under one "smart test generation" label
+as if they're one project at one readiness level. They aren't.
+
+### The plugin API (item 8) — direct answer
+
+**Not now, and this is not a new question — it has been asked and
+answered the same way four separate times already in this project's own
+history** (Round 4: "legitimate eventually, not urgent, start with one
+concrete extension point... rather than a `generator/plugins/` ecosystem
+designed ahead of any actual plugin author"; Round 5: same, re-affirmed;
+Round 6: refinements kept this verdict unchanged; Third round's
+"Generator plugin system" entry: identical language). A fifth round
+saying the same thing isn't padding — it's confirmation the answer hasn't
+changed because the underlying condition hasn't changed: **there are
+still zero real plugins, inside or outside this project, that the
+proposed hook shape (`onPage`/`onRegion`/`onItem`/`onGenerate`/
+`onReport`) has been checked against.** That shape is a plausible guess,
+not a verified contract — and this project's entire discipline (ADR-002,
+ADR-004, the Analysis Engineer rejection) is built around exactly the
+distinction between "plausible and unverified" and "real and checked."
+Building the plugin API now would mean designing a stable, third-
+party-facing contract before a single real consumer — internal or
+external — has exercised it. If the hook shape is wrong (and there's no
+way to know yet whether `onGenerate(context)` gets the right data, or
+whether `onReport(report)` fires at the right point relative to
+coverage/diff), that's a breaking change to a *public* API, which is a
+categorically worse mistake than getting an internal function signature
+wrong. This is precisely the "organizational structure for a capability
+that doesn't exist yet" trap the Analysis Engineer proposal was rejected
+for, applied to internal architecture instead of an agent role — same
+shape, same answer.
+
+**What would change this verdict**: not "the idea is good" (it may well
+be) but **real, concrete extension points actually being built inside
+this project first.** If the CRUD-generation discovery pass above, the
+human-readable-diff templating, or a future security/lint decision (if
+the "no linter" commitment is ever deliberately reversed) each end up
+wanting to hook into `onPage`/`onRegion`/`onGenerate`-shaped moments, build
+those as internal, non-plugin extension points first — a single
+pluggable naming function, a single pluggable diff-formatter, one at a
+time, the same way `ApexCardsRegion`/`ApexFacetsRegion` were added one
+verified type at a time instead of a speculative full component
+hierarchy up front. Extract a stable, versioned, public plugin API from
+two or three of *those* real internal call sites once they exist — not
+from zero. This is the exact trigger condition already on record for the
+`@apx/model` extraction ("when a third NEW consumer... is actually being
+built, not just proposed") and it applies here without modification.
+
+**Sequencing point worth being blunt about**: the maintainer's own
+suggested build order puts the plugin API at step 8, after linting,
+diffing, docs, coverage, security, and impact analysis — i.e., after
+several of the very capabilities that would give it real consumers to
+design against. That instinct is closer to right than building it first.
+The one adjustment worth making explicit: several of those "before"
+items (linting, security-as-a-product, impact analysis) are themselves
+not now (see below), so the plugin API's real trigger is further out
+than step 8 implies, not because the sequencing logic is wrong, but
+because some of the items ahead of it in that logic aren't happening yet
+either.
+
+### Needs foundational data this project doesn't have yet — same bucket as the rejected Analysis Engineer
+
+- **Impact analysis (`apx impact`), item 7.** Needs two things that don't
+  exist: LOV *value* resolution (explicitly out of scope, Seventh round —
+  "no concrete consumer asking for the actual values yet") and a
+  cross-page reference/dependency graph (explicitly deferred pending
+  parser extension, Fifth round — "Dependency graphs... needs a parser
+  extension first, not an architecture change"). This is the Tier 3
+  "Metadata-driven analysis layer" entry by another name — same
+  "no such capability exists in this codebase today" starting condition
+  that sank the Analysis Engineer proposal. **Defer.** Real trigger: the
+  day LOV values and a real cross-reference graph exist for some other,
+  concretely-motivated reason, impact analysis becomes a thin read over
+  them — building the graph *for* impact analysis, speculatively, is the
+  order this project has already ruled out.
+- **Dead code detection** (unused pages/LOVs/unreachable branches/
+  unused processes/duplicate validations), unprioritized item. Same
+  missing dependency-graph foundation as impact analysis, plus the same
+  "no linter" scope conflict as item 2. **Defer**, same trigger as impact
+  analysis.
+- **Dependency graph visualization**, unprioritized item. Same
+  foundational gap, stated plainly across three prior rounds now
+  (Third round's Navigation Graph correction, Fifth round's dependency-
+  graph entry, this round). **Defer**, same trigger.
+- **Documentation generator, item 4** — split verdict, not one thing.
+  Page/region documentation drawn from the already-typed AST (items,
+  regions, buttons, now processes/computations/columns/actions) is a
+  real, low-risk extension, similar in shape to the human-readable diff
+  above — **plausible build-now candidate if scoped to exactly this**.
+  Business-process docs and navigation maps need the same missing
+  navigation/menu typed field and cross-reference graph as impact
+  analysis and dependency-graph visualization above — **defer**, same
+  trigger. ER diagrams need database schema/foreign-key information this
+  project has never parsed and isn't in scope for a `.apx`-export parser
+  to begin with (a `.apx` export doesn't carry full DB schema) — **not
+  this project's scope**, a genuinely different data source, not a
+  missing feature.
+
+### Not this project's scope right now — real reasons, not hedging
+
+- **Language Server, item 10.** The maintainer's own word for it —
+  "the dream" — is itself the tell. Full autocomplete/definitions/
+  find-references/rename/diagnostics for an entire language is a
+  standalone, multi-month product effort with its own protocol
+  (LSP), its own correctness bar, and zero discovery pass or prior
+  signal in this project. It would also need most of what's deferred
+  above (navigation graph, dependency graph, full cross-reference
+  resolution) as prerequisites just to implement "find references." This
+  project hasn't hit its own M4 milestone (a second real user) yet — an
+  LSP is not a reasonable next commitment at this stage by any measure of
+  opportunity cost. **Not now.**
+- **Security analyzer, item 6.** The maintainer's own framing —
+  "this alone could become a product" — is the same tell as the Language
+  Server: that's a description of a *different product*, not a testing-
+  framework feature, and the Third round already named this pattern
+  directly ("Security/performance/accessibility smoke suites... each is
+  its own domain with its own correctness bar... risks the same false-
+  confidence problem"). Some of what's asked (unrestricted pages, missing
+  authorization schemes) is already partially covered — `security.
+  authentication` is already a diffed page-level field in `apx-diff` — but
+  "unsafe dynamic actions" and "dangerous JS" detection are a genuinely
+  different, harder static-analysis problem (JS security analysis) this
+  project has no evidence base or stated expertise claim for. **Not this
+  project's scope right now.**
+- **Runtime inspector browser extension**, unprioritized item. A second,
+  separate piece of browser-extension engineering (distinct from the
+  already-rejected VS Code extension) with no user-reported gap behind
+  it — nobody has asked for this, and it's a large new surface
+  (extension development, packaging, distribution) disproportionate to a
+  project that's still pre-alpha by its own milestone tracking. **Not
+  now.**
+- **Performance reporting**, unprioritized item. Same "own domain, own
+  correctness bar" reasoning as security above (Third round). **Not now**,
+  though less categorically than security — plausibly a legitimate,
+  deliberately-scoped future initiative once the project has more than
+  one live app to establish a performance baseline against at all.
+- **Accessibility checks (axe-core)**, unprioritized item. Same bucket as
+  performance — genuinely more tractable than security or perf, since
+  axe-core is an established, off-the-shelf tool rather than something
+  this project would have to invent detection logic for, but still "own
+  domain, own correctness bar, worth scoping as a deliberate separate
+  initiative if pursued, not folded in casually" (Third round, verbatim).
+  **Not now**, but the most plausible "someday, deliberately" item of the
+  three domain-specific analyzers on this list.
+- **Visual regression (`toHaveScreenshot`)**, unprioritized item. This is
+  the existing Tier 2 "Snapshot testing" entry restated — still blocked
+  on an unscoped masking-policy design (timestamps, generated ids, chart
+  data), unchanged across every round that has touched it. **Defer**,
+  same as Tier 2 above, not a new item.
+- **Test-data generator (CSV/JSON/SQL inserts)**, unprioritized item. Only
+  really motivated as a sub-piece of CRUD generation (item 1) above — on
+  its own, without a concrete consumer, it's the same "build
+  infrastructure ahead of the thing that needs it" pattern. If the CRUD
+  discovery pass above proceeds and needs literal seed values, scope this
+  as part of that work, not standalone.
+- **"AI context generator" (`apx context`)**, unprioritized item. Check
+  this against what already exists before treating it as new:
+  `packages/mcp` already exposes the parser and generator to any
+  MCP-capable agentic tool and is explicitly described as "the real
+  cross-tool integration point" (AGENTS.md). A dedicated `apx context`
+  CLI command may substantially duplicate what MCP already provides for
+  MCP-capable tools; it might still have a narrow, real justification as
+  a lower-friction path for tools that *aren't* MCP-capable, but that's a
+  much smaller, different pitch than "instead of a raw export" implies.
+  **Not now** — verify what MCP doesn't already cover before scoping
+  anything new here, per this project's own "check existing components
+  before proposing new ones" discipline (Seventh round).
+
+### What a realistic next 1–3 things looks like for this project's actual stage
+
+The Eighth round already has a live, unfinished "Prioritized build-now
+list" (column/action live-discovery — done; Interactive Report UI-locator
+discovery — done; button DOM identifier discovery — done; Checkbox
+live verification — still open; `docs/support-matrix.md` chart-widget
+correction — still open) plus two access-blocked items (Calendar/Map
+runtime verification) that this 20-item proposal doesn't reference or
+supersede. Those unfinished items are still this project's actual
+critical path — a 20-item wishlist doesn't change that. Realistically,
+the next 1–3 things worth picking up, in order, are:
+
+1. **Finish the Eighth round's still-open items** — Checkbox live
+   verification (cheapest real item on record, no new app or mechanism
+   needed) and the `docs/support-matrix.md` chart-widget factual
+   correction (Documentation & DX Engineer, already flagged, still
+   undone).
+2. **Human-readable diff + coverage visualization** (items 3 and 5 above)
+   — the two genuinely free-standing, low-risk wins from this proposal,
+   both thin layers over data that already exists, both routable to
+   Runtime & Test Automation Engineer (owns `packages/generator`,
+   `apx-diff`, `apx-coverage`).
+3. **The CRUD-generation discovery pass** (item 1, sub-question 1 only —
+   not the Dynamic Action or Interactive Grid pieces) — Runtime & Test
+   Automation Engineer to confirm PK-detection and save/delete-button
+   conventions live against a real form-over-table page, before any
+   generation code is written, per ADR-002/004.
+
+Everything else on the 20-item list either conflicts with a standing
+commitment, needs foundational data this project has explicitly deferred
+building before it has a concrete consumer, or is a different product at
+a different scale than this project's current pre-alpha, one-user stage
+can justify as its next move.
