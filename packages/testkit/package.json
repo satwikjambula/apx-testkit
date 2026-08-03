@@ -1,9 +1,21 @@
 {
   "name": "@apx/testkit",
   "version": "0.1.0",
+  "description": "Live-verified Playwright fixtures and component wrappers for Oracle APEX 26.1+ apps.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/satwikjambula/apx-testkit.git",
+    "directory": "packages/testkit"
+  },
+  "homepage": "https://github.com/satwikjambula/apx-testkit#readme",
+  "bugs": "https://github.com/satwikjambula/apx-testkit/issues",
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run"

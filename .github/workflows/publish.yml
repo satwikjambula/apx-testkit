@@ -1,0 +1,86 @@
+name: publish
+
+# Publishes all four @apx/* packages to the public npm registry.
+#
+# Trigger: pushing a tag matching v* (e.g. `git tag v0.1.0 && git push origin v0.1.0`).
+# This workflow does NOT run on every push/PR -- only on a version tag, so
+# tagging a release is a deliberate, separate act from merging to main.
+#
+# REQUIRED SETUP BEFORE THIS WORKFLOW CAN SUCCEED (the repo owner must do
+# this manually -- no agent or CI job can create this secret):
+#   1. Run `npm login` locally (or use an existing npmjs.com account) and
+#      create an Automation-type access token: https://www.npmjs.com/settings/<user>/tokens
+#      (Automation tokens work in CI without 2FA prompts; Publish tokens
+#      also work but are meant for interactive use.)
+#   2. In this repo's GitHub Settings -> Secrets and variables -> Actions,
+#      add a repository secret named NPM_TOKEN with that token's value.
+#   3. The @apx npm scope must exist / be creatable by that account --
+#      first publish of a new @scope/name creates it under that account,
+#      publicly, because of publishConfig.access=public in each package.json.
+#
+# Publish order matters: @apx/parser has no workspace dependency and
+# publishes first; @apx/testgen and @apx/mcp depend on @apx/parser (and
+# @apx/testgen respectively) via real semver ranges (^0.1.0), not
+# workspace-relative pins, so once @apx/parser is live on the registry the
+# ^0.1.0 range in the other packages' package.json resolves correctly for
+# anyone installing them independently.
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # for npm provenance
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          registry-url: 'https://registry.npmjs.org'
+
+      - run: npm install
+
+      - name: Full release gate (build + test + typecheck spike + determinism)
+        run: |
+          npm run build --workspaces --if-present
+          npm run test --workspaces --if-present
+          cd spike && npm install && npx tsc --noEmit -p tsconfig.json && cd ..
+          node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/gen1
+          node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/gen2
+          diff -r /tmp/gen1 /tmp/gen2
+
+      # Publish order: parser -> testkit -> generator -> mcp.
+      # parser has zero @apx/* dependencies; testkit has zero @apx/*
+      # runtime dependencies; generator depends on parser; mcp depends on
+      # generator. Publishing out of order would leave a dependent
+      # package's ^0.1.0 range temporarily unresolvable for a fresh
+      # `npm install` against the public registry between steps.
+      - name: Publish @apx/parser
+        run: npm publish --access public --provenance
+        working-directory: packages/parser
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @apx/testkit
+        run: npm publish --access public --provenance
+        working-directory: packages/testkit
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @apx/testgen
+        run: npm publish --access public --provenance
+        working-directory: packages/generator
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+      - name: Publish @apx/mcp
+        run: npm publish --access public --provenance
+        working-directory: packages/mcp
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

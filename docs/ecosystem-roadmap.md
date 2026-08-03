@@ -2270,3 +2270,64 @@ either: a typed `pkColumn`/`pkItem` field lands from a page's
 task), *and* a real, reachable, credentialed form-over-table page (Sample
 Interactive Grids' underlying EMP form, or equivalent) is available to
 observe an actual create → PK-assigned → read-back round trip.
+
+## Tenth round (2026-08-02): npm-publish readiness — Release Engineer decision
+
+The maintainer asked directly whether `@apx/testkit` and friends could be
+published to the public npm registry instead of the `file:/absolute/path`
+workaround `docs/tutorial.md` has documented since the beginning
+("Wire it into a runnable Playwright project"). Checked live against the
+real npm registry: `@apx/testkit`, `@apx/testgen`, `@apx/parser`, `@apx/mcp`
+are all genuinely unclaimed (404 on each).
+
+**Verdict: prepare readiness now; do not actually publish yet.** The two
+candidate objections don't hold up on inspection, and the one real
+objection is now fixed, not just flagged:
+
+- **"Pre-alpha status blocks publishing" — rejected.** Semver's own 0.x.y
+  convention exists precisely to let a project ship honestly before API
+  stability is claimed. Every package here is already 0.x; that number
+  *is* the same signal the README's "Pre-alpha" banner gives, not a
+  contradiction of it. M4 (a second real user) is about confidence in the
+  runtime claims this project makes, not about whether the packages are
+  installable — and the current `file:` workaround is itself a real,
+  named friction point for exactly the second user this project is
+  looking for.
+- **"Four open PRs (#10-13) would ship before landing" — false as of this
+  check.** Verified live via `gh pr list`, not assumed from the task
+  description: all four (human-readable `apx-diff`, `apx-coverage --html`,
+  `apx-docs`, CRUD-generation discovery) are already MERGED to `main` as of
+  2026-08-02. Local `main` was stale (behind `origin/main` by these four
+  merges) until this pass fast-forwarded it. Nothing about publish timing
+  is blocked on these anymore.
+- **Cross-package version pinning — real, and now fixed.** `@apx/testgen`
+  depended on `"@apx/parser": "0.0.1"` (exact pin) and `@apx/mcp` on
+  `"@apx/testgen": "0.1.0"` (exact pin) — workspace-relative pins that
+  would break the moment these are independently versioned packages on a
+  real registry instead of npm-workspace siblings resolved by name alone.
+  Fixed: real caret ranges (`^0.1.0`) in both places. `@apx/parser` itself
+  was bumped `0.0.1` -> `0.1.0` first, since caret ranges against a
+  `0.0.x` base are nearly as restrictive as an exact pin under semver's
+  own rules for `0.x` — and the bump is independently justified: several
+  purely-additive typed AST fields (`branch`, `validation`, `lov`,
+  `process`, `computation`, report columns, region actions) landed since
+  `0.0.1`, which this project's own release checklist already classifies
+  as a minor-level change.
+
+**What was prepared** (build/test/typecheck/determinism re-verified clean
+after every change, per `.ai/checklists/release.md`): all four
+`package.json` files now carry `files: ["dist"]` (confirmed via
+`npm pack --dry-run` — no `src/`/`test/` leaks), `publishConfig.access:
+"public"` (required for a new scoped package), real `repository`/
+`homepage`/`bugs` URLs, `license: "Apache-2.0"`, and `engines.node: ">=22"`.
+A new `.github/workflows/publish.yml` runs only on a `v*` tag push, re-runs
+the full release gate (build, test, spike typecheck, determinism diff),
+then publishes in dependency order (parser -> testkit -> generator -> mcp)
+using an `NPM_TOKEN` secret the workflow file documents but cannot create.
+
+**What was deliberately not done:** no package was actually published, no
+npm token exists in this environment or was requested, and no version was
+tagged. That remains the maintainer's own action — see the workflow file's
+header comment for the exact three setup steps (npm Automation token,
+`NPM_TOKEN` repo secret, first-publish scope creation) and
+`git tag vX.Y.Z && git push origin vX.Y.Z` to trigger it once ready.

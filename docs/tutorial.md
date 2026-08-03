@@ -224,7 +224,12 @@ generated file assumes.
 
 (`@apx/testkit` isn't published to npm yet — link it by path to your local
 clone. `@types/node` is easy to forget and you'll get a confusing
-`TS2688` without it.)
+`TS2688` without it. Publishing readiness — correct `package.json`
+metadata and a tag-triggered `.github/workflows/publish.yml` — is prepared
+as of 2026-08-02, but no version has actually been published; once it is,
+replace the `file:` line above with `"@apx/testkit": "^0.1.0"` and drop
+`--install-links` below in favor of a plain `npm install`. See
+docs/ecosystem-roadmap.md "Tenth round" for the readiness decision.)
 
 **`playwright.config.ts`**
 ```ts

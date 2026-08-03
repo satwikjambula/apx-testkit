@@ -1,9 +1,21 @@
 {
   "name": "@apx/parser",
-  "version": "0.0.1",
+  "version": "0.1.0",
+  "description": "Lossless parser for Oracle APEX 26.1+ APEXlang (.apx) exports -> typed semantic AST.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "files": ["dist"],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/satwikjambula/apx-testkit.git",
+    "directory": "packages/parser"
+  },
+  "homepage": "https://github.com/satwikjambula/apx-testkit#readme",
+  "bugs": "https://github.com/satwikjambula/apx-testkit/issues",
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run"

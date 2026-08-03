@@ -1,6 +1,7 @@
 {
   "name": "@apx/testgen",
   "version": "0.1.0",
+  "description": "Deterministic Playwright PageObject/spec generation, AST diffing (apx-diff), coverage mapping (apx-coverage), and doc generation (apx-docs) from Oracle APEX 26.1+ .apx exports.",
   "type": "module",
   "bin": {
     "apx-testgen": "dist/cli.js",
@@ -9,18 +10,30 @@
     "apx-docs": "dist/docs-cli.js"
   },
   "main": "dist/cli.js",
+  "types": "dist/cli.d.ts",
+  "files": ["dist"],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/satwikjambula/apx-testkit.git",
+    "directory": "packages/generator"
+  },
+  "homepage": "https://github.com/satwikjambula/apx-testkit#readme",
+  "bugs": "https://github.com/satwikjambula/apx-testkit/issues",
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "test": "vitest run"
   },
   "dependencies": {
-    "@apx/parser": "0.0.1"
+    "@apx/parser": "^0.1.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
     "@types/node": "^22.0.0",
     "vitest": "^2.0.0",
-    "@apx/testkit": "0.1.0"
+    "@apx/testkit": "^0.1.0"
   },
   "exports": {
     ".": "./dist/cli.js",

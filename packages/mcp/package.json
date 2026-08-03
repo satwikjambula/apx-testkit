@@ -1,11 +1,25 @@
 {
   "name": "@apx/mcp",
   "version": "0.1.0",
+  "description": "MCP stdio server exposing @apx/parser + @apx/testgen (inspect_apex_export, generate_apex_tests) to MCP-capable agentic coding tools.",
   "type": "module",
+  "main": "dist/server.js",
+  "types": "dist/server.d.ts",
   "bin": { "apx-mcp": "dist/server.js" },
+  "files": ["dist"],
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/satwikjambula/apx-testkit.git",
+    "directory": "packages/mcp"
+  },
+  "homepage": "https://github.com/satwikjambula/apx-testkit#readme",
+  "bugs": "https://github.com/satwikjambula/apx-testkit/issues",
+  "publishConfig": { "access": "public" },
+  "engines": { "node": ">=22" },
   "scripts": { "build": "tsc -p tsconfig.json" },
   "dependencies": {
-    "@apx/testgen": "0.1.0",
+    "@apx/testgen": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "zod": "^3.23.0"
   },
