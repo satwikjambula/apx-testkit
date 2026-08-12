@@ -220,10 +220,20 @@ test`.
 
 ## Current status
 
-**Pre-alpha (M3 engineering-complete).** Verified against exactly one real
-APEX 26.1 application (UX Pattern Catalog) — see docs/support-matrix.md
-before trusting anything here beyond that, and docs/grammar-assumptions.md
-for the full ledger of what's confirmed vs. open.
+**Pre-alpha (M3 engineering-complete).** UPDATE (corrected in place — this
+used to say "verified against exactly one real APEX 26.1 application"; that
+is no longer accurate and understates the current corpus): the static parser
+corpus is **46 real Oracle APEX 26.1 applications**, all parsing with zero
+warnings (13 Oracle gallery apps + 11 independently-authored apps from
+`ujnak/APEXlang-exports` + 18 apps from `github.com/oracle/apex`'s `26.1`
+branch + 3 further independent apps + 1 more, this project's own user's own
+app — see `.ai/knowledge/verification.md` for the full breakdown). Live
+verification against a real *running* instance is narrower and a genuinely
+different claim — confirmed so far against **4 of the 46** (UX Pattern
+Catalog, Sample File Upload and Download, Sample Interactive Grids, Sample
+Charts) — see docs/support-matrix.md before trusting anything here beyond
+that, and docs/grammar-assumptions.md for the full ledger of what's
+confirmed vs. open.
 
 `apx-*` naming (not "apexlang"/"apex") is a permanent, compliance-driven
 choice per Oracle's trademark guidelines, not a placeholder — see
@@ -340,7 +350,7 @@ behind specific rows:
 | Milestone | Status |
 |---|---|
 | M0 — ground truth, license/naming check | Done |
-| M1 — parser | Done against one app; needs a second, independent export before it's fully trusted |
+| M1 — parser | Done — UPDATE (corrected in place; this used to say "done against one app, needs a second, independent export"): now confirmed against a 46-app real Oracle APEX 26.1 corpus, zero warnings across all 46 — see .ai/knowledge/verification.md |
 | M2 — testkit fixtures | Done — exit criterion met (hand-written spec, testkit primitives only, passing live) |
 | M3 — generator (page objects + smoke specs) | Engineering-complete; the literal exit criterion (a green run in a live 26.1 GitHub Actions container) is open — needs Oracle APEX/ORDS infrastructure this project doesn't have access to |
 | M4 — release + second user | Launch-prep done: LICENSE (full Apache-2.0), trademark/license review, support matrix, limitations doc, examples/. The actual milestone — a real second user filing real breakage reports — is still open and isn't something engineering work alone can produce |

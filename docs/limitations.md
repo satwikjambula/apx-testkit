@@ -222,6 +222,14 @@ workaround isn't obvious; that's exactly the signal M4 needs.
 - Comment syntax, string quoting/escaping edge cases, and property-order
   significance are all unverified assumptions (assumed "none" until proven
   otherwise) — see docs/grammar-assumptions.md "Still open".
-- Verified against exactly one application. A second, independently-sourced
-  export is needed before any of the "verified" claims in this repo should
-  be trusted beyond that one app — see docs/support-matrix.md.
+- UPDATE (stale line, corrected in place): this used to say "verified
+  against exactly one application; a second, independently-sourced export is
+  needed." That gap has since been closed and substantially exceeded — the
+  static parser corpus is now 46 real apps (13 Oracle gallery + 11
+  `ujnak/APEXlang-exports` + 18 `oracle/apex` GitHub + 3 independent + 1
+  user's own app), all parsing with zero warnings — see
+  `.ai/knowledge/verification.md`. Live, running-instance verification is a
+  separate, narrower claim: confirmed against 4 of the 46 so far (UX Pattern
+  Catalog, Sample File Upload and Download, Sample Interactive Grids, Sample
+  Charts) — see docs/support-matrix.md for which claims are live-verified
+  vs. static-parse-only.
