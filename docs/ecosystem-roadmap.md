@@ -2711,6 +2711,78 @@ authority per this project's own governance, not mine. That review is the
 literal next step, not a formality to skip because the maintainer said
 "proceed."
 
+**Software Architect confirmation (2026-08-12):** Confirmed as proposed —
+`flow.ts` (+ `flow-cli.ts`) lives inside `packages/generator`, no new
+`packages/flow/`. This is a package-boundary call, mine to finalize per
+`.ai/AGENT.md`'s decision-authority table, not Product Architect's; I'm
+not deferring to their recommendation, I independently reach the same
+verdict from the architecture side, for reasons specific to my domain:
+
+- **Shape match against the actual precedent, checked directly, not
+  assumed.** Read `packages/generator/src/` as it exists today:
+  `diff.ts`(653 lines)+`diff-cli.ts`, `coverage.ts`(189)+`coverage-cli.ts`
+  +`coverage-html.ts`, `docs.ts`(440)+`docs-cli.ts`, each a self-contained
+  "typed-AST-in, deterministic-artifact-out" module with its own CLI bin
+  and its own `package.json` `exports` subpath (`./diff`, `./coverage`,
+  `./docs`). `flow.ts`+`flow-cli.ts` is the same shape, not an analogy to
+  it — same input (typed `ApexAppAst`), same output contract (deterministic
+  JSON artifact), same CLI-bin pattern (`apx-flow`, alongside
+  `apx-diff`/`apx-coverage`/`apx-docs`), same additive `exports["./flow"]`
+  entry. There is no real seam here to justify a package boundary — a
+  package boundary should track a genuine architectural discontinuity
+  (different consumer, different lifecycle, different verification
+  regime), and none of those apply: Flow Map has the exact same consumer
+  base (whoever already runs `apx-diff`/`apx-coverage`), the exact same
+  build/publish lifecycle, and the exact same verification regime (parser
+  unit tests + determinism check against `examples/employee-page`, per
+  DESIGN_GUARDRAILS — no live Oracle instance involved, so ADR-002's
+  stricter regime for `packages/testkit` doesn't even apply here).
+- **Grab-bag check, done concretely rather than by feel.** Five modules
+  post-addition (page-object/cli, coverage, diff, docs, flow) at ~2,400
+  lines total today is not an unfocused package — every module shares one
+  literal function signature shape (`(ast: ApexAppAst, ...) => Artifact`)
+  and one CLI-invocation convention. The real test for "has this package
+  tipped over" isn't module count, it's whether a module reads the typed
+  AST and nothing else. Flow Map does — no live `apex.*` calls, no DOM
+  interaction, no `packages/testkit` dependency in the actual artifact
+  logic (only in generator's devDependencies, for its own test fixtures,
+  same as today). If a future proposal wanted flow data fed by *live*
+  runtime discovery (e.g. resolving `apex.navigation` calls at runtime,
+  explicitly out of scope per Decision 1/2 above), that would cross into
+  `packages/testkit`'s domain and change this answer — this proposal
+  doesn't.
+- **ADR-001 governs this cleanly; no new ADR needed.** `flow-map.json` is
+  exactly the case ADR-001 already describes: a new downstream consumer
+  reading *only* the canonical typed AST, adding no new parsing concern of
+  its own. The two typed-field additions Phase 1a actually needs (button
+  page/URL redirect targets; `ApexColumnLinkTarget.url` per Decision 4)
+  are `packages/parser` changes, governed by ADR-001's existing
+  "type it, thread it into `diff.ts`'s field-by-field diffing, in the same
+  change" rule — not a new principle, the same rule that already caught
+  the `calendarSettings` gap. Nothing about Flow Map introduces a new kind
+  of Oracle-API-verification question (ADR-002), a new region-resolution
+  question (ADR-003), or a new verification-evidence question (ADR-004) —
+  it's a pure AST-to-artifact transform, the least architecturally novel
+  category of change this project has. **No new ADR is warranted.**
+- **Cross-package API stability: no impact.** `@apx/testkit` needs no
+  change — Flow Map never touches a live Oracle instance or a runtime
+  wrapper, so it's outside `@apx/testkit`'s contract entirely. `@apx/mcp`
+  needs no change for Phase 1a — it currently registers
+  `generate_apex_tests`/`inspect_apex_export` only; whether an
+  `analyze_apex_flow`-style MCP tool gets added later is a legitimate
+  future question but not one this placement decision forces, and not
+  part of the CLI-only scope Decision 1 already drew. The only public
+  surface change is additive: a new `apx-flow` bin and a new
+  `exports["./flow"]` subpath on `@apx/testgen`, following the exact
+  precedent of `./diff`/`./coverage`/`./docs` — not a breaking change to
+  any existing export, field, or CLI flag.
+
+**This placement question is resolved. Parser work (Decision 2's button
+target fields, Decision 4's `ApexColumnLinkTarget.url` fix) and generator
+work (`flow.ts`/`flow-cli.ts` inside `packages/generator`) are both
+unblocked to proceed, in the sequence Decision 4 already specifies (bug
+fix and button-target typing first, `flow.ts` wired against them second).**
+
 ### Decision 4 — the `ApexColumnLinkTarget` bug: prerequisite, not parallel
 
 Fix first, before Phase 1a's report/IR/IG edge source is wired in. The
