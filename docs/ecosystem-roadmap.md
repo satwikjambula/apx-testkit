@@ -2422,3 +2422,182 @@ Action redirects — the only candidate for "genuinely Phase-3, DOM-only"
 among the sources checked, though not proven so with full confidence).
 This is a genuinely different, more nuanced picture than "does not exist"
 — ready for Product Architect to scope a Phase 1a against.
+
+## Twelfth round (2026-08-03): maintainer's Flow Map UI + Application Flow
+Intelligence vision — recorded, not yet decided
+
+Two follow-on proposals from the maintainer, submitted after the Eleventh
+round's verification landed, both explicitly parked ("I will answer
+later") rather than acted on. Recorded here verbatim-in-substance per this
+project's standing practice of writing large proposals into this file as
+a durable record (see the Ninth round for the precedent), **not** as an
+approved backlog — no Product Architect scoping has happened on either of
+these yet, and no code should be built against this entry without that
+step first.
+
+### Part A: the Flow Map as a persisted, UI-visualized artifact
+
+Building on the Navigation/Interaction Graph discussed in the Eleventh
+round, the maintainer proposed making the flow map a **durable, versioned
+artifact**, not just a generated diagram:
+
+- **`flow-map.json`** as the canonical, machine-readable graph (nodes =
+  pages, edges = navigation transitions with `trigger`/`condition`/
+  `mechanism`/`confidence` fields) — the source of truth. Example edge
+  shape proposed: `{ from, to, trigger: {type, identifier}, condition:
+  {type, expression}, mechanism, confidence }`.
+- **`flow-layout.json`** kept separate from the graph — persisted node
+  positions from a user manually arranging the diagram, so regenerating
+  the graph from a new export never clobbers layout preferences.
+- **`annotations.json`**, also separate — free-text notes/owner/risk tags
+  a user attaches to nodes, explicitly never mixed into parsed APEX
+  metadata.
+- **A visual Flow Map UI**: a workflow-designer-style graph editor
+  (maintainer suggests using an existing graph UI library rather than
+  building rendering from scratch), with an application-level view
+  (pages only, to stay readable on large apps) that drills into a
+  page-level view (region/button/validation/process/branch detail) on
+  click. Side-panel evidence display on clicking a node or edge — e.g.
+  clicking an edge shows mechanism/source/trigger/condition/target/
+  evidence/confidence, directly surfacing this project's "don't guess"
+  principle in the UI itself.
+- Multiple named, overlapping maps referencing subsets of the canonical
+  graph (e.g. "Entire Application," "Employee Management," "Approval
+  Workflow") without duplicating underlying data.
+- Flow-map-to-scenario generation: selecting a path in the UI and
+  generating a starter test scenario description from it, editable by
+  the user afterward.
+- Role-based graph rendering (toggle a role, see which nodes/edges are
+  reachable) explicitly gated on the same evidence-tiering discipline as
+  everything else — "the ✗ should be backed by authorization metadata,
+  not an assumption."
+- Derived analysis surfaced visually: unreachable/orphaned pages, dead-end
+  workflows (a page with no discovered outgoing path), and "potentially
+  incomplete branch" findings (conditional branches with no confirmed
+  default/fallback) — explicitly framed as **findings with evidence**,
+  not automatic bug claims.
+- Flow-map versioning tied to the existing `apx-diff` capability: a
+  "Flow Changes" view showing added/removed navigation edges and changed
+  branch conditions between two export versions, with a stated impact
+  count (scenarios/tests affected).
+- Proposed package layout: a new `packages/flow/` (`analyzer.ts`,
+  `navigation.ts`, `interaction.ts`, `scenarios.ts`, `types.ts`,
+  `serializer.ts`) feeding a separate `apps/flow-map/` UI application,
+  with the hard rule that **the UI never parses the APEX export itself**
+  — it only ever reads the already-analyzed, already-serialized artifacts.
+
+**My response at the time** (recorded here since it's part of what was
+actually discussed, not just the proposal): the data/graph-model half of
+this (persisted JSON, confidence-tiered edges, evidence-on-click as a
+*principle*, layout/annotations kept separate from analyzed data) is
+sound and doesn't require a UI to deliver real value — a `flow-map.json`
+plus a CLI (`apx flow`, `apx scenarios`) already gets most of the stated
+functional value as text/data output, matching this project's existing
+all-CLI shape. The **visual Flow Map UI** specifically — a graph-editing
+web application with persisted layouts, multi-map support, and
+interactive drill-down — is a different *kind* of project, not a bigger
+version of the same feature: it needs a frontend framework, a graph
+rendering library, and real UX design work this project has never done,
+and is arguably a bigger commitment than the VS Code extension and
+Language Server ideas already explicitly rejected in the Ninth round for
+being "a different product, not a testing-framework feature" at this
+project's current pre-alpha, no-second-user-yet stage. Recommended
+splitting into two separate decisions — data model + CLI now (if the
+Eleventh round's verification supports it), UI logged as its own,
+much larger future decision — rather than letting the UI ambition carry
+the data-model scoping. **Not yet answered by the maintainer as of this
+entry** ("I will answer the question later").
+
+### Part B: "APEX Application Intelligence" — a 16-item, 5-phase extension
+
+A further, larger proposal, submitted immediately after Part A, reframing
+the whole direction: not "a navigation visualizer" but an intelligence
+layer built on the same AST + flow graph, explicitly guided by the
+maintainer's own stated principle — "don't add features just because
+they're technically possible. Add features that reuse the same AST +
+flow graph and produce something valuable for developers, QA, architects,
+and AI agents."
+
+The 16 items, as proposed: (1) business-critical path detection —
+auto-identify important paths (login→dashboard→order→approve→complete
+style chains), tagged with risk/step-count/role; (2) risk-based test
+generation — a scoring formula (criticality + complexity + branch count +
+dependency count + authorization + recent-change history + historical
+failures) driving which flows get automated first vs. left exploratory;
+(3) impact analysis extending the existing `apx-diff` — "Page 20 changed,
+here are the N affected paths/branches/scenarios/tests, run only those";
+(4) AI-generated business scenarios — an agent reasoning over a
+structured scenario model instead of raw export text, to enumerate
+realistic cases (happy path, rejected, validation failure, unauthorized,
+cancel, duplicate, session timeout, back-navigation); (5) a role/
+authorization matrix (page × role grid), explicitly distinguishing
+verified from inferred authorization; (6) a dependency graph beyond
+navigation — page → LOV/process/table/authorization/child-page edges,
+answering "what tests are affected if table EMPLOYEES changes"; (7) an
+automatically-produced, always-current component capability matrix (this
+project already has `README.md`'s capability matrix — the proposal is
+generating/maintaining it from the same underlying analysis rather than
+by hand); (8) a "why does this page exist" view — purpose, incoming/
+outgoing edges, used-by roles, dependencies, test count, and risk, i.e.
+auto-generated living documentation (overlaps with the already-shipped
+`apx-docs`, issue #4 — a future scoping pass would need to reconcile
+these rather than duplicate); (9) anomaly detection — findings like "page
+has no incoming navigation," "branch has no default path," "region has
+no discoverable runtime identifier," framed explicitly as **findings with
+evidence and confidence**, never automatic bug claims, matching this
+project's existing quirks-ledger discipline; (10) scenario coverage
+visualization overlaid directly on the flow map (green/yellow/red per
+node) extending the already-shipped coverage engine (`apx-coverage`,
+issue #2); (11) a combined AST-diff + flow-diff + test-diff "Release
+Impact Report" for deployment gates; (12) production-vs-test flow
+comparison — storing real runtime-observed navigation and diffing it
+against the declared model ("runtime behavior differs from application
+model"); (13) a browser flow recorder — record real user actions, map
+each back to the AST (click → button identifier → APEX button → branch →
+target page), explicitly framed as a possible solution to "some of the
+hardest runtime locator problems... because you have actual observed
+evidence"; (14) an "explore this application" agent combining AST + flow
+graph + runtime discovery + browser observation to describe a workflow in
+prose with an evidence/confidence citation, a direct extension of this
+project's existing multi-agent structure; (15) a long-term "application
+knowledge graph" enabling natural-language queries ("what happens when a
+manager approves a request," "which tests are affected by changing
+P20_STATUS," "which pages can an employee access"); (16) an "APEX
+Application Health Score" — per-dimension percentages (architecture,
+navigation, test coverage, runtime verification, authorization, flow
+completeness) with an explicit caution against reducing it to one
+meaningless composite number — "the individual dimensions and evidence
+matter more."
+
+**Maintainer's own proposed phasing** (not overridden or evaluated here,
+recorded as proposed): Phase 1 — Flow Intelligence (branch analysis,
+navigation/interaction graph, persisted `flow-map.json`, the UI, evidence/
+confidence, unreachable/dead-end detection — i.e. Part A above). Phase 2
+— Testing Intelligence (scenario generation, role-based scenarios,
+critical paths, coverage overlay, risk-based testing — items 1, 2, 5, 10
+above). Phase 3 — Change Intelligence (flow diff, impact analysis, test
+selection, release impact report — items 3, 11). Phase 4 — Runtime
+Intelligence (browser recording, runtime flow verification, expected-vs-
+observed, component discovery — items 12, 13). Phase 5 — AI Application
+Intelligence (knowledge graph, natural-language queries, AI workflow
+discovery, AI scenario generation, AI-assisted regression planning —
+items 4, 14, 15).
+
+**Status: recorded, explicitly parked by the maintainer** ("I will answer
+later and also add this to the next list"). No Product Architect
+evaluation, no Software Architect package-boundary review, and no Oracle
+APEX Architect verification has happened on Part B at all — unlike Part A
+and the Eleventh round's navigation-source work, none of Part B's 16
+items have been checked against real export data, real EBNF productions,
+or this project's existing "type only what has clear, direct testing
+value" bar yet. Several items (13, 14, 15 in particular — browser
+recording infrastructure, an AI natural-language query interface, runtime
+production monitoring) are, on their face, substantial standalone
+undertakings even by the standard already applied to the Part A UI
+question above — flagged verbally at the time, not yet formally evaluated
+here. **Next step, when the maintainer returns to this**: Product
+Architect scoping pass on Part A's data-model-vs-UI split first (already
+pending an answer), then a separate scoping pass on Part B's Phase 2
+items specifically (the ones most directly buildable on top of whatever
+Phase 1 data model gets approved), before any of Phases 3-5 are
+evaluated at all.
