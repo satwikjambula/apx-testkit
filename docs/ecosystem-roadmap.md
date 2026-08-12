@@ -706,6 +706,25 @@ developing against a single app.
   `parser.ts`. The claim that "the parser already knows branches, menus,
   navigation lists, breadcrumbs" does not hold today — same category of
   correction as the LOV/validations finding from the prior round.
+
+  **REVISED FINDING (Eleventh round, 2026-08-11, Oracle APEX Architect
+  verification pass) — this premise is now PARTIALLY WRONG, corrected in
+  place rather than deleted.** `ApexPage.branches` is real and typed
+  (Seventh round, below). `ApexRegion.actions` (Cards/List row actions,
+  including `type: fullCard` — the whole-card-clickable case) and
+  `ApexReportColumn.linkTarget` (report/IR/IG column links) are ALSO
+  real and typed now, and were not yet built when this bullet was
+  written. `breadcrumb` and `list` (navigation lists/menus) remain
+  genuinely untyped, but for a more specific reason than "no field
+  exists": both are **shared components** (`shared-components/
+  breadcrumbs.apx`, `shared-components/lists.apx`), not page-level
+  constructs — `parseApp`'s `projectPages()` only projects a `page` root
+  node, so a `breadcrumb`/`list` root parses cleanly (zero warnings,
+  confirmed live) into the generic `ComponentNode` tree but lands in
+  `unmodeled` and is never surfaced in `ParseResult.ast` at all. This
+  needs shared-component support in the parser's app-level output shape,
+  not just an additive field on an existing type — see the Eleventh
+  round entry below for the full per-source verdict table and evidence.
 - **Category-level coverage (Processes).** The existing coverage report
   (items/regions/buttons) can't extend to processes until `process` is a
   typed AST field — still sits in the generator's own `unmodeled` backlog
@@ -1403,7 +1422,13 @@ buildable now, and what's still genuinely blocked.
   graph needs these as real, typed, cross-referenceable data before it
   can exist; that's parser work, and it's already the correction this
   project made to an earlier round's "Automatic CRUD Tests"/"category
-  coverage" proposals for the identical reason.
+  coverage" proposals for the identical reason. **Update (Eleventh
+  round, 2026-08-11): `branch`/`validation`/`process` are now all typed
+  (Seventh round, below) — this specific blocker for Page/Branch is
+  resolved, though `process.target` (DML target: tableName/pkColumn) is
+  confirmed to never carry a navigation target itself, so `process` is a
+  step, not a graph edge, for navigation purposes specifically. See the
+  Eleventh round entry for the full navigation-source verdict table.**
 - **Versioned compatibility suite as its own repo.** Overlaps directly
   with round 3's showcase-app recommendation and the "Full compatibility
   lab" item above — same real constraint (no App Builder/workspace
@@ -2053,7 +2078,13 @@ either.
 - **Dependency graph visualization**, unprioritized item. Same
   foundational gap, stated plainly across three prior rounds now
   (Third round's Navigation Graph correction, Fifth round's dependency-
-  graph entry, this round). **Defer**, same trigger.
+  graph entry, this round). **Defer**, same trigger. **Update (Eleventh
+  round, 2026-08-11): the foundational gap is now narrower than "no
+  field exists" — see that entry for the full per-navigation-source
+  verdict (several sources are typed-now, several are structured-but-
+  untyped pending shared-component parser support, one — Dynamic Action
+  redirects — is confirmed to have no structural home in the EBNF at
+  all). Still not built; trigger unchanged.**
 - **Documentation generator, item 4** — split verdict, not one thing.
   Page/region documentation drawn from the already-typed AST (items,
   regions, buttons, now processes/computations/columns/actions) is a
@@ -2331,3 +2362,63 @@ tagged. That remains the maintainer's own action — see the workflow file's
 header comment for the exact three setup steps (npm Automation token,
 `NPM_TOKEN` repo secret, first-publish scope creation) and
 `git tag vX.Y.Z && git push origin vX.Y.Z` to trigger it once ready.
+
+## Eleventh round (2026-08-11): Navigation Graph — per-source verdict, Oracle APEX Architect verification pass
+
+A "Navigation Graph"/"Interaction Graph" proposal was raised a fourth
+time. The premise behind all three prior deferrals (Third/Fifth/Ninth
+rounds) — "no branch/menu/breadcrumb/navigation field exists anywhere in
+the parser" — has **partially changed** since those were written:
+`ApexPage.branches` (Seventh round), `ApexRegion.actions`, and
+`ApexReportColumn.linkTarget` are all now real, typed fields. This round
+verifies, source by source, exactly what the user's proposed Phase 1
+(declarative-only, explicitly excluding `apex.navigation`/JS analysis)
+list actually needs, against real `.apx` export data
+(`ux-pattern-catalog`, the one app locally available to this session —
+see below) and the official EBNF (`curl`'d directly, never
+WebFetch-summarized, per ADR-004).
+
+**Evidence note on corpus access**: this session had direct file access
+to only one real export, `ux-pattern-catalog` (found readable in
+`~/.Trash`, not the full 46-app corpus referenced elsewhere in this
+project's history, which is not present in this environment). Findings
+below marked "confirmed this pass" are witnessed directly against that
+app's raw `.apx` files; findings marked from prior history cite this
+project's own `docs/grammar-assumptions.md`/`ast.ts` doc comments, which
+record real evidence from the fuller corpus this session couldn't
+re-access. Where evidence is inferred by structural analogy rather than
+directly witnessed, that's stated explicitly — not presented as
+confirmed.
+
+### Per-source verdict table
+
+| Source | Verdict | Evidence |
+|---|---|---|
+| Page branches | **Typed now** (skip — pre-confirmed) | `ApexPage.branches`, Seventh round |
+| Button page/app redirect target (`redirectThisApp`/`redirectOtherApp`) | **Structured, not yet typed** | EBNF `button-behavior-property` (`apexlang.ebnf:2579-2589`): `action` is a closed enum incl. `redirectThisApp`/`redirectOtherApp`; `target: <value>` applies when action=REDIRECT_PAGE/REDIRECT_APP, same opaque-`<value>`-but-real-`{page,items,clearCache}`-object shape as branch/column/list/breadcrumb. Not directly re-witnessed with a real `redirectThisApp` button this pass (none in `ux-pattern-catalog`); prior corpus evidence on record (`docs/grammar-assumptions.md:437-440`) confirms the enum against real data. Today `ApexButton.action` captures only the bare string, not the destination — lives in `raw` only. |
+| Button external-URL target (`redirectUrl`) | **Structured, not yet typed** | Confirmed live, 17 real buttons, `ux-pattern-catalog` (e.g. `pages/p00110-dashboard-simple.apx:1136-1139`: `behavior { action: redirectUrl targetUrl: # }`). `targetUrl` sits in `raw['behavior.targetUrl']`, not on `ApexButton`. |
+| Page links (generic non-button link component) | **Not a separate source** | EBNF has no standalone top-level `<link>` production — `link {}` is always a nested group reused inside `column`/`entry`(list, breadcrumb)/region-`action`. Folds into those three findings below, not its own category. |
+| Breadcrumbs | **Structured, not yet typed — bigger lift than a field** | Confirmed live: `shared-components/breadcrumbs.apx` parses with zero warnings via the existing generic `parseApxFile`; every `entry` carries a real `pageNumber` direct property AND `link { target: { page: N } }` (e.g. `entry home ( pageNumber: 1 ... link { target: { page: 1 } } )`). But `breadcrumb` is a **shared component**, not a page-child — `projectPages()` only projects `page` roots, so it lands in `unmodeled` and never reaches `ParseResult.ast` at all. Needs shared-component support in the parser's app-level output, not just an additive AST field. |
+| Navigation lists / Lists | **Structured, not yet typed — same shared-component gap as breadcrumbs** | Confirmed live: `shared-components/lists.apx`, e.g. `list navigation-menu ( entry about ( link { target: { page: 3 } } ) )` — real navigation menu, page-targeted. ALSO confirmed a `type: url` entry variant on the same shared list type (`list item-details-side-actions`, `entry delete ( link { target: { type: url url: # } } )`). Same `unmodeled`/shared-component gap as breadcrumb. A page-level `region (type: list, source.list: @name)` only *references* a shared list by name — it doesn't inline entries, so region-level parsing alone can't resolve targets without shared-component support too. |
+| Cards links | **Typed now** | `ApexRegion.actions` (`ApexRegionAction[]`) already covers this — confirmed by evidence already on record in `ast.ts` (`sample-cards`, `p00002-blob-column.apx:118`, `type: fullCard behavior { target: {...} } }`) and independently re-derivable from the EBNF's `action-d` production. `type: fullCard` IS "the whole card is clickable" — not a separate mechanism from `ApexRegion.actions`, confirming the user's question directly: card-level and element-level (button/title/subtitle/media) navigation are the same typed field. |
+| Report / IR / IG links | **Typed now for in-app page targets — CONFIRMED BUG found this pass for the URL-redirect variant** | `ApexReportColumn.linkTarget` covers the page-redirect case, confirmed live this pass on a `classicReport` column (`ux-pattern-catalog`, `pages/p00320-item-detail-full.apx`, region `child-records`). BUT: found a real, reproducible counter-example to `ApexColumnLinkTarget`'s own doc comment ("no external-URL variant is defined anywhere in any column-link production") — `pages/p00320-item-detail-full.apx:460`: `column CHILD_RECORD_NAME ( type: link link { target: { type: url url: # } linkText: #CHILD_RECORD_NAME# } )`. Today's `projectColumn()`/`projectPageTarget()` silently returns `{page:null, items:null, clearCache:null}` for this real case — the actual `url` value stays in `raw` (ADR-001 compliant, not lost) but the typed `linkTarget` field is empty/misleading for URL-redirect columns. IG columns (`column-b`) are covered by the same generic `projectColumn()` — the parser doesn't branch on the six EBNF column-variant productions, confirmed by reading `parser.ts`. Needs a `ApexColumnLinkTarget.url` field + the doc comment corrected in place. |
+| Dialog links / modal page navigation | **Structured, not yet typed** | `pageMode: normal \| modalDialog \| nonModalDialog` is confirmed a **target-page-level** `appearance` property (EBNF `page-appearance-property`, `apexlang.ebnf:2346`), not a property of the redirecting link/branch/button itself. So "does this navigation open a dialog" IS answerable from static data — but only by resolving the target page id and reading THAT page's own `raw['appearance.pageMode']` (not currently a typed `ApexPage` field either). A navigation-graph consumer would need to join `target.page -> ApexPage.pageMode`. |
+| `apex.navigation` JS API | **Confirmed real, documented — correctly out of Phase 1 scope** | Oracle's own JS API docs (Release 24.2, `apex.navigation`) confirm `redirect()`, `dialog()`, `popup()`, `openInNewWindow()` as real, documented methods. Genuinely Phase-2-or-later per the user's own framing, since it's JS-invoked at runtime, not present in static `.apx` export metadata. |
+| Dynamic Actions that navigate (`redirectThisApp`) | **Not declarative metadata as far as could be confirmed — genuinely different from the button case** | Read the FULL `action-c` EBNF production (Dynamic Action's own nested `action` step, `apexlang.ebnf:3022-3113`) group-block by group-block: `genAI`, `affectedElements`, `execution`, `clientSideCondition`, `serverSideCondition`, `security`, `config`, `advanced`, `comments` — **none carry a page/URL target of any kind**. `action-c-direct-property`'s own `action` field is an open, ungated `<string-like-value>` ("SUPPORTED UI" type), unlike button's `behavior.action`, which is a closed enum with defined `target`/`targetUrl` companion properties. No real DA-redirect example was available in this session's one accessible corpus app to double-check against real data (ADR-004 requires this, and it could not be obtained this pass). **This is flagged as the one source most likely to be genuinely undiscoverable from export data alone** — recommend QA/Verification Engineer specifically hunt for a real `dynamicAction` with a `redirectThisApp` step (against the fuller corpus this session couldn't access) before ruling definitively, rather than accepting this verdict as final on EBNF silence alone. |
+| Processes that redirect / branches after submit | **Not a navigation source itself — confirmed** | `ApexProcess.target`'s doc comment (already on record) and the EBNF both confirm `process.target` is DML-only (`tableName`/`pkColumn`/`pkItem`/`returnKeyIntoItem`), never a page/URL target — the EBNF's own `<process-group-block>` (10 groups) has no `target` group at all; the DML shape is a confirmed real-data-vs-EBNF gap already documented, but still never a redirect target. `closeDialog` exists as a process `type` value but carries no target either. Redirect-after-process is always mediated through a separate `branch` (already typed) — processes are a graph STEP, not an independent navigation-graph EDGE source. |
+
+### Net effect on the Phase 1 scoping question
+
+Of 12 sources checked: **3 already fully typed** (branches, Cards/List
+actions, report/IR/IG page-target links), **1 typed with a confirmed bug**
+(report-column URL-redirect variant), **5 structured but requiring new
+parser work** (button page/URL targets, breadcrumbs, lists, dialog-page
+detection) — of which breadcrumbs and lists specifically need
+shared-component support in `parseApp`, a bigger architectural lift than
+an additive field, **1 confirmed real but correctly out of Phase 1 scope**
+(`apex.navigation`), **1 not a source at all** (processes — folds into
+branches), and **1 unresolved pending more corpus access** (Dynamic
+Action redirects — the only candidate for "genuinely Phase-3, DOM-only"
+among the sources checked, though not proven so with full confidence).
+This is a genuinely different, more nuanced picture than "does not exist"
+— ready for Product Architect to scope a Phase 1a against.
