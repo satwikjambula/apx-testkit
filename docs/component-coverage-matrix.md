@@ -116,7 +116,7 @@ found to contradict ADR-003 either.
 | `checkboxGroup` | 16/46 | 70 | Not verified |
 | `popupLov` | 10/46 | 49 | Not verified — `PopupLov` stub |
 | `password` | 41/46 | 48 | Partially — `login()`'s `.fill()` works against it in practice, but not verified via the generic `ApexItem`/`apex.item()` round-trip the way the other types are |
-| `checkbox` | 26/46 | 40 | Not verified, not stubbed either — likely tractable, just never exercised live |
+| `checkbox` | 26/46 | 40 | Not verified, not stubbed either — a live-verification pass was attempted 2026-08-12 (GitHub issue #8) and blocked: the only no-login live app (UX Pattern Catalog) and 3 other apps on the same Autonomous DB host all returned an identical ORDS-level 404 ("could not be mapped to any database") on repeated checks over ~6 minutes, and `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` were unset, so credentialed apps were also unreachable. This is an access gap, not a finding about Checkbox's behavior — see `docs/quirks/26.1.json` `checkbox-item-live-verification-blocked` |
 | `fileUpload` | 12/46 | 39 | Not verified — `FileBrowse` stub |
 | `selectOne` | 4/46 | 37 | Not verified — new type as of an earlier round, real ground truth grew in that batch (was 1/24, now 4/46) |
 | `richTextEditor` | 4/46 | 27 | Not verified — `RichText` stub |
