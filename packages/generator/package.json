@@ -8,7 +8,8 @@
     "apx-coverage": "dist/coverage-cli.js",
     "apx-diff": "dist/diff-cli.js",
     "apx-docs": "dist/docs-cli.js",
-    "apx-flow": "dist/flow-cli.js"
+    "apx-flow": "dist/flow-cli.js",
+    "apx-report": "dist/report-cli.js"
   },
   "main": "dist/cli.js",
   "types": "dist/cli.d.ts",
@@ -44,6 +45,7 @@
     "./coverage-html": "./dist/coverage-html.js",
     "./diff": "./dist/diff.js",
     "./docs": "./dist/docs.js",
-    "./flow": "./dist/flow.js"
+    "./flow": "./dist/flow.js",
+    "./report": "./dist/report.js"
   }
 }
