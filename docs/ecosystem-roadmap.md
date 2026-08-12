@@ -2601,3 +2601,141 @@ pending an answer), then a separate scoping pass on Part B's Phase 2
 items specifically (the ones most directly buildable on top of whatever
 Phase 1 data model gets approved), before any of Phases 3-5 are
 evaluated at all.
+
+## Thirteenth round (2026-08-12): Flow Map — Product Architect scoping decision
+
+The maintainer has greenlit moving forward. This round makes the actual
+scoping call the Twelfth round left pending — decided against the
+Eleventh round's per-source evidence, not re-presented as a tradeoff.
+
+### Decision 1 — data model + CLI now; visual UI deferred, not built
+
+**Confirmed, not just re-agreed-with-myself.** The UI is out for the same
+structural reason this project has rejected every prior "bigger,
+ahead-of-need" proposal: Analysis Engineer (no capability existed yet for
+an agent to own), the plugin API (four separate rounds, no third real
+consumer ever materialized), the VS Code extension and Language Server
+(both "a different product, not a testing-framework feature," Ninth
+round). Apply the same test here: does a *visual* Flow Map address a real
+gap with real ground truth, or is it organizational/product structure for
+a capability that doesn't exist yet? Nothing has ever consumed even a
+text/JSON flow graph in this project — there is no user, internal or
+external, who has hit a wall using a CLI-only `flow-map.json` and asked
+for a graph editor. Building the UI now would mean designing persisted
+layouts, multi-map overlays, and drill-down interaction against zero
+usage evidence of the thing underneath it. It is also, by the maintainer's
+own proposal text and my prior assessment (Twelfth round), a categorically
+bigger lift than any of those four rejected precedents — a new frontend
+framework, a graph-rendering library, and real UX design work this
+project has never done, at a project that is still pre-alpha and still
+short M4 (a second real user). The data model half is different in kind:
+it's the same shape as `apx-diff`/`apx-coverage` — consume already-typed
+AST fields, emit a JSON artifact plus a CLI verb — which this project
+already knows how to ship safely and has shipped twice. **Verdict: build
+`flow-map.json` + a CLI (`apx flow`) now. The visual UI stays logged in
+this file, unbuilt, until a real user is driving `apx flow` output into
+their own workflow and hits a concrete wall text output can't solve.**
+That's the evidence condition that would change this call — not "the data
+model shipped, so build the UI next" by default.
+
+### Decision 2 — Phase 1a exact boundary
+
+Drawing the line at **single-node, already-typed-or-trivially-typeable
+fields only** — no shared-component parser work, no cross-page joins, in
+this slice:
+
+**In Phase 1a:**
+- **Page branches** (`ApexPage.branches`) — typed, zero new work, wire
+  directly into the edge builder.
+- **Cards/List row actions** (`ApexRegion.actions`, incl. `type:
+  fullCard`) — typed, zero new work.
+- **Report/IR/IG page-target links** (`ApexReportColumn.linkTarget`) —
+  typed for the in-app case; blocked on the bug fix in Decision 4 before
+  Phase 1a can treat this source as trustworthy (see below).
+- **Button page/app redirect targets** (`redirectThisApp`/
+  `redirectOtherApp`) — NOT typed today, but this is the one net-new field
+  in Phase 1a, and it's deliberately in-scope rather than deferred: the
+  EBNF confirms the exact same opaque `target: {page, items, clearCache}`
+  shape already typed for branches/columns/list/breadcrumb entries, so
+  this is a direct application of an already-proven projection helper
+  (`projectPageTarget()`), not new design. Low risk, small, same pattern
+  as work already shipped this project. Button external-URL targets
+  (`redirectUrl`/`targetUrl`) get the same typed treatment in the same
+  change — no reason to type one button-target variant and not the other.
+
+**Deferred to Phase 1b (structurally bigger, not just "more work"):**
+- **Breadcrumbs and navigation lists** — both are shared components
+  (`shared-components/breadcrumbs.apx`, `lists.apx`), not page children.
+  `parseApp`'s `projectPages()` only projects `page` roots today; making
+  these visible to `ParseResult.ast` at all needs new shared-component
+  support in the parser's app-level output shape, not an additive field.
+  That's a different, larger kind of parser change than everything else
+  in 1a, and the Eleventh round already flagged this explicitly — taking
+  that flag at face value rather than smuggling it into 1a under
+  "structured, needs a field."
+- **Dialog-page detection** (`pageMode` on the *target* page) — needs (a)
+  a new typed `ApexPage.pageMode` field, which is easy on its own, AND
+  (b) a join from a navigation edge's target-page-id to that target page's
+  own typed record — the first time this project's typed AST would need
+  cross-page resolution rather than single-node projection. That join
+  logic doesn't exist yet anywhere in `packages/parser` or
+  `packages/generator`. Keeping Phase 1a to single-node data only, and
+  building cross-referencing as a deliberate Phase 1b step once there's
+  more than one join to design for, is the more defensible boundary than
+  drawing it project-by-project.
+
+**Not part of Phase 1 at all:**
+- `apex.navigation` JS API — confirmed real, confirmed correctly out of
+  scope per the maintainer's own Phase 1 framing (static-only).
+- Processes — confirmed not a navigation source; folds into branches.
+
+### Decision 3 — package boundary: recommend against a new package, but this is Software Architect's call to finalize
+
+I do not own `packages/*` structure, and package-boundary changes are
+explicitly Software Architect's domain (see `.ai/ADR/*`). What I can say
+from the product side: Phase 1a as scoped above is functionally identical
+in shape to `apx-diff` and `apx-coverage` — a module that consumes
+already-typed AST fields and emits a derived artifact plus a CLI verb.
+Both of those live inside `packages/generator`, not as their own
+packages, and this project has twice now explicitly declined to extract a
+shared `@apx/model` intermediate representation, citing "extract from
+real consumers once there are three or more, not from zero" (Fifth round)
+— the same reasoning argues against standing up `packages/flow/` before
+Phase 1a even has one shipped consumer. My recommendation is a
+`flow.ts` (or small `flow/` subdirectory) module inside
+`packages/generator` plus an `apx-flow` CLI bin, matching the existing
+`apx-diff`/`apx-coverage` precedent exactly. **This is a recommendation,
+not the final call** — Software Architect should confirm or override this
+specific placement before any code is written, since it's their
+authority per this project's own governance, not mine. That review is the
+literal next step, not a formality to skip because the maintainer said
+"proceed."
+
+### Decision 4 — the `ApexColumnLinkTarget` bug: prerequisite, not parallel
+
+Fix first, before Phase 1a's report/IR/IG edge source is wired in. The
+bug (URL-redirect report columns silently produce an empty typed
+`linkTarget`, contradicting the type's own doc comment) sits directly
+inside the exact data Phase 1a's third edge source reads. Shipping the
+flow graph on top of this bug would silently under-report edges for every
+URL-redirect column in every app the graph runs against — the kind of
+confident-wrong gap this project's whole evidence discipline exists to
+catch, and it would be introduced by the very feature meant to surface
+navigation truthfully. The fix itself is small and already fully scoped
+by the Eleventh round's finding (add `ApexColumnLinkTarget.url`, correct
+the doc comment, wire into `apx-diff` per DESIGN_GUARDRAILS' "type +
+diff in the same change" rule) — there's no real cost to sequencing it
+first, and real cost to not doing so.
+
+### Decision 5 — Dynamic Action redirects: parallel, not blocking
+
+Phase 1a's scope (Decision 2) already excludes DA redirects entirely —
+it was never a candidate for this slice, typed or not. QA/Verification
+Engineer's recommended corpus hunt (find a real `dynamicAction` with a
+`redirectThisApp` step against the fuller corpus, per the Eleventh
+round) can run fully in parallel to Phase 1a's build with no dependency
+either direction. Whatever it finds only affects Phase 1b/1c scoping
+later: real evidence of declarative DA-redirect metadata makes it a 1b/1c
+candidate; continued silence rules it Phase-3/DOM-only with actual
+confidence instead of EBNF-silence-alone. Nothing about Phase 1a's
+correctness or completeness depends on this resolving first.
