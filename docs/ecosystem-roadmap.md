@@ -2811,3 +2811,63 @@ later: real evidence of declarative DA-redirect metadata makes it a 1b/1c
 candidate; continued silence rules it Phase-3/DOM-only with actual
 confidence instead of EBNF-silence-alone. Nothing about Phase 1a's
 correctness or completeness depends on this resolving first.
+
+### Decision 4 and Decision 2's button-target slice — DONE (Compiler/Parser Engineer, 2026-08-12)
+
+Both prerequisites Decision 4 sequenced ahead of `flow.ts` are shipped.
+Full detail (EBNF productions checked, real-data citations, evidence-tier
+distinctions, test list, sweep results) is in
+`docs/grammar-assumptions.md`'s "Navigation Graph prerequisite pass" entry
+— summarized here for the roadmap record:
+
+- **`ApexColumnLinkTarget.url`** — the confirmed bug from the Eleventh
+  round is fixed. `ApexColumnLinkTarget`'s doc comment (`ast.ts`) is
+  corrected in place, not silently rewritten. Wired into `apx-diff`
+  automatically (the existing `linkTarget` diff line already JSON-compares
+  the whole object).
+- **`ApexButton.target`/`ApexButton.url`** — typed, per Decision 2's exact
+  scope: the page/app-redirect variant (`redirectThisApp`/
+  `redirectOtherApp`) via the same `projectPageTarget()` helper already
+  shared by branch/column/action, and the external-URL variant
+  (`redirectUrl`/`targetUrl`) as a flat sibling field, matching
+  `ApexRegionAction`'s already-confirmed shape exactly. The URL variant is
+  directly re-witnessed live (17 real buttons, `ux-pattern-catalog`); the
+  page/app-redirect variant is typed from the EBNF plus the proven helper
+  pattern, honestly flagged as NOT re-witnessed with a real
+  `redirectThisApp`/`redirectOtherApp` button in this session's corpus —
+  the same access constraint the Eleventh round hit on the same app.
+- Both wired into `apx-diff`, regression-tested
+  (`packages/parser/test/parser.test.ts`), zero-warnings-swept against the
+  one real export this session had direct access to (`ux-pattern-catalog`,
+  31 files, 0 warnings), determinism-checked (byte-identical regeneration
+  against `examples/employee-page`), and recorded in
+  `docs/grammar-assumptions.md` + `README.md`'s capability matrix (Button
+  and Report columns rows).
+- **No shared `LinkTarget`-style type was factored out across
+  branch/column/action/button.** Considered directly: `ApexBranchTarget`
+  (`page`/`url`/`items`, no `clearCache`) and the corrected
+  `ApexColumnLinkTarget` (`page`/`items`/`clearCache`/`url`, url NESTED
+  inside `target`) both carry `url` nested inside the target object;
+  `ApexRegionActionTarget`/the new `ApexButtonTarget` (`page`/`items`/
+  `clearCache`, no `url` field at all) carry their URL variant as a
+  separate FLAT sibling property instead, never nested. These are two
+  genuinely different real shapes, not incidental near-duplicates a single
+  type could paper over without either lying about a field that's never
+  populated (a phantom `url` on action/button) or a field that's sometimes
+  nested and sometimes flat depending on caller (worse). The one thing
+  that IS already shared, correctly, is `projectPageTarget()` itself — the
+  `{page, items, clearCache}` extraction logic — used identically by
+  column/action/button today. That helper is the real, proven
+  factoring; a shared TS *type* on top of it would only be adding
+  abstraction for its own sake, restrained-typing bar not met.
+- **This unblocks `flow.ts`** (Phase 1a's data model + CLI, Decision 1/3)
+  with complete data for all three currently-typed single-node sources
+  (`ApexPage.branches`, `ApexRegion.actions` incl. Cards/List row actions,
+  `ApexRegion.columns[].linkTarget` now including the URL-redirect case)
+  plus the one net-new source Decision 2 scoped in
+  (`ApexButton.target`/`ApexButton.url`). Button-target's page/app-redirect
+  variant carries the same honest evidence-tier caveat into `flow.ts`
+  that it carries here — real, typed, diffable data, not yet
+  live-re-witnessed for that specific enum value — a distinction `flow.ts`
+  should preserve in whatever `mechanism`/`confidence` field it emits for
+  edges sourced from it, not flatten into an unqualified "confirmed."

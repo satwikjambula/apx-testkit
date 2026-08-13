@@ -211,6 +211,8 @@ const buttonFixture: ApexButton = {
   identifier: 'BTN1',
   label: 'Save',
   action: 'SUBMIT',
+  target: { page: 5, items: { P5_ID: '#ID#' }, clearCache: '5' },
+  url: 'https://example.com',
   htmlDomId: 'btn1_dom',
   loc: LOC,
   raw: { 'some.rawKey': 'raw value' },
@@ -291,7 +293,7 @@ const columnFixture: ApexReportColumn = {
   type: 'plainText',
   heading: 'Name',
   sequence: 10,
-  linkTarget: { page: 5, items: { P5_ID: '#ID#' }, clearCache: '5' },
+  linkTarget: { page: 5, items: { P5_ID: '#ID#' }, clearCache: '5', url: null },
   loc: LOC,
   raw: { 'some.rawKey': 'raw value' },
 };

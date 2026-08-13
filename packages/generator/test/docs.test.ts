@@ -63,6 +63,8 @@ const buttonFixture: ApexButton = {
   identifier: 'SENTINEL_BUTTON',
   label: 'SENTINEL_BUTTON_LABEL',
   action: 'SENTINEL_BUTTON_ACTION',
+  target: null,
+  url: null,
   htmlDomId: 'SENTINEL_BUTTON_DOM_ID',
   loc: LOC,
   raw: {},
@@ -79,7 +81,7 @@ const columnFixture: ApexReportColumn = {
   type: 'plainText',
   heading: 'SENTINEL_COLUMN_HEADING',
   sequence: 42,
-  linkTarget: { page: 77, items: { P77_ID: '#ID#' }, clearCache: '77' },
+  linkTarget: { page: 77, items: { P77_ID: '#ID#' }, clearCache: '77', url: null },
   loc: LOC,
   raw: {},
 };

@@ -498,6 +498,94 @@ describe('button.htmlDomId (advanced { htmlDomId: ... })', () => {
   });
 });
 
+describe('typed button redirect target (behavior.target / behavior.targetUrl)', () => {
+  // Navigation Graph prerequisite pass (Thirteenth round's Decision 2,
+  // docs/ecosystem-roadmap.md, 2026-08-12): the same `{ page, items,
+  // clearCache }` nested shape already confirmed for
+  // branch/column/regionAction `target`, applied to buttons via the same
+  // shared `projectPageTarget()` helper, per apexlang.ebnf:2578-2589
+  // (`button-behavior-property`, full production checked).
+  it('projects a nested page-redirect target for behavior.action = redirectThisApp', () => {
+    // NOT re-witnessed live this pass -- no real redirectThisApp/
+    // redirectOtherApp button was found anywhere in this session's one
+    // directly-accessible corpus app (ux-pattern-catalog, matching the
+    // Eleventh round's identical finding). Typed on the strength of the
+    // EBNF production + the already-proven projectPageTarget() shape
+    // (see ApexButtonTarget's doc comment for the full evidence tiering).
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region employee (
+    type: form
+    button view-employee (
+      label: View Employee
+      behavior {
+        action: redirectThisApp
+        target: {
+          page: 3
+          items: {
+            P3_EMPNO: &EMPNO.
+          }
+          clearCache: 3
+        }
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [button] = result.ast.pages[0].regions[0].buttons;
+    expect(button.action).toBe('redirectThisApp');
+    expect(button.target).toEqual({ page: 3, items: { P3_EMPNO: '&EMPNO.' }, clearCache: '3' });
+    expect(button.url).toBeNull();
+  });
+
+  it('projects a flat url (behavior.targetUrl) for behavior.action = redirectUrl, with target null -- reproduces ux-pattern-catalog, pages/p00110-dashboard-simple.apx:1120-1141, button view-details', () => {
+    const apx = `page 110 (
+  name: Dashboard Simple
+  alias: DASHBOARD-SIMPLE
+  region chart-1 (
+    type: chart
+    button view-details (
+      buttonName: VIEW_DETAILS_LINK
+      label: View Details Link
+      behavior {
+        action: redirectUrl
+        targetUrl: #
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p00110-dashboard-simple.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [button] = result.ast.pages[0].regions[0].buttons;
+    expect(button.action).toBe('redirectUrl');
+    expect(button.url).toBe('#');
+    expect(button.target).toBeNull();
+  });
+
+  it('is null for both target and url when behavior has neither (e.g. a plain submitPage button)', () => {
+    const apx = `page 1 (
+  name: Test
+  alias: TEST
+  region employee (
+    type: form
+    button save (
+      label: Save
+      behavior {
+        warnOnUnsavedChanges: doNotCheck
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [button] = result.ast.pages[0].regions[0].buttons;
+    expect(button.target).toBeNull();
+    expect(button.url).toBeNull();
+  });
+});
+
 describe('multi-line array parsing (bug: first element dropped)', () => {
   // Reproduces a real, wide-reaching bug found via a calendar region's
   // `calendarViewsAndNavigation` array: when '[' is the LAST character on
@@ -1140,6 +1228,7 @@ describe('typed report column support (column <id> (...), nested inside a region
       page: 94,
       items: { P94_ID: '#ID#' },
       clearCache: '94',
+      url: null,
     });
   });
 
@@ -1150,6 +1239,52 @@ describe('typed report column support (column <id> (...), nested inside a region
     expect(second!.type).toBe('hidden');
     expect(second!.linkTarget).toBeNull();
     expect(second!.heading).toBeNull();
+  });
+
+  it('projects a flat, external-URL link.target (bug fix: ApexColumnLinkTarget.url) -- reproduces ux-pattern-catalog, pages/p00320-item-detail-full.apx:459-464, region child-records, column CHILD_RECORD_NAME', () => {
+    // Before this fix, `ApexColumnLinkTarget`'s own doc comment claimed "no
+    // external-URL variant is defined anywhere in any column-link
+    // production" -- WRONG, per this real counter-example (Navigation Graph
+    // prerequisite pass, Eleventh round, docs/ecosystem-roadmap.md,
+    // 2026-08-11/12). `projectColumn()`/`projectPageTarget()` used to
+    // silently return `{page:null, items:null, clearCache:null}` for this
+    // shape (the `url` value stayed in `raw`, ADR-001-compliant, but the
+    // typed field was empty/misleading). Confirmed against the FULL
+    // `link.target` shape, including the sibling `linkText` property outside
+    // `target` -- matches the real export exactly, not a narrowed
+    // reproduction.
+    const apx = `page 320 (
+  name: Item Detail Full
+  alias: ITEM-DETAIL-FULL
+
+  region child-records (
+    name: Child Records
+    type: classicReport
+
+    column CHILD_RECORD_NAME (
+      type: link
+      layout {
+        sequence: 20
+      }
+      link {
+        target: {
+          type: url
+          url: #
+        }
+        linkText: #CHILD_RECORD_NAME#
+      }
+    )
+  )
+)`;
+    const result = parseApp({ 'p00320-item-detail-full.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [region] = result.ast.pages[0].regions;
+    const [column] = region.columns;
+    expect(column!.identifier).toBe('CHILD_RECORD_NAME');
+    expect(column!.linkTarget).toEqual({ page: null, items: null, clearCache: null, url: '#' });
+    // The url value was always present in raw (ADR-001) -- confirming this
+    // fix is additive, not a change to raw's own contents.
+    expect(column!.raw['link.target.url']).toBe('#');
   });
 });
 

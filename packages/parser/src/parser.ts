@@ -23,10 +23,10 @@
  */
 
 import type {
-  ApexAppAst, ApexBranch, ApexBranchTarget, ApexButton, ApexColumnLinkTarget, ApexComputation,
-  ApexDAAction, ApexDynamicAction, ApexItem, ApexPage, ApexProcess, ApexRegion, ApexRegionAction,
-  ApexRegionActionTarget, ApexReportColumn, ApexServerSideCondition, ApexValidation,
-  ApexValidationError, ComponentNode, Loc, RawBag, RawValue, RefValue,
+  ApexAppAst, ApexBranch, ApexBranchTarget, ApexButton, ApexButtonTarget, ApexColumnLinkTarget,
+  ApexComputation, ApexDAAction, ApexDynamicAction, ApexItem, ApexPage, ApexProcess, ApexRegion,
+  ApexRegionAction, ApexRegionActionTarget, ApexReportColumn, ApexServerSideCondition,
+  ApexValidation, ApexValidationError, ComponentNode, Loc, RawBag, RawValue, RefValue,
 } from './ast.js';
 
 export interface ParseIssue { message: string; loc: Loc; }
@@ -309,10 +309,13 @@ function projectItem(n: ComponentNode): ApexItem {
 }
 
 function projectButton(n: ComponentNode): ApexButton {
+  const target = projectPageTarget(n.props, 'behavior.target') as ApexButtonTarget | null;
   return {
     identifier: n.identifier ?? '(anonymous)',
     label: str(n.props['label']),
     action: str(n.props['behavior.action']) ?? str(n.props['action']),
+    target,
+    url: str(n.props['behavior.targetUrl']),
     htmlDomId: str(n.props['advanced.htmlDomId']),
     loc: n.loc,
     raw: n.props,
@@ -435,12 +438,18 @@ function projectComputation(n: ComponentNode): ApexComputation {
   };
 }
 
-/** Shared by `column.link.target`/`action.behavior.target` -- the same
- * `{ page, items, clearCache }` nested-object shape already confirmed for
- * `ApexBranchTarget` (see that type's doc comment), minus the `url`
- * variant (columns never carry one; actions carry it as a separate FLAT
- * `targetUrl` property instead -- see ApexRegionActionTarget's doc
- * comment). */
+/** Shared by `column.link.target`/`action.behavior.target`/
+ * `button.behavior.target` -- the same `{ page, items, clearCache }`
+ * nested-object shape already confirmed for `ApexBranchTarget` (see that
+ * type's doc comment), minus the `url` variant: `action`/`button` never
+ * carry a nested `url` at all (they carry it as a separate FLAT
+ * `targetUrl` property instead -- see `ApexRegionActionTarget`/
+ * `ApexButtonTarget`'s doc comments), while `column` DOES carry a nested
+ * `url` (see `ApexColumnLinkTarget`'s doc comment, corrected 2026-08-12) --
+ * read separately by `projectColumn()` below rather than folded into this
+ * shared helper, specifically so `action`/`button`'s target objects never
+ * pick up a spurious always-`null` `url` key their own declared types
+ * don't have. */
 function projectPageTarget(props: RawBag, keyPrefix: string): { page: number | string | null; items: Record<string, string> | null; clearCache: string | null } | null {
   const prefix = `${keyPrefix}.`;
   const hasTarget = Object.keys(props).some((k) => k.startsWith(prefix));
@@ -459,7 +468,13 @@ function projectPageTarget(props: RawBag, keyPrefix: string): { page: number | s
 }
 
 function projectColumn(n: ComponentNode): ApexReportColumn {
-  const linkTarget = projectPageTarget(n.props, 'link.target') as ApexColumnLinkTarget | null;
+  const pageTarget = projectPageTarget(n.props, 'link.target');
+  // `url` is read separately -- see projectPageTarget()'s doc comment for
+  // why it isn't folded into the shared helper. Confirmed live:
+  // ux-pattern-catalog, pages/p00320-item-detail-full.apx:460-462.
+  const linkTarget: ApexColumnLinkTarget | null = pageTarget
+    ? { ...pageTarget, url: str(n.props['link.target.url']) }
+    : null;
   return {
     identifier: n.identifier ?? '(anonymous)',
     type: str(n.props['type']),

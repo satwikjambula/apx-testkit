@@ -195,10 +195,69 @@ export interface ApexItem {
   raw: RawBag;
 }
 
+/**
+ * `behavior.target` on a button, when `behavior.action` is
+ * `redirectThisApp` (target page in the SAME app) or `redirectOtherApp`
+ * (target page in a DIFFERENT app) -- the SAME `{ page, items, clearCache }`
+ * nested-object shape already confirmed for `ApexBranchTarget`/
+ * `ApexColumnLinkTarget`/`ApexRegionActionTarget`, read via the identical
+ * `projectPageTarget()` helper those three already share (Navigation Graph
+ * prerequisite pass, 2026-08-12, Product Architect's Thirteenth-round
+ * Decision 2: "a direct application of an already-proven projection
+ * helper, not new design"). Confirmed against the FULL
+ * `button-behavior-property` EBNF production (`apexlang.ebnf:2578-2589`,
+ * every alternative read, not just `action`/`target`): `action` is a
+ * closed 9-value enum (`submitPage | triggerAction | redirectThisApp |
+ * redirectOtherApp | redirectUrl | definedByDynamicAction | resetPage |
+ * nextPage | previousPage`); `"target" ":" <ws> <value>` appears TWICE,
+ * once "applies when action = REDIRECT_PAGE" (type `LINK_IN_APP`) and once
+ * "applies when action = REDIRECT_APP" (type `LINK_IN_DIFF_APP`) -- both
+ * typed as the same opaque `<value>`, the identical EBNF-silent-on-real-
+ * shape pattern already found on branch/column/action `target` properties.
+ *
+ * NOT re-witnessed with a real `redirectThisApp`/`redirectOtherApp` button
+ * this pass -- a full grep of this session's one directly-accessible real
+ * export (`ux-pattern-catalog`, all `pages/*.apx`) found ZERO occurrences
+ * of either enum value anywhere (matching the Eleventh round's identical
+ * finding, `docs/ecosystem-roadmap.md`), only the `redirectUrl` variant
+ * (see `ApexButton.url`). Prior corpus evidence on record
+ * (`docs/grammar-assumptions.md`'s full-EBNF-audit entry) confirms the
+ * `action` enum itself against real data across the wider 46-app corpus,
+ * but does not specifically confirm a real `target` object was witnessed
+ * for the page-redirect case. Typed now on the strength of the EBNF
+ * production plus the proven, already-shipped `projectPageTarget()`
+ * pattern (low risk, same shape shipped three times already) per the
+ * Thirteenth round's explicit scoping call -- not claimed "live-confirmed"
+ * for this specific variant, an honest distinction from the `redirectUrl`
+ * variant below, which IS directly witnessed.
+ */
+export interface ApexButtonTarget {
+  page: number | string | null;
+  items: Record<string, string> | null;
+  clearCache: string | null;
+}
+
 export interface ApexButton {
   identifier: string;
   label: string | null;
   action: string | null;
+  /** `behavior.target` -- `null` unless `action` is `redirectThisApp`/
+   * `redirectOtherApp`. See `ApexButtonTarget`'s doc comment for the EBNF
+   * production and the honest evidence-tier distinction from `url` below. */
+  target: ApexButtonTarget | null;
+  /**
+   * `behavior.targetUrl` -- the flat external-URL-redirect variant
+   * (`action: redirectUrl`), sibling to `target` rather than nested inside
+   * it, the SAME flat-vs-nested shape already confirmed for
+   * `ApexRegionAction.url`/`ApexRegionActionTarget` (see that type's doc
+   * comment) -- `apexlang.ebnf:2584`: `"targetUrl" ":" <ws>
+   * <string-like-value> (* required; applies when action = REDIRECT_URL *)`.
+   * Confirmed live and DIRECTLY re-witnessed this pass: 17 real buttons,
+   * `ux-pattern-catalog` (e.g. `pages/p00110-dashboard-simple.apx:1137-1139`,
+   * button `view-details`: `behavior { action: redirectUrl targetUrl: # }`
+   * -- `#` is this export's own literal placeholder value, not a parser
+   * artifact). `null` for every other `action` value. */
+  url: string | null;
   /**
    * `advanced { htmlDomId: ... }` -- confirmed against the official EBNF's
    * `button-advanced-property` production (`docs.oracle.com/.../apexlang.ebnf`
@@ -679,10 +738,39 @@ export interface ApexComputation {
  * live, Oracle's own `opportunities` starter app,
  * `p00002-accounts.apx:748`: `link { target: { page: 94 items: { P94_ID:
  * #ID# } clearCache: 94 action: resetPagination } linkText: #CUSTOMER_NAME#
- * }`). Unlike `ApexBranchTarget`, no external-URL variant (`type: url`) is
- * defined anywhere in any column-link production -- a column's link
- * target is always an in-app page redirect, never typed as opaque enough
- * to carry a URL alternative the way `branch`/`action` are.
+ * }`).
+ *
+ * CORRECTED (2026-08-12, Navigation Graph prerequisite pass -- this project's
+ * "correct in place, visibly" discipline, ADR-004): this doc comment
+ * PREVIOUSLY claimed "unlike `ApexBranchTarget`, no external-URL variant
+ * (`type: url`) is defined anywhere in any column-link production -- a
+ * column's link target is always an in-app page redirect." That claim was
+ * WRONG -- found a real, reproducible counter-example (Eleventh round,
+ * `docs/ecosystem-roadmap.md`, 2026-08-11): `ux-pattern-catalog`,
+ * `pages/p00320-item-detail-full.apx:459-464`, region `child-records`,
+ * column `CHILD_RECORD_NAME` (a `classicReport`-family `link` column):
+ * `link { target: { type: url url: # } linkText: #CHILD_RECORD_NAME# } }`
+ * -- the identical `target: { type: url, url: ... }` shape already
+ * confirmed for `ApexBranchTarget` (see that type's doc comment,
+ * `apextogo`'s sign-out branch), re-confirmed present in this session's
+ * own re-read of the same corpus file/line before this fix. Before this
+ * fix, `projectColumn()`/`projectPageTarget()` silently returned
+ * `{page:null, items:null, clearCache:null}` for this real case -- the
+ * `url` value stayed in `raw` (ADR-001 compliant, never lost) but the
+ * typed `linkTarget` field was empty/misleading for URL-redirect columns.
+ * `url` is now populated the same way `ApexBranchTarget.url` is (`str()`
+ * off `link.target.url`), read directly by `projectColumn()` rather than
+ * folded into the `projectPageTarget()` helper shared with
+ * `ApexRegionActionTarget`/`ApexButtonTarget` (see those types' doc
+ * comments -- action/button carry their own URL variant as a separate
+ * FLAT `targetUrl` property, never nested inside `target`, so adding a
+ * `url` extraction to the shared helper would silently leak an
+ * always-`null` `url` key onto every action/button target object, a shape
+ * those two types deliberately do not declare). Confirmed only ONE real
+ * occurrence of this shape in this session's one directly-accessible
+ * corpus app (`ux-pattern-catalog`) -- not a high-volume finding, but a
+ * real, reproducible one, and this field was empty/wrong for it before
+ * this fix regardless of frequency.
  */
 export interface ApexColumnLinkTarget {
   page: number | string | null;
@@ -691,6 +779,14 @@ export interface ApexColumnLinkTarget {
    * and `&ITEM.`/`#ITEM#` substitution tokens, same defensive handling as
    * `ApexBranchTarget.items`' values. */
   clearCache: string | null;
+  /** External URL redirect variant (`target: { type: url, url: ... }`),
+   * the SAME nested shape already typed on `ApexBranchTarget.url` --
+   * confirmed live, `ux-pattern-catalog`,
+   * `pages/p00320-item-detail-full.apx:460-462`, column
+   * `CHILD_RECORD_NAME`. `null` for the in-app page-target variant above
+   * (the dominant real case). See this type's doc comment for the
+   * correction history. */
+  url: string | null;
 }
 
 /**

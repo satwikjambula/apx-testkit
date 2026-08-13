@@ -1288,8 +1288,16 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
     SAME real-data-vs-EBNF-opaque-`<value>` divergence already documented
     for `link.target` in the `strategic-planner` entry above, now also
     confirmed on a column specifically (Oracle's own `opportunities`
-    starter app, `p00002-accounts.apx:748`). No external-URL variant
-    exists for a column's link target (unlike `branch`/`action`).
+    starter app, `p00002-accounts.apx:748`).
+    **CORRECTED (2026-08-12, see the dated entry below, "Navigation Graph
+    prerequisite pass"): this bullet used to end "No external-URL variant
+    exists for a column's link target (unlike `branch`/`action`)" — that
+    claim was WRONG, a real counter-example was found
+    (`ux-pattern-catalog`, `pages/p00320-item-detail-full.apx:459-464`,
+    column `CHILD_RECORD_NAME`: `link { target: { type: url url: # }
+    linkText: #CHILD_RECORD_NAME# } }`). Left visible here rather than
+    silently rewritten, per this project's correction discipline — see the
+    dated entry below for the fix.**
   - **`ApexRegion.actions` (`action <id> (...)`, deliberately named
     `ApexRegionAction` to keep it unambiguously distinct from the
     Dynamic-Action `action`/`ApexDAAction`)**. EBNF confirms TWO sibling
@@ -1377,6 +1385,141 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
     action's target page changed) confirmed all four new diff paths
     actually surface a change when one exists, not just stay silent on
     identical input.
+
+- [x] **Navigation Graph prerequisite pass (2026-08-12) — `ApexColumnLinkTarget`
+      URL-redirect bug fixed; `ApexButton.target`/`ApexButton.url` typed.**
+      Both changes required before `packages/generator`'s planned `flow.ts`
+      (Flow Map data model, `docs/ecosystem-roadmap.md`'s Thirteenth round)
+      can be built on complete underlying data — Decision 4 of that round
+      made the column bug fix a hard prerequisite, not parallel work.
+  - **`ApexColumnLinkTarget.url` — bug fix, not a new field alone.** This
+    type's own doc comment previously claimed "no external-URL variant is
+    defined anywhere in any column-link production" — WRONG, per a real,
+    reproducible counter-example found in the Eleventh round
+    (`docs/ecosystem-roadmap.md`, 2026-08-11) and re-confirmed directly in
+    this pass against the same corpus file: `ux-pattern-catalog`,
+    `pages/p00320-item-detail-full.apx:459-464`, region `child-records`,
+    column `CHILD_RECORD_NAME`: `link { target: { type: url url: # }
+    linkText: #CHILD_RECORD_NAME# } }` — the SAME `target: { type: url,
+    url: ... }` nested shape already confirmed on `ApexBranchTarget`
+    (`apextogo`'s sign-out branch). Before this fix, `projectColumn()`/
+    `projectPageTarget()` silently returned `{page:null, items:null,
+    clearCache:null}` for this real shape — the `url` value stayed in
+    `raw` (`link.target.url`, ADR-001-compliant, never lost) but the typed
+    `linkTarget` field was empty/misleading. Only ONE real occurrence found
+    in this session's one directly-accessible corpus app (a full grep of
+    every `pages/*.apx` `type: url` occurrence found exactly one, at this
+    exact line) — a real, reproducible finding regardless of frequency, not
+    inflated. `url` is read separately by `projectColumn()`, not folded
+    into the `projectPageTarget()` helper shared with
+    `action.behavior.target`/`button.behavior.target` (see next bullet) —
+    those two never carry a nested `url` (their URL variant is a flat
+    sibling `targetUrl` property instead), so folding `url` extraction into
+    the shared helper would have silently leaked an always-`null` `url` key
+    onto every action/button target object, a shape those types
+    deliberately do not declare. `ApexColumnLinkTarget`'s doc comment in
+    `ast.ts` is corrected in place (not silently rewritten) with the full
+    correction history, per this project's standing discipline.
+  - **`ApexButton.target`/`ApexButton.url` — net-new typed fields**, the
+    page/app-redirect (`behavior.action: redirectThisApp`/
+    `redirectOtherApp`) and external-URL-redirect (`behavior.action:
+    redirectUrl`) variants respectively. Full `button-behavior-property`
+    EBNF production checked (`apexlang.ebnf:2578-2589`, every alternative
+    read, not just `action`/`target`): `action` is a closed 9-value enum
+    (`submitPage | triggerAction | redirectThisApp | redirectOtherApp |
+    redirectUrl | definedByDynamicAction | resetPage | nextPage |
+    previousPage`); `"target" ":" <ws> <value>` appears twice (once
+    "applies when action = REDIRECT_PAGE", type `LINK_IN_APP`; once
+    "applies when action = REDIRECT_APP", type `LINK_IN_DIFF_APP`), both
+    the same EBNF-opaque-`<value>`-but-real-`{page,items,clearCache}`-
+    object pattern already confirmed on `branch`/`column`/`action` —
+    `ApexButton.target` reuses the identical `projectPageTarget()` helper,
+    no new parsing design. `targetUrl` ("applies when action =
+    REDIRECT_URL") is a separate FLAT property, matching
+    `ApexRegionAction.url`/`ApexRegionActionTarget`'s already-confirmed
+    flat-vs-nested shape exactly.
+    - **`redirectUrl`/`targetUrl` variant: directly re-witnessed this
+      pass.** 17 real buttons confirmed in `ux-pattern-catalog` (grep
+      count of `action: redirectUrl` across `pages/*.apx`, matching the
+      Eleventh round's identical count exactly). Concrete example:
+      `pages/p00110-dashboard-simple.apx:1120-1141`, button
+      `view-details`: `behavior { action: redirectUrl targetUrl: # }`
+      (`#` is this export's own literal placeholder value in this
+      particular sample app, not a parser artifact).
+    - **`redirectThisApp`/`redirectOtherApp` variant: NOT re-witnessed
+      live this pass** — a full grep of every `pages/*.apx` file in this
+      session's one directly-accessible corpus app for both enum values
+      found ZERO occurrences, matching the Eleventh round's identical
+      finding on the same app. Typed anyway on the strength of the EBNF
+      production plus the already-proven, already-shipped
+      `projectPageTarget()` pattern (shipped identically three times
+      already for branch/column/action) — an explicit, deliberate
+      Product Architect scoping call (Thirteenth round, Decision 2:
+      "a direct application of an already-proven projection helper... low
+      risk, small, same pattern as work already shipped"), not a claim
+      that this specific variant has been live-confirmed. `ApexButtonTarget`'s
+      doc comment in `ast.ts` states this evidence-tier distinction
+      explicitly rather than blurring the two variants together.
+  - **`Sawalhah/apexlang-view` cross-check**: fetched
+    `github.com/Sawalhah/apexlang-view/blob/main/src/parser.js` directly
+    (reference only, never imported/depended on) — no construct-specific
+    handling exists anywhere for `button`/`column` beyond generic
+    group/property parsing; their parser does not distinguish a nested
+    `target: { type: url }` shape from a page-target shape either way, the
+    same generic treatment already noted for `process`/`computation`/
+    `column`/`action` in the entry above. Nothing to cross-check
+    convergence or divergence against specifically for the `url` fix or
+    the button target fields; recorded as a checked-and-negative finding.
+  - **Wired into `apx-diff` in this same change**: `diffButtonFields`
+    (`packages/generator/src/diff.ts`) gained `target`/`url` lines (the
+    same `JSON.stringify` whole-object-compare pattern already used for
+    `ApexRegionAction.target`); `diffColumnFields`'s existing `linkTarget`
+    line already JSON-compares the WHOLE `linkTarget` object, so the new
+    `url` field is automatically covered by that pre-existing line, no new
+    diff.ts code needed for the column side. Confirmed automatically, not
+    just asserted: `packages/generator/test/diff-field-coverage.test.ts`'s
+    generic, fixture-key-driven mechanism (96 tests total after this
+    change) passes for both `ApexButton.target`/`ApexButton.url` and
+    `ApexReportColumn.linkTarget` (including its new `url` sub-field via
+    the fixture's populated value) — this is the actual regression
+    guard for "was this wired into apx-diff," not a manual claim.
+  - **Regression tests**: `packages/parser/test/parser.test.ts` — a new
+    `describe('projects a flat, external-URL link.target (bug fix...)')`
+    test reproducing the exact real `p00320-item-detail-full.apx` shape
+    (asserts `linkTarget` equals `{page:null, items:null, clearCache:null,
+    url:'#'}`, plus a `raw['link.target.url']` check confirming `raw` was
+    never affected by the fix); a fixed pre-existing assertion in the
+    `column.link.target` page-redirect test (now expects the added
+    `url: null` key); and a new `describe('typed button redirect target
+    ...')` block with three cases — nested page-target
+    (`redirectThisApp`), flat URL target (`redirectUrl`, reproducing the
+    real `view-details` button verbatim), and the neither-set case
+    (a plain `submitPage`-style button with an unrelated `behavior {}`
+    group present, confirming `hasTarget` detection doesn't false-positive
+    on sibling `behavior.*` keys).
+  - **Zero-warnings sweep**: re-parsed the full `ux-pattern-catalog` export
+    (31 `.apx` files: `application.apx`, `page-groups.apx`, all 19
+    `pages/*.apx`, all `shared-components/*.apx`) through the rebuilt
+    `@apx/parser` — 0 warnings, matching the pre-existing baseline exactly
+    (unchanged). This session had direct file access to only this one real
+    export (found in `~/.Trash`, same access constraint the Eleventh round
+    recorded) — not the full 46-app corpus referenced elsewhere in this
+    project's history, which was not present in this environment either.
+  - **Determinism confirmed**: `packages/generator/test/fixtures/reference-fixtures`
+    regenerated via `node packages/generator/dist/cli.js
+    packages/generator/test/fixtures/reference-fixtures --out <scratch>`
+    and diffed byte-for-byte against committed `examples/employee-page`
+    (`p00003-employee.page.ts`/`p00003-employee.spec.ts`) — identical
+    (that fixture is a table-based form with no button/column redirect
+    target at all, so this confirms no regression to the unaffected
+    common path, not new target-field coverage itself, which the parser
+    unit tests above cover directly).
+  - **Full regression sweep**: `npm run build --workspaces` (all four
+    packages, 0 errors), `npm test --workspaces --if-present` (263 tests
+    total: 69 parser + 189 generator + 5 testkit, all passing, 5 parser
+    integration tests conditionally run against `ux-pattern-catalog` via
+    `APX_EXPORT_DIR`), `npm run lint` (0 errors/warnings), `cd spike && npx
+    tsc --noEmit` (0 errors).
 
 ## Still open
 
