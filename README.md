@@ -168,8 +168,10 @@ The pipeline is four packages wired together, AST-first:
                  deterministic: same AST in -> byte-identical files out
                  also: --watch (auto-regen on .apx change), the
                  apx-coverage CLI (touch log -> coverage report), the
-                 apx-diff CLI (pure AST-to-AST regression report), and the
-                 apx-docs CLI (AST -> per-page Markdown docs, no live app)
+                 apx-diff CLI (pure AST-to-AST regression report), the
+                 apx-docs CLI (AST -> per-page Markdown docs, no live app),
+                 and the apx-flow CLI (AST -> Flow Map navigation graph
+                 JSON, no live app)
     ▼
 @apx/testkit   — the primitives BOTH generated and hand-written specs
                  import: item.ts (apex.item, VERIFIED), region.ts
@@ -261,6 +263,7 @@ not existing).
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
 | Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed; `--format human` for prose output alongside the default structured tree) | — |
 | Documentation generation (`apx-docs`) | — | ✅ (pure AST read, no live app needed) | — |
+| Flow Map / navigation graph (`apx-flow`) | — | ✅ (pure AST read, no live app needed) — Phase 1a scope: `ApexPage.branches`, `ApexRegion.actions` (Cards/List), `ApexRegion.columns[].linkTarget`, `ApexButton.target`/`.url`. Every edge carries a real confidence tier: `'high'` (7 of 8 mechanisms — live-witnessed real data) or `'medium'` (button page/app-redirect targets specifically — typed from the EBNF + the proven `projectPageTarget()` pattern, but zero real `redirectThisApp`/`redirectOtherApp` buttons found anywhere in this project's 46+ app corpus). Breadcrumbs/navigation lists (shared-component parser support needed), dialog-page detection (cross-page join needed), Dynamic Action redirects (no declarative metadata found), and `apex.navigation` (runtime JS API) are all explicitly out of scope — see `docs/ecosystem-roadmap.md`'s Thirteenth round | — |
 
 Full list of limitations in docs/limitations.md; a few of the stories
 behind specific rows:

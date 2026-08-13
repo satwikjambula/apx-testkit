@@ -2604,6 +2604,8 @@ evaluated at all.
 
 ## Thirteenth round (2026-08-12): Flow Map — Product Architect scoping decision
 
+**Status: Phase 1a — DONE (Runtime & Test Automation Engineer, 2026-08-13). See the "Phase 1a — DONE" subsection at the end of this round's entry for the closeout.**
+
 The maintainer has greenlit moving forward. This round makes the actual
 scoping call the Twelfth round left pending — decided against the
 Eleventh round's per-source evidence, not re-presented as a tradeoff.
@@ -2871,3 +2873,70 @@ distinctions, test list, sweep results) is in
   live-re-witnessed for that specific enum value — a distinction `flow.ts`
   should preserve in whatever `mechanism`/`confidence` field it emits for
   edges sourced from it, not flatten into an unqualified "confirmed."
+
+### Phase 1a — DONE (Runtime & Test Automation Engineer, 2026-08-13)
+
+`packages/generator/src/flow.ts` (+ `flow-cli.ts`, `apx-flow` bin) is
+shipped, exactly matching Decision 1/2/3's scope — no expansion, nothing
+deferred pulled forward. Placed inside `packages/generator` per Software
+Architect's confirmed Decision 3, `exports["./flow"]` added alongside
+`./diff`/`./coverage`/`./docs`.
+
+- **Data model**: `FlowMap { flowMapVersion, nodes, edges, reachability }`.
+  `FlowNode` is `{ id: "page:<pageId>", pageId, alias, name }`, one per
+  real generated page (`id !== 0 && alias`, the same filter `apx-docs`/
+  `apx-coverage`/`apx-testgen` already apply). `FlowEdge.to` is a
+  discriminated union (`{kind:'page', nodeId, pageId}` /
+  `{kind:'unresolvedPage', ref}` / `{kind:'url', url}`) rather than a
+  single opaque field — an honest reflection of what target resolution can
+  and can't determine statically (a different app's page number, an
+  item-substitution token like `&LAST_VIEW.`, and an external URL are three
+  genuinely different outcomes, not one).
+- **All four sources wired**, no more: `ApexPage.branches`,
+  `ApexRegion.actions` (Cards/List, incl. `type: fullCard`),
+  `ApexRegion.columns[].linkTarget` (both page and URL-redirect variants,
+  now safe post-Decision-4 fix), `ApexButton.target`/`.url`.
+- **Condition preservation confirmed** — one edge per source-construct
+  array element, by construction (no `(from,to)`-keyed dedup anywhere in
+  the implementation); a synthetic two-branch same-target-different-
+  condition case is a named regression test
+  (`test/flow.test.ts`, "CONDITION PRESERVATION").
+- **Confidence tiering implemented as eight fine-grained mechanisms**
+  (`FlowEdgeMechanism`), each with its own confidence + literal evidence
+  citation in `FLOW_MECHANISM_EVIDENCE` — seven `'high'` (live-witnessed),
+  exactly one `'medium'` (`button.page`, the `redirectThisApp`/
+  `redirectOtherApp` variant — typed/EBNF-confirmed but zero real
+  occurrences anywhere in this project's corpus, per `ApexButtonTarget`'s
+  own `ast.ts` doc comment). A regression test asserts this exact 7-high/
+  1-medium split so the tiering can't silently blur.
+- **Verified against this session's one locally accessible real export**
+  (`ux-pattern-catalog`, the same access constraint the Eleventh round and
+  the Navigation Graph prerequisite pass both hit): 18 nodes, 38 edges (17
+  `button`, 20 `regionAction`, 1 `reportColumnLink`), all 38 `'high'`
+  confidence — every edge in this specific app happens to be a
+  URL-redirect variant (including the real `reportColumnLink.url` bug-fix
+  case from the Eleventh round and 10 real `regionAction.url` cases), so
+  `branch` and `button.page` are demonstrated only via `test/flow.test.ts`
+  synthetic fixtures plus the citations already on record in `ast.ts`/
+  prior rounds (`apextogo`, `customers`, `opportunities`, `sample-cards` —
+  not locally re-accessible this session) — stated honestly, not glossed
+  over. Zero parser warnings on this export; determinism confirmed
+  (`apx-flow` run twice, byte-identical JSON) on both `ux-pattern-catalog`
+  and the committed `examples/employee-page` fixture.
+- **Reachability summary included** (`pagesWithNoIncomingEdges`) — cheap,
+  pure computation over the already-built edge list, explicitly caveated in
+  its own doc comment and the CLI's console output as "not a claim of true
+  unreachability" given breadcrumbs/lists/`apex.navigation`/DA-redirects
+  are all out of this pass's scope.
+- **Full regression sweep passed**: `npm run build --workspaces` (zero
+  errors), `npm test --workspaces` (219/219 generator tests incl. 30 new
+  `flow.test.ts` cases, full suite otherwise unchanged), `npm run lint`
+  (zero errors), `cd spike && npx tsc --noEmit` (clean), reference-fixtures
+  regeneration vs. `examples/employee-page` byte-identical (unaffected by
+  this purely additive change, re-confirmed regardless).
+- **Docs updated together**: `README.md` capability matrix (new Flow Map
+  row), `docs/tutorial.md` §2.17 (new section, mirroring §2.16's
+  structure), this entry.
+- **Nothing deferred was built.** Breadcrumbs/lists, dialog-page detection,
+  Dynamic Action redirects, `apex.navigation`, and the visual UI all remain
+  exactly as scoped out in Decision 1/2 above — untouched.

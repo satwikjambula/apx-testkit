@@ -30,6 +30,7 @@ number of real apps, and honest about what doesn't work yet.
    - [2.14 Report columns](#214-report-columns)
    - [2.15 Region actions (Cards/List row-level)](#215-region-actions-cardslist-row-level)
    - [2.16 Documentation generation](#216-documentation-generation)
+   - [2.17 Flow Map (navigation graph)](#217-flow-map-navigation-graph)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -1082,6 +1083,112 @@ not a gap to work around:
 - ER diagrams — need database schema/foreign-key information a `.apx`
   export never carries at all; a genuinely different data source, not a
   missing feature.
+
+---
+
+### 2.17 Flow Map (navigation graph)
+
+**Status: VERIFIED**, and like regression detection (2.10) and
+documentation generation (2.16), needs no live app at all — it's a pure
+read of the already-typed AST into a deterministic JSON graph. See
+`docs/ecosystem-roadmap.md`'s Thirteenth round ("Flow Map: data model + CLI
+now, UI deferred") for the full scoping decision this implements.
+
+```bash
+node /path/to/apx-testkit/packages/generator/dist/flow-cli.js <export-dir> --out flow-map.json
+```
+
+```
+Flow Map
+  nodes (pages): 18
+  edges: 38
+    button: 17
+    regionAction: 20
+    reportColumnLink: 1
+  confidence:
+    high: 38
+  pages with no incoming edge from these 4 sources: 1, 2, 3, 100, ...
+    (not a claim these pages are unreachable in the running app -- breadcrumbs, navigation lists,
+     apex.navigation, and Dynamic Action redirects are all out of this pass's scope)
+
+Flow Map written to flow-map.json
+```
+
+(Output above is real, from running `apx-flow` against this project's own
+`ux-pattern-catalog` corpus copy — every navigation edge that app declares
+happens to be an external-URL redirect, so every edge resolves to a `url`
+target rather than a `page` target; this is a genuine property of that
+specific app's data, not a limitation of the tool — see below.)
+
+**Nodes** are one per real, generated page (`page:<pageId>`, same `id !==
+0 && alias` filter `apx-docs`/`apx-coverage`/`apx-testgen` already apply,
+for consistency). **Edges** come from exactly four typed navigation
+sources, Phase 1a's deliberately drawn boundary:
+
+1. `ApexPage.branches` — page-processing redirects.
+2. `ApexRegion.actions` — Cards/List row-level actions (`type: fullCard`
+   included).
+3. `ApexRegion.columns[].linkTarget` — report/Interactive Report/
+   Interactive Grid column links, both the in-app page-redirect and
+   external-URL-redirect variants.
+4. `ApexButton.target`/`.url` — button page/app redirects and external-URL
+   redirects.
+
+**Condition preservation — never flattened.** A page with multiple
+branches (or region actions, or column links) targeting the same or
+different destinations under different conditions produces one edge PER
+source construct, always — never merged into a single unconditional edge.
+Each edge's own `condition` field (branches only — the other three sources
+have no typed condition field on the AST at all) carries its originating
+branch's condition verbatim.
+
+**Confidence is real and source-and-variant-specific, not a blanket
+"high."** Every edge carries a `mechanism` (one of eight fine-grained
+values — each of the four sources split into its page-target vs.
+URL-redirect variant) plus a `confidence` and literal `evidence` citation.
+Seven of the eight are `'high'` — live-witnessed against real exports (see
+`packages/generator/src/flow.ts`'s `FLOW_MECHANISM_EVIDENCE` for every
+citation). Exactly one, `button.page` (the `redirectThisApp`/
+`redirectOtherApp` button variant), is `'medium'`: typed from the full
+EBNF production plus the already-proven `projectPageTarget()` pattern, but
+a full sweep of this project's entire 46+ app real corpus found zero real
+occurrences of either enum value — see `ApexButtonTarget`'s own doc
+comment in `packages/parser/src/ast.ts` for the full accounting. This
+distinction is deliberate and load-bearing — do not read `apx-flow`'s
+output as uniformly "confirmed."
+
+**A target that can't be resolved to one of this app's own real pages
+stays honestly unresolved** (`{ kind: 'unresolvedPage', ref: ... }`) rather
+than guessed — this covers a different app's page number
+(`redirectOtherApp`), a page 0/alias-less target, or an item-substitution
+token (e.g. `&LAST_VIEW.`) that can't be resolved without runtime
+evaluation.
+
+**Reachability**: `flow-map.json`'s `reachability.pagesWithNoIncomingEdges`
+lists pages with zero incoming edges from these four sources — a pure,
+cheap computation over the graph already built, not a new evidence
+question. This is explicitly a finding, not a bug claim: breadcrumbs,
+navigation lists, `apex.navigation`, and Dynamic Action redirects are all
+out of this pass's scope (see below), so a page reached only through one of
+those will still show up here.
+
+**Explicitly out of scope for this pass** (Thirteenth round, Decision 2) —
+deliberately NOT attempted, not a gap to work around:
+- Breadcrumbs and navigation lists — both are shared components, not page
+  children; need new shared-component support in the parser's app-level
+  output, a bigger lift than an additive field.
+- Dialog-page detection (`pageMode` on a navigation edge's *target* page) —
+  needs a new typed `ApexPage.pageMode` field AND a cross-page join that
+  doesn't exist anywhere in this project's typed AST yet.
+- Dynamic Action redirects — the full `action-c` EBNF production has no
+  page/URL target field anywhere; no real DA-redirect example has been
+  found in any locally accessible corpus app either.
+- `apex.navigation` JS API — confirmed real and documented, but runtime-
+  invoked, not present in static `.apx` export metadata at all; correctly
+  Phase 2+.
+- A visual Flow Map UI — logged in `docs/ecosystem-roadmap.md`, deliberately
+  unbuilt until a real user hits a concrete wall `apx-flow`'s JSON/CLI
+  output can't solve.
 
 ---
 
