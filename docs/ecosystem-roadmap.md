@@ -2940,3 +2940,191 @@ Architect's confirmed Decision 3, `exports["./flow"]` added alongside
 - **Nothing deferred was built.** Breadcrumbs/lists, dialog-page detection,
   Dynamic Action redirects, `apex.navigation`, and the visual UI all remain
   exactly as scoped out in Decision 1/2 above — untouched.
+
+## Fourteenth round (2026-08-13): QA/Verification Engineer — release-gate pass on 6 pending commits, `concurrent-manager` end-to-end
+
+Pre-push release-gate check (`git log origin/main..main`: `ee3e4e8` through
+`b4d12b5` — the navigation-source verification pass, Flow Map scoping
+decision, Software Architect package-boundary confirmation, the
+`ApexColumnLinkTarget`/`ApexButton.target` parser fix, and `flow.ts`/
+`apx-flow` itself). Ran every stage of the pipeline — parse, `apx-testgen`,
+`apx-diff`, `apx-coverage`, `apx-docs`, `apx-flow` — against the same real
+app end to end, per this project's own discipline that a stage passing in
+isolation is not the same as the whole pipeline being genuinely verified
+together. App used: `concurrent-manager` (56 pages, the richest real app in
+this corpus — branches, validations, processes, computations, report
+columns, region actions all present), the same app documented in
+`.ai/knowledge/verification.md`.
+
+**Result: 7 of 9 checked stages pass clean. One genuine, reproducible
+evidence-accuracy defect found in shipped code (Flow Map's `button.page`
+mechanism). One requested stage (`apx-report`) does not exist in this
+codebase at all. Verdict: NO-GO on push until the `button.page` finding
+below is corrected in place — everything else in these 6 commits is
+genuinely solid.**
+
+### What passed, with evidence
+
+1. **Parse — zero warnings**: 56 pages, 159 regions, 217 items, 67 buttons,
+   4 unmodeled types (`axis`, `pageGroup`, `savedReport`, `series`) —
+   matches `.ai/knowledge/verification.md`'s recorded figures for this app
+   exactly.
+2. **`apx-testgen`**: 55 page-object/spec pairs (110 files), byte-identical
+   across two independent runs (`diff -rq`, zero output). Spot-checked
+   `p00010-request-submission.{page,spec}.ts` and
+   `p00005-request-history.spec.ts` — real, correct TypeScript matching
+   this project's stated conventions (login-gated auth tests, region
+   resolve-checks emitted only for IR/Cards/Faceted Search, honest "not
+   covered" callouts for `staticContent`).
+3. **`apx-diff`** — self-diff of `concurrent-manager` against itself: `0
+   added, 0 removed, 0 changed, 55 unchanged`, identical in both
+   `structured` and `--format human` output, byte-identical `--json` report
+   across two runs.
+4. **`apx-coverage`** — ran cleanly against the full 55-page/159-region/
+   217-item/67-button app with an empty touch log (correctly enumerates
+   0% coverage everywhere, no crash on a large real app); `--html` produced
+   a genuine 70KB self-contained heatmap report, not a stub.
+5. **`apx-docs`** — 55 page docs + `index.md` (56 files), byte-identical
+   across two runs. Spot-checked `index.md` (all 55 pages, correct
+   region/item/button counts) and `p00105-job-definition-form.docs.md` in
+   full — real branches, validations, processes, dynamic actions, and
+   computations sections, sourced correctly from the typed AST, not
+   placeholder content.
+8. **Full regression sweep**: `npm run build --workspaces` (0 errors, all 4
+   packages), `npm test --workspaces` (293 tests: 219 generator + 69
+   parser [+5 skipped integration] + 5 testkit, all green), `npm run lint`
+   (0 errors), `cd spike && npx tsc --noEmit` (clean). Determinism against
+   `examples/employee-page` re-confirmed independently of the vitest
+   suite — manually regenerated `apx-docs`/`apx-testgen` output from
+   `packages/generator/test/fixtures/reference-fixtures` and diffed
+   against the committed `examples/employee-page` files: byte-identical
+   (`p00003-employee.docs.md`, `index.md`, `.page.ts`, `.spec.ts`).
+9. **Corpus-wide zero-warnings parse** — honest scope, matching every
+   prior session's documented access constraint: only 3 real apps were
+   locally accessible this session (`apextogo`, `concurrent-manager`,
+   `sample-cards`), not the full 46+ app corpus. All 3 parse with zero
+   warnings. This is not a new gap — the same "one real export in
+   `~/.Trash`" / "corpus not present in this environment" pattern the
+   Eleventh round documented.
+
+### Finding — `apx-flow`'s `button.page` mechanism ships a now-falsified "zero occurrences" claim (real, reproducible, in the commits under review)
+
+`apx-flow` itself is functionally correct on this app: 55 nodes, 39 edges
+(9 `branch`, 17 `button`, 13 `reportColumnLink`), byte-identical across two
+runs. The 9 `branch` edges exactly match the "9 branches confirmed earlier
+this session" figure this task was given to expect — good, real
+corroboration of the branch-edge source.
+
+But `packages/generator/src/flow.ts`'s `FLOW_MECHANISM_EVIDENCE['button.page']`
+entry, and `packages/parser/src/ast.ts`'s `ApexButtonTarget` doc comment
+(both shipped in commit `50d86c8`/`b4d12b5`, part of this push), state:
+
+> "a full sweep of this project's entire 46+ app real corpus... found ZERO
+> real redirectThisApp/redirectOtherApp buttons"
+
+This is false, and reproducibly so. `concurrent-manager` — already
+documented in `.ai/knowledge/verification.md` as the 46th app in that same
+corpus — contains **17 real, live-in-the-export occurrences**:
+
+```
+$ grep -rn "action: redirectThisApp\|action: redirectOtherApp" pages/ | wc -l
+17
+```
+
+across 11 distinct pages (`p00020-workday-calendar-manager.apx`,
+`p00090-request-details-log-viewer.apx`, `p00100-job-definition-manager.apx`,
+`p00105-job-definition-form.apx`, `p00120-request-set-builder.apx`,
+`p00121-request-set-builder-detail.apx`, `p00195-email-template-manager.apx`,
+`p00200-request-templates.apx`, `p00330-lookup-manager.apx`,
+`p00335-lookup-manager-form1.apx`, `p00350-lookup-manager2.apx`) — e.g.
+`pages/p00020-workday-calendar-manager.apx:207-210`:
+```
+action: redirectThisApp
+target: {
+    page: 25
+}
+```
+This exactly matches the flow map's own 17 `button.page` edges — the
+extraction logic is correct, the count is correct, the mechanism label is
+correct. **Only the evidence string is wrong**, and it's wrong in a way
+that matters: it doesn't just say "not yet witnessed in a small sample," it
+asserts a completed "full sweep of the entire 46+ app corpus," a stronger
+verification claim than was actually performed. Re-reading the Thirteenth
+round's own Decision 4 entry, the pass that wrote this string only had
+`ux-pattern-catalog` locally accessible ("NOT re-witnessed... in this
+session's corpus — the same access constraint the Eleventh round hit on
+the same app") — a single-app check, not the "entire 46+ app corpus" the
+shipped evidence string in `flow.ts` claims. `concurrent-manager` was
+already recorded as part of that corpus in `.ai/knowledge/verification.md`
+before this string was written; the "full sweep" simply never touched it
+for this specific field.
+
+This is exactly the class of error this project's own evidence discipline
+(ADR-004, DESIGN_GUARDRAILS' "correct a wrong prior claim in place,
+visibly") exists to catch, and it ships as literal text in `apx-flow`'s
+own JSON output (`edges[].evidence`) — any downstream consumer reading a
+`button.page` edge's evidence field today gets told something false about
+this project's own verification history.
+
+**This is not a data-correctness bug** — the flow map's nodes, edges, edge
+counts, and mechanism classification are all genuinely right, and
+`'medium'` is (if anything) now under-confident given real data exists,
+not over-confident in a dangerous direction. It is a shipped, false
+"confirmed absence" claim, in code that is part of this push, caught by
+the exact kind of fuller-corpus check this project's QA discipline
+requires before calling anything actually verified — precisely the
+pattern the QA/Verification Engineer charter names as having burned this
+project twice already (Chart `widget()`, the array-parsing bug).
+
+**To resolve** (not fixed in this pass — verification only, per this
+session's explicit scope):
+- Correct `packages/generator/src/flow.ts`'s `FLOW_MECHANISM_EVIDENCE['button.page']`
+  entry in place, citing `concurrent-manager`'s 17 real occurrences (file/line
+  evidence above) instead of "found ZERO."
+- Correct `packages/parser/src/ast.ts`'s `ApexButtonTarget` doc comment in
+  place, same correction, same citation.
+- Decide whether `button.page` should be upgraded from `'medium'` to
+  `'high'` confidence now that real corpus data (source 2 per ADR-004)
+  directly confirms the enum value and its `{page, items, clearCache}`
+  target shape in a real export — this is a real design call (medium was
+  chosen partly for "not live-browser-witnessed," which remains true), but
+  the "zero occurrences" justification specifically must not stay as
+  written regardless of which way that call goes.
+- Add a regression test in `flow.test.ts` fixturing this exact
+  `concurrent-manager` case (or an equivalent synthetic one) so a future
+  full-corpus claim like this is checked against test fixtures, not just
+  prose.
+- Re-run this same corpus sweep against the other 43 apps in
+  `.ai/knowledge/verification.md`'s list once they're locally accessible
+  again, since "zero occurrences" was evidently never actually checked
+  against more than one of them.
+
+### `apx-report` — does not exist; not a defect, a scope mismatch
+
+This task asked for verification of `apx-report`, "the composite dashboard
+(coverage + diff + parser-warnings)." No such tool exists anywhere in this
+codebase — not in any package's `bin`, not as a module in
+`packages/generator/src/`, not referenced in `README.md`'s capability
+matrix or `docs/tutorial.md`. The only mention anywhere is the Twelfth
+round's Part B item 11, "a combined AST-diff + flow-diff + test-diff
+'Release Impact Report'" — explicitly a *future*, Phase-3, never-scoped,
+never-built idea, not part of any of the 6 pending commits. This is not a
+finding against the pending push (`apx-report` isn't in any of the 6
+commits under review) — flagged here only because the task explicitly
+asked for it to be checked and it genuinely doesn't exist to check.
+
+### Verdict: NO-GO
+
+Scoped precisely: **do not push until the `button.page` evidence-string
+correction above lands.** Everything else in these 6 commits —
+`ApexColumnLinkTarget.url`, `ApexButton.target`/`ApexButton.url`'s typing
+and the `redirectUrl` variant's `'high'`-confidence evidence, the parser
+fix itself, `apx-testgen`/`apx-diff`/`apx-coverage`/`apx-docs`, the Flow
+Map's actual graph-building logic, the Software Architect package-boundary
+decision, and the full regression sweep — is genuinely solid, evidenced
+directly in this pass, and does not need to be re-litigated. The one
+correction needed is small (two doc-comment/evidence-string edits plus one
+regression-test addition), not a redesign, and there is real cost to
+shipping a "confirmed zero occurrences" claim known to be false at the
+moment it ships — exactly the gap this project's own evidence discipline
+exists to catch before a release, not after.
