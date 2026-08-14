@@ -103,10 +103,14 @@
  *     `clearCache` field at all (unlike its three siblings), even though
  *     real branches DO carry one (`concurrent-manager`,
  *     `pages/p00351-lookup-manager1.apx:960-968`) — see `FlowEdge.clearCache`'s
- *     own doc comment (corrected in place there) for the full finding.
- *     This is a `packages/parser` typed-field gap, not a `flow.ts` bug —
- *     filed to `/parser` via `docs/grammar-assumptions.md`'s "Still open"
- *     section, out of this module's ownership to fix directly.
+ *     own doc comment (corrected in place there) for the full finding. This
+ *     was, at the time, a `packages/parser` typed-field gap, not a
+ *     `flow.ts` bug — filed to `/parser` via `docs/grammar-assumptions.md`'s
+ *     "Still open" section, out of this module's ownership to fix directly.
+ *     CORRECTED IN PLACE (2026-08-14): that parser-side gap is now closed
+ *     (`ApexBranchTarget.clearCache` typed, Fifteenth round) and `flow.ts`'s
+ *     own follow-up is done — `fromBranch()` now reads it; see
+ *     `FlowEdge.clearCache`'s doc comment for the current, real behavior.
  *
  * **Determinism contract**, identical to every other module in this
  * package: same `ApexAppAst` in -> byte-identical `FlowMap` out. No
@@ -239,31 +243,28 @@ export interface FlowEdge {
    * `docs/grammar-assumptions.md`) -- both pass through this field
    * unresolved and unmodified, matching `items`' own contract above).
    *
-   * CORRECTED IN PLACE (substitution-syntax audit pass, 2026-08-13): this
-   * comment previously asserted `ApexBranchTarget` genuinely has no
-   * `clearCache` in real data ("an honest reflection of that real,
-   * confirmed AST shape difference, not an oversight"). That claim was
-   * never actually checked against a real branch with a `clearCache` --
-   * it turns out one exists: `concurrent-manager`,
-   * `pages/p00351-lookup-manager1.apx:960-968`, the "Redirect to all"
-   * branch (`behavior { target: { page: 350 clearCache: 350 action:
-   * resetPagination } }`). So `branch.*` edges being `null` here is NOT a
-   * confirmed absence of the underlying data -- it is `ApexBranchTarget`
-   * (`packages/parser/src/ast.ts`) never having typed a `clearCache` field
-   * at all, unlike its three siblings (which all share the
-   * `projectPageTarget()` helper; `projectBranchTarget()` is a separate,
-   * older function that predates it and only reads `page`/`url`/`items`).
-   * The real value is NOT lost -- `ApexBranch.raw` still carries
-   * `behavior.target.clearCache` per ADR-001 -- but it never reaches this
-   * typed `FlowEdge.clearCache` field for a `branch` source. This is a
-   * genuine, real, parser-level typed-field gap, filed to `/parser`
-   * (see `docs/grammar-assumptions.md`'s "Still open" section) -- NOT
-   * fixed in this pass, since `ApexBranchTarget` is outside
-   * `packages/generator`'s ownership. `branch.*` edges will keep
-   * returning `clearCache: null` unconditionally until that field is
-   * added upstream; `test/flow.test.ts` locks in this exact, honestly-
-   * labeled gap (not a silent pass) so the fix is visible in the diff
-   * whenever it lands.
+   * CORRECTED IN PLACE (Runtime & Test Automation Engineer, 2026-08-14):
+   * this comment previously described `branch.*` edges as unconditionally
+   * `null` here because `ApexBranchTarget` (`packages/parser/src/ast.ts`)
+   * had no typed `clearCache` field at all -- a real, filed parser-level
+   * gap (Fourteenth round's substitution-syntax audit,
+   * `docs/grammar-assumptions.md`'s "Still open" section). That gap is now
+   * closed: the Compiler/Parser Engineer added `ApexBranchTarget.clearCache:
+   * string | null` (Fifteenth round), read by `projectBranchTarget()`
+   * (`packages/parser/src/parser.ts`) the same way `projectPageTarget()`
+   * already reads it for the three sibling target types. `fromBranch()`
+   * below now reads `t.clearCache` directly instead of hardcoding `null`,
+   * matching `fromRegionAction()`/`fromReportColumn()`/`fromButton()`'s own
+   * pattern exactly -- no branch-specific shape invented. Real evidence,
+   * re-confirmed live via `apx-flow` against `concurrent-manager` both
+   * before and after this fix: `pages/p00351-lookup-manager1.apx:960-968`,
+   * the "Redirect to all" branch (`behavior { target: { page: 350
+   * clearCache: 350 action: resetPagination } }`) now produces a
+   * `branch.page` edge with `clearCache: "350"` (coerced to `String(...)`,
+   * matching the sibling sources' own coercion in `projectPageTarget()`);
+   * its sibling "Redirect to new" branch on the same page (no `clearCache`
+   * key in the source) still correctly produces `clearCache: null` --
+   * both real shapes locked in `test/flow.test.ts`.
    */
   clearCache: string | null;
   confidence: FlowConfidence;
@@ -438,7 +439,7 @@ function fromBranch(b: ApexBranch): RawTargetData | null {
   const t = b.target;
   if (!t) return null;
   if (t.page === null && t.url === null) return null;
-  return { pageRef: t.page, url: t.url, items: t.items, clearCache: null };
+  return { pageRef: t.page, url: t.url, items: t.items, clearCache: t.clearCache };
 }
 
 function fromRegionAction(a: ApexRegionAction): RawTargetData | null {

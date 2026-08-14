@@ -3235,7 +3235,7 @@ comments are written to be honest about that specific residual gap
 (one app confirmed for `redirectThisApp`, zero for `redirectOtherApp`)
 rather than overclaiming it away.
 
-## Fifteenth round (2026-08-14): `ApexBranchTarget.clearCache` typed (Compiler/Parser Engineer) — `flow.ts` follow-up filed, not made
+## Fifteenth round (2026-08-14): `ApexBranchTarget.clearCache` typed (Compiler/Parser Engineer) — `flow.ts` follow-up filed AND resolved (Runtime & Test Automation Engineer)
 
 Closes the gap the Fourteenth round's `flow.ts` substitution-syntax audit
 filed to `/parser` (`docs/grammar-assumptions.md`'s "Still open" section,
@@ -3259,19 +3259,37 @@ typecheck, zero warnings across all four accessible real exports,
 byte-identical `reference-fixtures` regeneration via both `apx-testgen`
 and `apx-docs`).
 
-**Filed follow-up for Runtime & Test Automation Engineer, NOT made in
-this pass** (outside `/parser`'s ownership, same courtesy the Fourteenth
+**Follow-up for Runtime & Test Automation Engineer — RESOLVED, same
+round** (outside `/parser`'s ownership, same courtesy the Fourteenth
 round's `flow.ts` audit extended to `/parser` when it found this gap):
 now that `ApexBranchTarget.clearCache` is real,
-`packages/generator/src/flow.ts`'s `fromBranch()` can drop its hardcoded
-`clearCache: null` and read `t.clearCache` the same way
-`fromRegionAction()`/`fromReportColumn()`/`fromButton()` already do for
-their own sources. `FlowEdge.clearCache`'s own doc comment in that file
-also still describes this as an open, filed-but-unfixed gap ("CORRECTED
-IN PLACE (substitution-syntax audit pass, 2026-08-13)" paragraph) and
-needs a small correction-in-place once the generator-side fix lands.
-`test/flow.test.ts` already has a dedicated regression case locking in
-the current (pre-fix) `branch.*` → `clearCache: null` behavior, per that
-file's own note — expect it to need updating to `'350'` for the
-`concurrent-manager` `p00351-lookup-manager1.apx` branch case once this
-follow-up is picked up.
+`packages/generator/src/flow.ts`'s `fromBranch()` reads `t.clearCache`
+directly instead of hardcoding `null`, matching
+`fromRegionAction()`/`fromReportColumn()`/`fromButton()`'s own pattern
+exactly. Live-reconfirmed both before and after the fix via `apx-flow`
+against `concurrent-manager`: before, all 9 branch edges (including the
+"Redirect to all" branch, `pages/p00351-lookup-manager1.apx:960-975`)
+showed `clearCache: null` in the generated `flow-map.json`, matching the
+filed gap; after, that same edge shows `clearCache: "350"` (string-
+coerced, same as the three sibling sources' own `String(...)` coercion),
+while its sibling "Redirect to new" branch (same page, no
+`target.clearCache` key in the source) still correctly shows `null` —
+both real shapes now locked into a single regression test. `FlowEdge.
+clearCache`'s doc comment (previously "CORRECTED IN PLACE (substitution-
+syntax audit pass, 2026-08-13)") and this module's own top-level
+"Substitution-syntax audit" doc-comment paragraph are both corrected in
+place again to describe the fix, not restate it as still-open.
+`test/flow.test.ts`'s dedicated "KNOWN GAP" regression case is now a
+"FIXED" case, extended to cover both real sibling branches (`"350"` and
+`null`) on the same fixture page, rather than only the previously-null
+case. Determinism reconfirmed (`apx-flow` regenerated twice against
+`concurrent-manager`, byte-identical). Full regression sweep green
+again: build (`npm run build --workspaces`, 4/4 packages), full test
+suite (all workspaces, 302 tests — 227 generator/38 of them `flow.test.ts`,
+70 parser, 5 testkit — 0 failures), lint (`eslint packages`, clean),
+`spike` typecheck, zero-warnings parse across all four accessible real
+exports (`ux-pattern-catalog`, `apextogo`, `sample-cards`,
+`concurrent-manager`), byte-identical `reference-fixtures` regeneration
+via both `apx-testgen` and `apx-docs` against the committed
+`examples/employee-page` (unaffected by this `flow.ts`-only change, as
+expected — confirmed rather than assumed).

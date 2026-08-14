@@ -160,10 +160,10 @@ describe('buildFlowMap — source 1: page branches', () => {
     expect(e.from).toBe('page:1');
     expect(e.to).toEqual({ kind: 'page', nodeId: 'page:2', pageId: 2 });
     expect(e.items).toEqual({ P2_ID: '&P1_ID.' });
-    // ApexBranchTarget has no typed clearCache field -- see the dedicated
-    // "branch target with a real clearCache" test below for the corrected,
-    // evidence-backed explanation of why this is a known, filed-to-/parser
-    // gap, not a confirmed absence of the underlying real data.
+    // No target.clearCache key on this fixture branch -- honest absence,
+    // not the historical fromBranch() hardcoded-null gap (fixed, see the
+    // dedicated "concurrent-manager Redirect to all/Redirect to new" test
+    // below for the real, non-null case now surfaced from ApexBranchTarget).
     expect(e.clearCache).toBeNull();
     expect(e.confidence).toBe('high');
   });
@@ -202,19 +202,28 @@ describe('buildFlowMap — source 1: page branches', () => {
     expect(result.edges[0].to).toEqual({ kind: 'unresolvedPage', ref: '&LAST_VIEW.' });
   });
 
-  it('KNOWN GAP (filed to /parser, not a flow.ts bug): a real branch WITH a ' +
-    'clearCache directive still surfaces clearCache: null, because ApexBranchTarget ' +
-    'never typed that field -- regression fixture for concurrent-manager, ' +
-    'pages/p00351-lookup-manager1.apx:960-968 ("Redirect to all" branch: ' +
+  it('FIXED (previously a KNOWN GAP filed to /parser): a real branch WITH a ' +
+    'clearCache directive now surfaces it verbatim -- regression fixture for ' +
+    'concurrent-manager, pages/p00351-lookup-manager1.apx:941-975, both real ' +
+    'sibling branches on the same page: "Redirect to new" (line 941-958, no ' +
+    'target.clearCache key at all) and "Redirect to all" (line 960-975, ' +
     'behavior { target: { page: 350 clearCache: 350 action: resetPagination } }). ' +
-    'See FlowEdge.clearCache\'s doc comment (corrected in place, substitution-syntax ' +
-    'audit pass 2026-08-13) for the full evidence trail -- this test locks in the ' +
-    'CURRENT, honestly-documented behavior so a future ApexBranchTarget.clearCache ' +
-    'field lands visibly in this diff, not silently.', () => {
-    const p1 = page({
+    'ApexBranchTarget.clearCache (packages/parser/src/ast.ts) is now typed ' +
+    '(Compiler/Parser Engineer, Fifteenth round) and fromBranch() ' +
+    '(packages/generator/src/flow.ts) now reads it instead of hardcoding null -- ' +
+    'see FlowEdge.clearCache\'s doc comment (corrected in place again here) for ' +
+    'the full evidence trail. Both real shapes locked in: the numeric literal ' +
+    'coerced to a string ("350", matching projectPageTarget()\'s own ' +
+    'String(...) coercion for the three sibling target types) and the honest ' +
+    'null absence on the sibling branch that never carried the key.', () => {
+    const p351 = page({
       id: 351,
       alias: 'LOOKUP_MANAGER1',
       branches: [
+        branch({
+          name: 'Redirect to new',
+          target: { page: 350, url: null, items: { P350_LOOKUP_TYPE: '&P351_LOOKUP_TYPE.' }, clearCache: null },
+        }),
         branch({
           name: 'Redirect to all',
           target: { page: 350, url: null, items: null, clearCache: '350' },
@@ -222,10 +231,16 @@ describe('buildFlowMap — source 1: page branches', () => {
       ],
     });
     const p350 = page({ id: 350, alias: 'LOOKUP_MANAGER2' });
-    const result = buildFlowMap(ast([p1, p350]));
-    const e = result.edges[0];
-    expect(e.to).toEqual({ kind: 'page', nodeId: 'page:350', pageId: 350 });
-    expect(e.clearCache).toBeNull(); // real data has 350 here -- see comment above
+    const result = buildFlowMap(ast([p351, p350]));
+    expect(result.edges).toHaveLength(2);
+
+    const redirectToNew = result.edges.find((e) => e.label === 'Redirect to new')!;
+    expect(redirectToNew.to).toEqual({ kind: 'page', nodeId: 'page:350', pageId: 350 });
+    expect(redirectToNew.clearCache).toBeNull();
+
+    const redirectToAll = result.edges.find((e) => e.label === 'Redirect to all')!;
+    expect(redirectToAll.to).toEqual({ kind: 'page', nodeId: 'page:350', pageId: 350 });
+    expect(redirectToAll.clearCache).toBe('350');
   });
 
   it('produces no edge for a branch with no target data at all', () => {
