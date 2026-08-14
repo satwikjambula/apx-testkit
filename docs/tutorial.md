@@ -1094,8 +1094,17 @@ read of the already-typed AST into a deterministic JSON graph. See
 `docs/ecosystem-roadmap.md`'s Thirteenth round ("Flow Map: data model + CLI
 now, UI deferred") for the full scoping decision this implements.
 
+**Run it against your own app**: point `<export-dir>` at any real
+APEXlang export (the same folder you'd pass to `apx-testgen`/`apx-docs` —
+anywhere with `application.apx` and a `pages/` subdirectory).
+
 ```bash
+# from a built clone (matches every other command in this tutorial)
 node /path/to/apx-testkit/packages/generator/dist/flow-cli.js <export-dir> --out flow-map.json
+
+# once @apx/testgen is installed/linked as a real dependency, the plain
+# CLI name works too, same as apx-testgen/apx-docs/apx-diff/apx-coverage
+apx-flow <export-dir> --out flow-map.json
 ```
 
 ```
