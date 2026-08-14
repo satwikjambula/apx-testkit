@@ -1120,6 +1120,19 @@ happens to be an external-URL redirect, so every edge resolves to a `url`
 target rather than a `page` target; this is a genuine property of that
 specific app's data, not a limitation of the tool — see below.)
 
+A second real app, `concurrent-manager`, has genuine page-to-page branches
+instead:
+
+![apx-flow terminal output — 55 pages, 39 edges, all high confidence](flow-map-terminal.png)
+
+![A real branch example — Page 351 redirects to Page 350 under two different conditions, both preserved as separate edges, one carrying a real clearCache value](flow-map-branch-example.png)
+
+Both screenshots are real, captured directly from a live `apx-flow` run —
+regenerate them yourself with `node packages/generator/dist/flow-cli.js
+<export-dir> --out flow-map.json` against any real export with branches,
+then render the JSON however you like (these two happen to be small
+hand-styled HTML pages screenshotted with Playwright, nothing fancier).
+
 **Nodes** are one per real, generated page (`page:<pageId>`, same `id !==
 0 && alias` filter `apx-docs`/`apx-coverage`/`apx-testgen` already apply,
 for consistency). **Edges** come from exactly four typed navigation
