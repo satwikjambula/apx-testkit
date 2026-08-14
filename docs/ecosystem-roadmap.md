@@ -3293,3 +3293,322 @@ exports (`ux-pattern-catalog`, `apextogo`, `sample-cards`,
 via both `apx-testgen` and `apx-docs` against the committed
 `examples/employee-page` (unaffected by this `flow.ts`-only change, as
 expected — confirmed rather than assumed).
+
+## Sixteenth round (2026-08-14): Functional Scenario Authoring RFC — Product Architect verdict
+
+**Status: RFC reviewed, not approved. Not now.** This is a review of a
+proposal the maintainer explicitly framed as "requires review," not a
+feature already greenlit — treated that way here, independent of the
+RFC's own careful design.
+
+### Core framing question, answered directly
+
+**No — not at this project's current stage, in this shape.** The
+architectural boundary the RFC proposes (LLM strictly outside the CI/test-
+execution path, draft-only output, human-approval gate before anything
+becomes a versioned artifact, no new package ahead of a real consumer) is
+genuinely well-designed and is not what's being rejected here. What's
+being rejected is *timing and evidence*, the same axis this project has
+already used to say no to four rounds of plugin-API pitches, the VS Code
+extension, the Language Server, impact analysis, dependency-graph
+visualization, and the original Analysis Engineer proposal — all
+well-reasoned, all declined for lack of a real forcing consumer. This RFC
+has the same gap: no QA engineer, APEX developer, business analyst, or
+test automation engineer has hit a wall and asked for this. It is
+proposed on the strength of its own architecture, not on the strength of
+anyone's reported need.
+
+### 1. Is functional scenario authoring within apx-testkit's product scope at all?
+
+Adjacent, not core, and the README says so in its own words: "This
+doesn't replace test authorship for business logic — it replaces 'does
+the page still render/validate correctly' as a repetitive hand-written
+chore." Business-scenario authorship is the thing this project has
+explicitly and repeatedly said it does *not* do — that line isn't an
+oversight, it's the floor/ceiling distinction the whole positioning rests
+on. A capability that authors business-logic scenarios is a real product
+adjacency, not a natural extension of the existing pipeline the way Flow
+Map was (Thirteenth round: same typed-AST-in/deterministic-artifact-out
+shape as `apx-diff`/`apx-coverage`). It could legitimately become in-scope
+later as a clearly-separate, clearly-labeled authoring aid — but "could
+become in scope" is different from "is in scope now," and the RFC asks
+for the former while reading like the latter.
+
+### 2. Is human-reviewed scenario authoring valuable enough to justify the project's first LLM dependency, in this specific way?
+
+Not yet, for three concrete reasons, not just "no evidence":
+
+- **No forcing consumer.** Same test that sank impact analysis,
+  dependency-graph visualization, dead code detection, and the "AI
+  context generator" pitch (Ninth round: "no concrete consumer asking for
+  the actual values yet" / "building the graph *for* impact analysis,
+  speculatively, is the order this project has already ruled out"). This
+  RFC is that same order, applied to scenario authoring instead of a
+  dependency graph.
+- **The Analysis-Engineer trigger is being stretched past what actually
+  exists.** `.ai/AGENT.md`'s stated condition for revisiting is "only when
+  the underlying capability exists," and the RFC correctly points to Flow
+  Map as new, real ground truth. But Flow Map grounds one thing well —
+  static page-to-page navigation (branches, region actions, report/IR/IG
+  column targets, button targets) — not the seven scenario categories
+  proposed (Business Modules, User Journeys, Functional, CRUD, Negative,
+  Authorization, Navigation, Smoke). Navigation-flavored journeys are
+  genuinely FACT-gradeable off Flow Map + the typed AST today. CRUD
+  scenarios, Negative scenarios, and "Business Module" grouping are not —
+  there is no dependency graph, no CRUD-detection pass (explicitly
+  deferred, Ninth round), and "Business Module" is a semantic/product
+  concept the AST has never carried. For those categories the honest
+  FACT/INFERENCE/ASSUMPTION split the RFC itself proposes would land
+  mostly in ASSUMPTION, which is a tell that the evidence bar for that
+  part of the scope isn't actually met yet, even though it is for the
+  navigation slice.
+- **This is the project's first LLM dependency, in a project whose
+  single-sentence README differentiator is "Zero LLM calls in the test
+  loop... the opposite trade-off from an AI test-writer, and the reason
+  this stays CI-stable."** Keeping the LLM fully outside the CI path (as
+  proposed) is necessary but not sufficient to avoid diluting that pitch —
+  a prospective second user (still the open M4 milestone) reading "apx-
+  testkit now also has an LLM-assisted authoring agent" absorbs a
+  different, muddier product identity than the current one-line pitch,
+  regardless of where in the architecture the LLM call actually sits.
+  Diluting the clearest differentiator before the project has landed its
+  second real user is a real cost, not a hypothetical one, and it's a
+  cost this specific project is unusually well-positioned to recognize
+  given how much of its own roadmap discipline is built on "evidence over
+  assumption."
+
+### 3. Who is the actual target user?
+
+The RFC doesn't pin this down, and neither can this review — that's
+itself diagnostic. Ruled out directly: APEX developers (they build the
+app, they don't test-plan against it) and test automation engineers (the
+RFC's own design means its output is never directly executable, so it
+doesn't serve someone whose job is writing automation). The plausible fit
+is a QA lead or business analyst doing manual test planning who wants a
+FACT/INFERENCE/ASSUMPTION-tiered draft to review and refine — but that's
+persona-fitting from the architecture backward, not a validated user
+telling us this is their bottleneck. Same evidentiary gap as question 2.
+
+### 4. Should scenarios be persisted in the repository at all?
+
+**Draft (unapproved) scenarios: no.** The RFC's own rationale for keeping
+the LLM out of the deterministic path — two runs can legitimately produce
+different-but-both-valid output for the same evidence — is exactly the
+argument against committing drafts to git. This project's whole identity
+is diffable, reproducible artifacts; committing non-deterministic
+generations contradicts that even if they're clearly labeled "draft."
+Draft output should be ephemeral CLI/local output, not tracked.
+
+### 5. Should *approved* scenarios become version-controlled artifacts?
+
+**Yes, if this is ever built.** Once a human has approved a scenario spec,
+it becomes exactly the kind of artifact this project already knows how to
+treat safely — a frozen, versioned, diffable spec feeding a deterministic
+downstream step, the same shape as an `.apx` export feeding the generator
+today. This part of the RFC's design is sound and requires no correction.
+
+### 6. Minimum useful v1 — not endorsed now, but scoped precisely for the record
+
+If/when a real forcing consumer shows up, the right v1 is considerably
+smaller than the full RFC, not the full RFC minus a package:
+
+- Agent definition + a scenario-spec YAML format only, per the RFC's own
+  proposed package boundary (no `packages/scenario/` or
+  `packages/functional/` ahead of a real consumer — correct, matches this
+  project's own extract-from-three-or-more-real-consumers precedent,
+  Fifth round).
+- Scope the *content* down too: **Navigation and Smoke scenario categories
+  only, sourced from Flow Map + the existing typed AST, role-neutral
+  unless a real `authorization_scheme` backs a role.** Drop Business
+  Module, CRUD, Negative, and Authorization-scenario categories from v1 —
+  they need a dependency graph and/or CRUD-detection foundation this
+  project has explicitly deferred (Ninth round) for the same "no forcing
+  consumer" reason being applied here. Building those categories now would
+  mean generating mostly-ASSUMPTION content dressed in a FACT/INFERENCE/
+  ASSUMPTION scheme that implies more rigor than the underlying data
+  supports.
+- Draft output stays out of git entirely; only a human-approved spec is
+  ever committed.
+
+### What would change this verdict
+
+A real user — QA lead, business analyst, or test engineer, using
+apx-testkit against a live app — reporting that hand-writing functional
+scenarios from the typed AST/Flow Map is a specific, named bottleneck,
+not a hypothetical persona. Secondary supporting evidence: Flow Map
+itself getting real usage from at least one project for real navigation
+documentation, establishing the underlying data is trusted before any
+non-deterministic authoring layer is built on top of it. Until then this
+stays logged here, unbuilt, same as Analysis Engineer, impact analysis,
+and the plugin API — a good idea whose time has not yet been earned by
+evidence.
+
+### Software Architect confirmation (2026-08-14)
+
+Reviewed independently, on the architecture/determinism-boundary axis
+specifically — not re-litigating Product Architect's "not now," which is
+their call to make and which I have no basis to override. This section
+exists so the architecture verdict is on record for if/when a real forcing
+consumer reopens this, per Product Architect's own "what would change this
+verdict" note above — the same discipline the Thirteenth round's package-
+boundary confirmation modeled: independently re-derived from this
+project's actual files (`.ai/ADR/*`, `DESIGN_GUARDRAILS.md`,
+`.ai/knowledge/architecture.md`, `.ai/knowledge/generator.md`,
+`packages/generator/src/flow.ts`, `packages/mcp/src/server.ts`), not
+rubber-stamped from the RFC's own diagram.
+
+**Core framing question, architecture half: is the proposed
+deterministic/non-deterministic boundary itself sound?** Conceptually yes
+— it matches three things this project already enforces elsewhere: the
+treadmill rule (generated code never contains hand-authored logic), ADR-004's
+evidence-tiering discipline (a claim is FACT only with real citations, exactly
+what the RFC's own FACT/INFERENCE/ASSUMPTION scheme reuses from `flow.ts`'s
+`FlowEdgeMechanism`/`FLOW_MECHANISM_EVIDENCE` pattern), and
+`packages/mcp/src/server.ts`'s own stated principle, "the agent DISPATCHES
+generation; it never authors assertions — determinism is the product." The
+RFC's diagram is a correct instance of a pattern this codebase already lives
+by. **But "sound in concept" is not the same as "enforceable as drafted"** —
+the RFC currently specifies the boundary as a stated rule plus a diagram, not
+a mechanism, and this project's own history (the `calendarSettings`/
+`UNTRACKABLE_REGION_TYPES` drift documented in ADR-001 and
+`.ai/knowledge/generator.md`) is direct evidence that a "should stay in sync"
+rule without an enforced check drifts here specifically, not hypothetically.
+Four concrete corrections would be required before implementation, not
+implementation details to backfill after:
+
+**1. Should scenario specs become a first-class artifact at all?** If ever
+built: yes, but only the *approved* form. An approved scenario spec is
+architecturally identical in shape to `flow-map.json` or a parsed `.apx`
+export — a frozen, versioned, diffable input feeding a deterministic
+downstream step (Product Architect's Q5 reaches the same conclusion from the
+product side). A *draft* is never first-class — no schema guarantee, no
+version, ephemeral by design (matches Product Architect's Q4 verdict that
+drafts must never be committed).
+
+**2. Where should the format live?** Not inside `packages/*` — there is no
+consuming module yet, and putting a type there ahead of a real consumer is
+the same "org-chart-before-the-org" antipattern `.ai/AGENT.md` already named
+for the original Analysis Engineer rejection, applied here to a schema file
+instead of an agent. Home: `docs/`, alongside this project's other
+cross-package convention artifacts that already live outside `packages/*`
+(`docs/quirks/26.1.json`, `docs/grammar-assumptions.md`,
+`docs/component-coverage-matrix.md`) — e.g. `docs/scenario-spec.md` for the
+schema and versioning rules, with example fixtures under `examples/`. No new
+package is warranted (confirming the RFC's own recommendation): Phase-1
+scope here is functionally smaller than `flow.ts` was at the Thirteenth
+round, and that round's precedent — extract to a package only once there are
+three or more real consumers, not from zero (Fifth round) — applies with even
+less force when zero consumers exist yet at all.
+
+**3. Should the schema be deterministic and versioned?** Yes, if built.
+Sketch: a top-level `scenarioSpecVersion` field (same pattern
+`flow-map.json`'s own `flowMapVersion` already established); additive-only
+evolution within a major version, reusing ADR-001's own rule for the typed
+AST verbatim (new optional fields fine, no field renamed or removed without a
+version bump); every FACT/INFERENCE/ASSUMPTION-classified field carries a
+literal, AST-resolvable `evidence` array — not prose — mirroring
+`FLOW_MECHANISM_EVIDENCE`'s discipline of citing concrete data, not asserting
+confidence; and the required `approval` block from point 4 below is part of
+the versioned schema itself, not a side-channel.
+
+**4. Relationship to `flow-map.json` — loose reference by stable AST field,
+never by `flow-map.json`'s own edge `id`.** A real coupling risk exists here
+that the RFC doesn't currently guard against: `flow.ts`'s `edgeId()`
+(`packages/generator/src/flow.ts`) is ordinal-based — an index into a page's
+`branches`/`actions`/`columns`/`buttons` array — so reordering any construct
+on a page shifts other edges' ids even when nothing relevant to a given
+scenario changed. An approved scenario citing that opaque id would go stale
+silently on an unrelated edit. Citing the same stable, typed AST fields
+`flow.ts` itself reads (page `id`/`alias`, button/region `identifier`) avoids
+that coupling entirely; `flow-map.json` remains a convenient read for
+authoring, not the identity source.
+
+**5. Can Playwright generation consume the approved format without an LLM in
+that step — confirmed, but only with a schema correction.** Architecturally
+achievable, but the RFC's own example schema is not sufficient as drafted:
+its `evidence` fields are human-readable display strings (`button: Approve`),
+not resolvable identifiers. A deterministic generator turning a display
+label into a Playwright locator without a canonical identifier means either
+guessing via name-matching — exactly what DESIGN_GUARDRAILS forbids
+("Generate code from DOM heuristics when verified metadata or a documented
+API already exists") — or silently reopening non-determinism at the exact
+seam meant to keep it out. Required correction: an "Approved Scenario
+Specification" must carry resolved AST identifiers (page alias, button/region
+`identifier`) alongside the human-readable evidence, not display strings
+alone. This is the single most load-bearing correction in this review — it's
+the literal place a paraphrased LLM label could leak into generated code.
+
+**6. Preserving the byte-identical guarantee downstream of an approved
+scenario.** Treat the approved file exactly as an additional generator input
+alongside the typed AST, under the identical contract `.ai/knowledge/
+generator.md` already states for everything else: same inputs, byte-identical
+output, verified by regenerating twice and diffing. Concretely: parse YAML
+into a canonical in-memory form (not dependent on file whitespace/comment
+placement); never let generation read anything but resolved-identifier
+fields; keep `packages/mcp/src/server.ts`'s existing "do not hand-edit
+generated files, regenerate instead" rule; and extend the release
+checklist's reference-fixture regeneration check to cover one approved-
+scenario fixture, matching how `flow.ts`/`docs.ts` were folded into that same
+check when they shipped.
+
+**7. Concrete mechanism preventing an unapproved scenario from reaching CI —
+must be enforced in tooling, not documented as a rule alone.** A
+file-location convention (drafts never written to a tracked path — Product
+Architect's Q4 verdict) is a necessary first layer but not sufficient by
+itself; this project's own history shows conventions without an enforced
+check drift here. Required: a required `approval` block in the schema
+(`approvedBy`, `approvedAt`, `specHash` — a hash of the canonical byte form
+of everything above the approval block). The generator entrypoint must
+recompute `specHash` on every run and hard-fail — not warn — if it doesn't
+match, or if the approval block is absent, the same "throw a specific, named
+error rather than silently constructing something wrong" discipline ADR-003
+already applies to unresolvable region ids. Separately, the LLM-authoring
+step itself must never be a build/test/CI dependency — no `npm test`/`npm run
+build` step may import or invoke it — mirroring how this project already
+keeps live-Oracle verification structurally outside CI ("There is no CI
+running against a live Oracle instance," `.ai/knowledge/architecture.md`).
+
+**8. Stable scenario IDs.** Assign once at authoring/approval time and freeze
+inside the file (`id: PR-001` is the right instinct) — never derive or
+regenerate from AST/flow-map state, since nothing in this project's current
+AST or `flow-map.json` output is a stable, human-legible identity source
+across regenerations (`flow.ts`'s own edge ids are ordinal-based, per point
+4). Treat `id` + file path as the durable identity, the same way a `.apx`
+export's own identity is assigned externally, not derived in-band.
+
+**9. AST/Flow Map changes invalidating approved scenarios — a legitimate "not
+yet" for a v1, with one exception that is NOT deferrable.** Full proactive
+staleness-flagging (an `apx-diff`-style check surfacing which approved
+scenarios a given AST change affects) fails this project's own
+forcing-consumer test the same way Product Architect's Q2 already applies it
+project-wide — legitimately deferred, same shape `apx-diff` itself was phased
+in. But the generator must hard-fail, not silently skip, if a cited
+identifier no longer resolves against the current AST — that's a cheap
+existence check, not a semantic-staleness detector, and without it a renamed
+page could make a stale-but-"approved" scenario silently generate an empty or
+wrong-target test while remaining technically byte-identical and
+deterministic — defeating the safety premise the entire design rests on.
+This one check belongs in v1 if there ever is one.
+
+**Package boundary and ADR question, answered directly, since both are this
+domain's call:** No new package (confirmed, matching the RFC's own
+recommendation and this project's Fifth/Thirteenth-round precedent exactly).
+**A new ADR — ADR-005 — would be warranted the moment this is actually
+built**, not today. This is categorically different from ADR-001 through
+004, none of which govern admitting non-deterministic, externally-authored
+content into an otherwise fully deterministic pipeline; it deserves the same
+permanent, citable status ADR-004 gives "verification precedes
+implementation" rather than living only in an RFC and a roadmap paragraph.
+Logging the need now so it isn't rediscovered as a gap later, same spirit as
+this file's own habit of recording deferred-but-real items rather than
+letting them evaporate.
+
+**Verdict:** the boundary is sound in concept and consistent with this
+project's existing architecture, but not enforceable as currently drafted.
+If this is ever revisited, it should not proceed past the design stage
+without: resolved AST identifiers in the schema (point 5), a hash-verified
+approval mechanism enforced by the generator entrypoint (point 7), scenario
+references pinned to stable AST fields rather than `flow-map.json`'s ordinal
+edge ids (point 4), and a hard-fail existence check on generation (point 9).
+None of these change today's verdict of "not now" — they're the standing
+architectural bar for whenever "now" arrives.
