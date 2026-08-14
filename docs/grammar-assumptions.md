@@ -1532,6 +1532,359 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
     `APX_EXPORT_DIR`), `npm run lint` (0 errors/warnings), `cd spike && npx
     tsc --noEmit` (0 errors).
 
+- [x] **2026-08-13 — Oracle's authoritative "Built-in Substitution
+      Strings" list obtained and cross-checked against the real corpus,
+      for `flow.ts`'s eventual standard-vs-app-specific token
+      classification.** Source of truth is Oracle's own App Builder
+      User's Guide (NOT the EBNF — the EBNF treats `<reference>` (`@...`)
+      generically and, separately, does not model substitution-string
+      internals at all; this is prose documentation, fetched directly via
+      the Browser tools against the real `docs.oracle.com` site, not an
+      AI-summarized `WebFetch`, after `WebFetch` 404'd on two guessed URLs
+      first — the working page only turned up by opening the book's own
+      Table of Contents and searching its real link list):
+      **`https://docs.oracle.com/en/database/oracle/apex/26.1/htmdb/using-available-built-in-substitution-strings.html`**
+      (App Builder User's Guide §3.10.4 "Using Built-in Substitution
+      Strings", 52 numbered sub-entries, §3.10.4.1–§3.10.4.52). Confirmed
+      this is the 26.1-specific URL (book code `htmdb`, path segment
+      `/apex/26.1/`) — did not assume an older release's list/URL carries
+      over unchanged, per this task's own instruction; the guessed `aeadv`
+      book code from a prior release's likely path structure 404'd twice
+      before the real book (`htmdb`, "App Builder User's Guide") was found
+      via the TOC.
+
+      **The full documented list** (token, Oracle's own description in
+      brief, static-knowable-at-export-parse-time or runtime/session-only).
+      "Static" here means derivable from the `.apx` export's own files
+      (`application.apx`, a `pages/*.apx`) with no live instance; "runtime"
+      means it genuinely requires a live request/session/instance to
+      resolve, even in principle:
+      - `&APEX_CSP_DISPLAY_NONE.` / `#APEX_CSP_DISPLAY_NONE#` — fixed CSS
+        exception string (`style=display:none;`) for CSP compliance. Fixed
+        constant per APEX version, not export-derived, not app-specific —
+        a special case, arguably "always statically known" but not FROM
+        the export.
+      - `&APEX_FILES.` / `#APEX_FILES#` — virtual path to the images
+        directory shipped with APEX itself (renamed from legacy
+        `IMAGE_PREFIX`). Runtime/instance-dependent (depends on the target
+        APEX instance's configured file prefix).
+      - `&APEX$ROW_NUM.` — current row number of a submitted tabular-form
+        row, used in validations/processes/conditions on tabular forms.
+        Runtime-only (per-submitted-row processing value).
+      - `&APEX$ROW_SELECTOR.` — X/NULL for whether a tabular-form row's
+        selector checkbox is checked. Runtime-only.
+      - `&APEX$ROW_STATUS.` — C/U/D status of a tabular-form/IG row during
+        processing. Runtime-only.
+      - `&APP_ID.` — application ID of the currently executing app.
+        **Static**: the export's own `application.apx` declares the app
+        id (`app IDENT (id: N ...)`).
+      - `&APP_ALIAS.` — alphanumeric app name, workspace-unique (distinct
+        from `APP_ID`, which is instance-unique). **Static**: also in
+        `application.apx`.
+      - `&APP_AJAX_X01.` ... `&APP_AJAX_X10.` — most-recently-passed
+        On-Demand-AJAX `x01`–`x10` URL parameter values. Runtime-only
+        (per-request).
+      - `&APP_BUILDER_SESSION.` — the Builder's own dev session id, if the
+        current user is also logged into App Builder. Runtime-only
+        (Builder-session-specific, not even the running app's own
+        session).
+      - `&APP_DATE_TIME_FORMAT.` / `&APP_NLS_DATE_FORMAT.` /
+        `&APP_NLS_TIMESTAMP_FORMAT.` / `&APP_NLS_TIMESTAMP_TZ_FORMAT.` —
+        Globalization attributes. **Static IF explicitly set** (present as
+        an app-level Globalization attribute in `application.apx`);
+        Oracle's own doc text says each falls back to "the database
+        session['s] NLS ... format at the start of the request" when
+        unset — that fallback path is runtime-only. Partial/conditional,
+        not a clean yes/no.
+      - `&APP_PAGE_ALIAS.` — alphanumeric, app-unique alias of the current
+        page. **Static**: a real page attribute in each `pages/*.apx`
+        (`page N ( alias: ... )`).
+      - `&APP_PAGE_ID.` — numeric id of the current page. **Static**: the
+        page number itself, present in every `.apx` page file/filename.
+      - `&APP_REGION_DOM_ID.` / `&APP_REGION_ID.` /
+        `&APP_REGION_STATIC_ID.` (deprecated, superseded by
+        `APP_REGION_DOM_ID`) — identify "the current executing region."
+        Ambient/context-relative rather than a single global value — if
+        used inside one specific region's own template, the resolved
+        value is that region's own known static id/DOM id (in principle
+        derivable from the export for THAT region, same ADR-003 layered
+        lookup already used for runtime-id resolution elsewhere in this
+        project) — but the substitution itself is only meaningful in a
+        rendering context that knows "which region is executing now,"
+        which is a runtime concept even though the resolved value may be
+        statically predictable per-usage-site. Treated as runtime/
+        context-dependent, not a plain static global.
+      - `&APP_REQUEST_DATA_HASH.` — hash of the actual request/item-name/
+        item-value URL parts. Runtime-only (depends on the literal
+        request received).
+      - `&APP_SESSION.` (aka `&SESSION.` — Oracle's own doc text: "you can
+        also use the substitution string SESSION in place of
+        APP_SESSION") — the session number. Runtime-only, by definition
+        (a session only exists once a real session has been established).
+      - `&APP_SESSION_VISIBLE.` — session number variant that reads `0`
+        under Zero Session ID / unauthenticated public access.
+        Runtime-only.
+      - `&APP_TEXT$Message_Name.` / `&APP_TEXT$Message_Name$Lang.` —
+        references an app- or system-defined text message by name (legacy
+        form; 24.2+ apps prefer a newer short syntax per the same page).
+        Two-part: the message NAME is app-specific and, if the app's
+        `shared-components/*.apx` text-message component is included in
+        the export, statically enumerable; but this is closer to the
+        app-item/column-reference category (category 2 in this task's
+        framing) than a single global built-in — recorded here because
+        Oracle's own doc files it under "Built-in Substitution Strings,"
+        but it does NOT behave like `APP_ID`/`APP_TITLE` (fixed, global,
+        one value); flagged as a real edge case for `flow.ts`'s eventual
+        classifier, not cleanly binary.
+      - `&APP_TITLE.` — app title (falls back to Logo-attribute text, then
+        app name, if unset). **Static** (title is a direct `application.apx`
+        property), with the same "unset falls back to a different static
+        value, not runtime" nuance as the NLS-format entries above — still
+        static either way here, just a different static source.
+      - `&APP_UNIQUE_PAGE_ID.` — sequence-generated integer, unique per
+        page VIEW (anti-duplicate-submission, cache-busting). Runtime-only
+        by definition (a new value every request).
+      - `&APP_USER.` — current authenticated user. Runtime-only (session-
+        and authentication-scheme-dependent).
+      - `#APP_VERSION#` (template-substitution syntax only, no
+        `&...&.` form documented) — the app's entered Version attribute.
+        **Static**: a direct `application.apx` property.
+      - `&AUTHENTICATED_URL_PREFIX.` — app-level attribute for a "logged
+        in" URL prefix. **Static IF configured** — an app-level Security
+        attribute; empty/unset in most exports checked, but the raw value
+        itself lives in `application.apx` when set.
+      - `&BROWSER_LANGUAGE.` — the browser's current language preference.
+        Runtime-only (client-dependent, confirmed present in real export
+        data as a template placeholder — see corpus cross-reference below
+        — but the VALUE is never knowable from the export).
+      - `&CURRENT_PARENT_TAB_TEXT.` — legacy two-level-tabs parent-tab
+        label, page-template-only. Runtime/rendering-context-dependent
+        (which parent tab is currently selected).
+      - `&DEBUG.` — Yes/No debug flag. Runtime-only (session/request
+        setting).
+      - `#DEFAULT_THEME_FILES#` — virtual path for a theme's File Prefix
+        setting. Runtime/instance-dependent (depends on target instance's
+        configured `DEFAULT_THEME_FILES` parameter).
+      - `&HOME_LINK.` / `#HOME_LINK#` — the app's home page, redirected to
+        when no page is given. **Static**: a direct app-level "Home URL"
+        attribute in `application.apx` — though the attribute's OWN value
+        may itself contain further substitutions (e.g. `&APP_ID.:1:&SESSION.`),
+        so "static" here means "the raw configured string is in the
+        export," not "the fully-resolved URL is."
+      - `#JET_BASE_DIRECTORY#` / `#JET_CSS_DIRECTORY#` / `#JET_JS_DIRECTORY#`
+        — Oracle JET asset directories shipped with APEX. Runtime/
+        instance-dependent (depends on the target instance's install
+        layout), template-substitution-only syntax (no `&...&.` form
+        documented).
+      - `&LOGIN_URL.` / `#LOGIN_URL#` — link to a login page for
+        unauthenticated users. Runtime-only in practice — Oracle's own doc
+        gives its Direct-PL/SQL form as `APEX_APPLICATION.G_LOGIN_URL`, a
+        value the APEX engine computes per-request from the app's
+        authentication scheme, not a static export attribute.
+      - `&LOGOUT_URL.` / `#LOGOUT_URL#` — application-level logout URL
+        attribute. Same reasoning as `LOGIN_URL` — engine-computed from
+        the active authentication scheme at request time, not a flat
+        export property, despite being described as an "application-level
+        attribute." **Confirmed present in real export data** — see corpus
+        cross-reference below (`apextogo`, first found this session, per
+        the task's own framing).
+      - `&MAIN_APP_ID.` — main app's id, if the current app is a working
+        copy (else same as `APP_ID`). Runtime/deployment-context-dependent
+        (whether the running instance IS a working copy is not a property
+        of the exported app definition itself).
+      - `#OWNER#` (aka `#FLOW_OWNER#`, and its Direct-PL/SQL form
+        `APEX_APPLICATION.G_FLOW_SCHEMA_OWNER`) — the APEX app's parsing
+        schema. Runtime/deployment-target-only — the parsing schema is a
+        property of the WORKSPACE the app is imported into, never present
+        in the app's own `.apx` export.
+      - `&PRINTER_FRIENDLY.` — whether the engine is currently rendering
+        print view. Runtime-only (per-request rendering mode).
+      - `PROXY_SERVER` (Direct-PL/SQL only per Oracle's own text,
+        `APEX_APPLICATION.G_PROXY_SERVER`; no `&...&.`/`#...#` form
+        documented on this page) — app-level Proxy Server attribute for
+        URL-sourced regions. **Static IF configured**, in `application.apx`.
+      - `&PUBLIC_URL_PREFIX.` / `#PUBLIC_URL_PREFIX#` — app-level attribute
+        to toggle from an authenticated view to a public one. **Static IF
+        configured**, in `application.apx`.
+      - `&REQUEST.` — name of the button/tab that triggered the current
+        Accept processing (4th `f?p` segment). Runtime-only, explicitly:
+        Oracle's own text states it becomes NULL once the app branches to
+        a different page — a genuinely transient, per-request-lifecycle
+        value, not even stable across a single page's full lifecycle.
+      - `SYSDATE_YYYYMMDD` (bind-variable/PL/SQL forms documented; no
+        `&...&.`/`#...#` form shown on this page, though the property name
+        pattern strongly implies one exists) — current DB-server date,
+        `YYYYMMDD`-formatted. Runtime-only (current date at request time,
+        by definition).
+      - `#SQLERRM#` — template-substitution-only, valid solely inside an
+        Application Region Error Message. Runtime-only (an actual runtime
+        error's message text).
+      - `#THEME_DB_FILES#` / `#THEME_FILES#` — theme asset paths (DB-stored
+        vs. theme's configured File Prefix respectively). Runtime/
+        instance-dependent.
+      - `&WORKSPACE_FILES.` / `#WORKSPACE_FILES#` — shared-across-apps
+        workspace file path. Runtime/instance-dependent (workspace is a
+        deployment-target concept, not present in a single app's export).
+      - `&WORKSPACE_ID.` — the workspace id. Runtime/deployment-target-only
+        — like `OWNER`/`SCHEMA OWNER` above, a workspace is where an app
+        is imported INTO, never a property the app's own export carries.
+
+      **Real-corpus cross-reference** (grepped `&[A-Z][A-Z0-9_]*\.` and
+      `#[A-Z][A-Z0-9_]*#` across `apextogo`, `sample-cards`,
+      `concurrent-manager`, and `ux-pattern-catalog` — the four real
+      exports available in this environment):
+      - **Confirmed present, matching Oracle's documented built-in list**:
+        `&APP_ID.` (8), `&SESSION.` (8, confirmed using the documented
+        `SESSION`-for-`APP_SESSION` shorthand, not the long form —
+        real evidence this alias is actually used, not just a doc
+        footnote), `&DEBUG.` (7, always co-occurring with `&SESSION.` in
+        `f?p=...::&DEBUG` navigation strings, exactly matching Oracle's
+        own worked example), `&APP_USER.` (6), `&LOGOUT_URL.` (4, first
+        found in `apextogo` per the task framing — literal evidence:
+        `apextogo/pages/p20000-account.apx:219: url: &LOGOUT_URL.` inside
+        a `redirectUrl`-type page branch), `&APP_PAGE_ID.` (1,
+        `sample-cards` page-template `bare.apx`, inside a literal HTML
+        `class="...page-&APP_PAGE_ID. app-&APP_ALIAS."` attribute — a
+        genuinely different USE SITE than a page/button target, worth
+        noting for `flow.ts`: built-ins appear inside arbitrary HTML/CSS
+        string properties, not only inside `target`/`items`/`clearCache`
+        blocks), `&APP_ALIAS.` (1, same line), `&BROWSER_LANGUAGE.` (1,
+        same `bare.apx` line, inside an HTML `lang="..."` attribute),
+        `#APP_VERSION#` (13, `#APEX_VERSION#` is a distinct, separate
+        13-count token — see below, easy to conflate), `#APP_FILES#` (2).
+      - **`#DEFAULT#` (972 occurrences) is NOT this document's `DEFAULT_THEME_FILES`
+        or any built-in substitution at all** — cross-checked directly:
+        `#DEFAULT#` is the near-universal first `templateOptions` array
+        value (already well-documented elsewhere in this file, the
+        `parseArray()` bug entry above) — a template-option keyword, not a
+        substitution string. Flagged explicitly because the two are easy
+        to conflate by a naive `#[A-Z_]+#` sweep and `#DEFAULT#`'s sheer
+        volume (972 of the ~1,150 total `#TOKEN#`-shaped occurrences in
+        this 4-app sample) would otherwise dominate and mislead any
+        automated frequency-based classifier.
+      - **`#APEX_VERSION#` (13) and `#APEX_FILES#` (9) appear in the real
+        corpus but are NOT on Oracle's own "Built-in Substitution
+        Strings" §3.10.4 list** (only `APEX_FILES` with an `&...&.`/`#...#`
+        form, `AUTHENTICATED_URL_PREFIX`, etc. are listed; no
+        `APEX_VERSION` entry exists on this specific page at all,
+        checked by exact string search against the full fetched page
+        text). Both are real, both are near-certainly genuine Oracle
+        built-ins used elsewhere in Oracle's own theme/template docs
+        (Universal Theme page templates reference `#APEX_VERSION#`
+        routinely for cache-busting asset URLs) — but this task's scope
+        was specifically the §3.10.4 "Built-in Substitution Strings" page,
+        and this page does not cover them. Recorded as a real, confirmed
+        gap in this specific documented list rather than silently folded
+        in as if verified against the same source — a different Oracle
+        doc page (template-directive or theme-file reference) would need
+        to be checked before treating these as equally confirmed.
+      - **`#RTL_CLASS#` and `#TEXT_DIRECTION#`** (seen in the same
+        `sample-cards/.../bare.apx` line as `&APP_PAGE_ID.`/`&APP_ALIAS.`/
+        `&BROWSER_LANGUAGE.` above) are template-directive substitutions
+        (page-template-specific, per TOC entry "3.11.8 Built-in
+        Substitutions for Template Directives", a DIFFERENT page from the
+        one fetched for this task) — not checked against that page this
+        pass; flagged as adjacent, not confirmed either way.
+      - **Confirmed NOT a standard built-in despite superficially
+        resembling one — genuinely load-bearing finding**: `&APP_NAME.`
+        (23 occurrences, the single most frequent `&TOKEN.` in the corpus)
+        is NOT `APP_TITLE` or any other documented built-in. Literal
+        evidence, `apextogo/application.apx:92`:
+        ```
+        substitution APP_NAME (
+            value {
+                staticValue: APEXToGo
+            }
+        )
+        ```
+        This is a developer-defined **custom Application Substitution
+        String** (APEX's own Shared Components → Substitutions feature) —
+        a real, first-class APEXlang component (`substitution IDENT (
+        value { staticValue: ... } )`), confirmed present in 4 of the 4
+        real apps checked (`apextogo`, `sample-cards`, `concurrent-manager`,
+        plus `ux-pattern-catalog`), each declaring its OWN `APP_NAME`
+        with a different value (and in `sample-cards`/`concurrent-manager`,
+        also declaring `JET_VISUALIZATION_URL`, `MOVIEDB_API`,
+        `GOOGLE_API`, `PRODUCT_NAME` the same way). This is a genuine
+        THIRD category this task's two-category framing (standard
+        built-in vs. app item/column reference) does not cleanly cover:
+        **custom, developer-declared, app-level substitution strings**,
+        syntactically identical (`&NAME.`) to both other categories, but:
+        (a) 100% statically resolvable from the export (`application.apx`'s
+        own `substitution` components enumerate every name+value pair for
+        that app), unlike item/column references, which need live session
+        state; and (b) NOT part of Oracle's fixed, cross-app built-in
+        vocabulary, unlike `APP_ID`/`APP_TITLE`/etc. — a naive classifier
+        that just checks "is this name on Oracle's built-in list" would
+        correctly NOT flag `APP_NAME` as standard, but a classifier that
+        assumes "not on the built-in list" implies "needs live session
+        state" would be wrong for this category. `flow.ts` should treat
+        `substitution` components (when present in `application.apx`) as
+        a third, statically-resolvable bucket, distinct from both.
+      - **Confirmed NOT a standard built-in, and NOT a custom
+        `substitution` component either — a third kind of false positive,
+        this one a report/list/card COLUMN reference that happens to
+        share a name with a real built-in's un-prefixed form**:
+        `&PAGE_ALIAS.` (7 occurrences, all in `ux-pattern-catalog`, all
+        inside `f?p=&APP_ID.:&PAGE_ALIAS.:&SESSION.::&DEBUG.::::`-shaped
+        `redirectUrl` button targets) is easy to mistake for a shorthand
+        of the documented `APP_PAGE_ALIAS` (the same relationship
+        `SESSION`/`APP_SESSION` genuinely have) — but it is NOT documented
+        anywhere on the built-in-strings page, and real evidence shows why:
+        every one of the 7 pages using it also declares a report `column
+        PAGE_ALIAS ( source { databaseColumn: PAGE_ALIAS } )` on the SAME
+        page, and the button referencing `&PAGE_ALIAS.` has
+        `position: titleLink` — i.e. this is a genuine column/report-value
+        substitution (category 2, this task's framing: an app-specific,
+        SQL-column-sourced token requiring live report row data), not a
+        session-independent built-in, DESPITE living inside an `f?p=`
+        navigation-URL construction that otherwise looks structurally
+        identical to the documented `APP_ID`/`SESSION`/`DEBUG` pattern one
+        token over. This is exactly the kind of case a purely
+        name-pattern-based classifier would misclassify — name alone
+        (even a plausible-looking near-match to a real built-in) is not
+        evidence, matching this project's own ADR-002/ADR-004 discipline
+        applied to substitution strings, not just runtime APIs.
+      - **Confirmed category-2 (app-specific column/data references), NOT
+        checked against the built-in list because they are structurally
+        report/list/card-column substitutions, not candidates for
+        confusion with it**: `&TITLE.`, `&ICON.`, `&ICON_CLASS.`,
+        `&DESCRIPTION.`, `&NAME.`, `&ID.`, `&IMAGE.`, `&LABEL.` (all in
+        `ux-pattern-catalog`'s Cards-region `icon:`/`meta:`/`htmlExpression:`
+        column-attribute properties, e.g. `icon: &ICON_CLASS. fa-2x
+        u-opacity-50` and `<iframe src="...&ID." title="&TITLE.">`) map
+        to Oracle's separately-documented "3.10.1.3 Substitution Strings
+        for Interactive Grid, Cards, and Map Columns" TOC entry — a
+        DIFFERENT doc page from the one fetched for this task, not
+        checked this pass, but structurally unambiguous from the real
+        data alone (each token corresponds 1:1 to a `source.column` on
+        the same Cards region) — genuinely category 2, real, common (8 of
+        the top-12 most frequent `&TOKEN.` tokens in the whole corpus fall
+        in this bucket), and completely orthogonal to the built-in list
+        this task was scoped to.
+      - **`P185_RUN_ID`-as-page-target (concurrent-manager, per the task's
+        own framing) is NOT a substitution string at all** — re-checked
+        directly: `pages/p00090-request-details-log-viewer.apx:1764`
+        has `target: { page: P185_RUN_ID  items: { P185_RUN_ID:
+        &P90_REQUEST_ID. } ... }`. `P185_RUN_ID` here is used bare (no
+        `&...&.`/`#...#` delimiters) as the VALUE of `target.page` — a
+        page-item identifier used directly as a page-target value, a
+        different and separate real oddity from substitution-string
+        resolution (the `&P90_REQUEST_ID.` on the next line IS a genuine
+        page-item substitution, category 2, used as an item VALUE, the
+        normal/expected shape). Flagging this so it isn't conflated with
+        the substitution-string question this entry answers — it's a
+        `flow.ts`/parser question about `target.page` accepting a
+        non-numeric bare identifier, out of this entry's scope.
+
+      **Not independently re-verified this pass** (carried at face value
+      from Oracle's own doc text, no live 26.1 instance available in this
+      session to confirm actual rendering behavior — consistent with this
+      project's static-ground-truth-only discipline when no live instance
+      is available, per ADR-002/ADR-004): every runtime-only classification
+      above is Oracle's own documented behavior, not independently
+      observed against a running app this session.
+
 ## Still open
 
 (the quoted, substitution-embedding property KEY item that lived here has
