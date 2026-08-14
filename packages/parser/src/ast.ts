@@ -466,6 +466,59 @@ export interface ApexBranchTarget {
   /** `ITEM: value` pairs carried across the redirect (`target: { items: {
    * P90_REQUEST_ID: &P10_RESULT_ID. } }`), when present. */
   items: Record<string, string> | null;
+  /**
+   * Cache-clear directive -- the SAME `target.clearCache` property already
+   * typed on all three sibling target types that share `projectPageTarget()`
+   * (`ApexButtonTarget`/`ApexColumnLinkTarget`/`ApexRegionActionTarget`),
+   * a bare string kept verbatim/unresolved exactly like theirs. Filed as a
+   * real gap (Runtime & Test Automation Engineer's `flow.ts`
+   * substitution-syntax field audit, 2026-08-13, `docs/grammar-assumptions.md`
+   * "Still open") and fixed here.
+   *
+   * Real evidence: `concurrent-manager` (this project's own corpus),
+   * `pages/p00351-lookup-manager1.apx:960-968`, the "Redirect to all"
+   * branch -- re-confirmed directly against the raw export text before
+   * typing this field:
+   * ```
+   * behavior {
+   *     target: {
+   *         page: 350
+   *         clearCache: 350
+   *         action: resetPagination
+   *     }
+   * }
+   * ```
+   *
+   * EBNF cross-check (full `branch-a-behavior-property` production read,
+   * `apexlang.ebnf:2492-2503`, every alternative, not just `target`): the
+   * grammar types `target` as a single opaque `"target" ":" <ws> <value>`
+   * with no nested `clearCache` sub-property documented anywhere in the
+   * production -- the SAME EBNF-silent-on-real-shape gap already on record
+   * for `page`/`items`/`url` on this exact type (see `ApexBranch`'s own
+   * "CONFIRMED DISCREPANCY vs. the official EBNF" doc comment above). Real
+   * data wins per ADR-004; the grammar's silence is not evidence of
+   * absence.
+   *
+   * `Sawalhah/apexlang-view`'s independent parser (`src/parser.js`,
+   * reference only, checked this pass) has no branch-specific or
+   * `clearCache`-specific field extraction to diverge from -- it parses
+   * `target { ... }` as a fully generic nested group (see its
+   * `parseEntries()`) and only pulls out `pageNumber` for its own
+   * nav-graph use case, so it captures `clearCache` in its generic tree the
+   * same way this project's own `raw` bag already did before this field
+   * was typed. No divergence signal either way.
+   *
+   * Read the identical way `projectPageTarget()` already reads its own
+   * `clearCache` for the three sibling types (string/number coerced to
+   * `String(...)`, `null` when absent) -- `projectBranchTarget()` stays a
+   * separate function from `projectPageTarget()` (branch's nested `url`
+   * variant, unlike button/action, means it can't share the helper
+   * outright), but this one field now matches its sibling's read exactly.
+   * `null` for every branch without a `target.clearCache` key (confirmed
+   * the norm -- only 1 of the real branches examined this pass carries
+   * one).
+   */
+  clearCache: string | null;
 }
 
 /**

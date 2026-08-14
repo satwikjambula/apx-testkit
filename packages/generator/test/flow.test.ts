@@ -149,7 +149,7 @@ describe('buildFlowMap — source 1: page branches', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
-      branches: [branch({ name: 'go-to-two', target: { page: 2, url: null, items: { P2_ID: '&P1_ID.' } } })],
+      branches: [branch({ name: 'go-to-two', target: { page: 2, url: null, items: { P2_ID: '&P1_ID.' }, clearCache: null } })],
     });
     const p2 = page({ id: 2, alias: 'PAGE_TWO' });
     const result = buildFlowMap(ast([p1, p2]));
@@ -172,7 +172,7 @@ describe('buildFlowMap — source 1: page branches', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
-      branches: [branch({ name: 'sign-out', target: { page: null, url: '&LOGOUT_URL.', items: null } })],
+      branches: [branch({ name: 'sign-out', target: { page: null, url: '&LOGOUT_URL.', items: null, clearCache: null } })],
     });
     const result = buildFlowMap(ast([p1]));
     expect(result.edges).toHaveLength(1);
@@ -185,7 +185,7 @@ describe('buildFlowMap — source 1: page branches', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
-      branches: [branch({ target: { page: 'page_two', url: null, items: null } })],
+      branches: [branch({ target: { page: 'page_two', url: null, items: null, clearCache: null } })],
     });
     const p2 = page({ id: 2, alias: 'PAGE_TWO' });
     const result = buildFlowMap(ast([p1, p2]));
@@ -196,7 +196,7 @@ describe('buildFlowMap — source 1: page branches', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
-      branches: [branch({ target: { page: '&LAST_VIEW.', url: null, items: null } })],
+      branches: [branch({ target: { page: '&LAST_VIEW.', url: null, items: null, clearCache: null } })],
     });
     const result = buildFlowMap(ast([p1]));
     expect(result.edges[0].to).toEqual({ kind: 'unresolvedPage', ref: '&LAST_VIEW.' });
@@ -217,7 +217,7 @@ describe('buildFlowMap — source 1: page branches', () => {
       branches: [
         branch({
           name: 'Redirect to all',
-          target: { page: 350, url: null, items: null },
+          target: { page: 350, url: null, items: null, clearCache: '350' },
         }),
       ],
     });
@@ -240,12 +240,12 @@ describe('buildFlowMap — source 1: page branches', () => {
       branches: [
         branch({
           name: 'approve-branch',
-          target: { page: 2, url: null, items: null },
+          target: { page: 2, url: null, items: null, clearCache: null },
           condition: { whenButtonPressed: 'APPROVE', type: null, item: null, value: null, plsqlExpression: null },
         }),
         branch({
           name: 'reject-branch',
-          target: { page: 2, url: null, items: null },
+          target: { page: 2, url: null, items: null, clearCache: null },
           condition: { whenButtonPressed: 'REJECT', type: null, item: null, value: null, plsqlExpression: null },
         }),
       ],
@@ -641,7 +641,7 @@ describe('buildFlowMap — reachability', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
-      branches: [branch({ target: { page: 2, url: null, items: null } })],
+      branches: [branch({ target: { page: 2, url: null, items: null, clearCache: null } })],
     });
     const p2 = page({ id: 2, alias: 'PAGE_TWO' });
     const p3 = page({ id: 3, alias: 'PAGE_THREE' }); // never targeted
@@ -654,7 +654,7 @@ describe('buildFlowMap — reachability', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
-      branches: [branch({ target: { page: null, url: 'https://example.com', items: null } })],
+      branches: [branch({ target: { page: null, url: 'https://example.com', items: null, clearCache: null } })],
     });
     const result = buildFlowMap(ast([p1]));
     expect(result.reachability.pagesWithNoIncomingEdges).toEqual([1]);
@@ -666,7 +666,7 @@ describe('buildFlowMap — determinism', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
-      branches: [branch({ target: { page: 2, url: null, items: null } })],
+      branches: [branch({ target: { page: 2, url: null, items: null, clearCache: null } })],
       regions: [
         region({
           identifier: 'r1',

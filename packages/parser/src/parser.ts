@@ -393,10 +393,22 @@ function targetItems(props: RawBag, keyPrefix: string): Record<string, string> |
 function projectBranchTarget(props: RawBag): ApexBranchTarget | null {
   const hasTarget = Object.keys(props).some((k) => k.startsWith('behavior.target.'));
   if (!hasTarget) return null;
+  // clearCache read the identical way projectPageTarget() reads it for
+  // ApexButtonTarget/ApexColumnLinkTarget/ApexRegionActionTarget -- see
+  // ApexBranchTarget.clearCache's doc comment (packages/parser/src/ast.ts)
+  // for the real-data citation (concurrent-manager,
+  // pages/p00351-lookup-manager1.apx:960-968) and EBNF cross-check.
+  const clearCacheRaw = props['behavior.target.clearCache'];
   return {
     page: numOrStr(props['behavior.target.page']),
     url: str(props['behavior.target.url']),
     items: targetItems(props, 'behavior.target.items'),
+    clearCache:
+      clearCacheRaw === undefined
+        ? null
+        : typeof clearCacheRaw === 'string' || typeof clearCacheRaw === 'number'
+          ? String(clearCacheRaw)
+          : null,
   };
 }
 

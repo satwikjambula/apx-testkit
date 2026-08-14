@@ -151,7 +151,9 @@ const branchFixture: ApexBranch = {
   name: 'SENTINEL_BRANCH_NAME',
   sequence: 10,
   point: 'SENTINEL_BRANCH_POINT',
-  target: { page: null, url: 'https://sentinel.example/branch-url', items: null },
+  // clearCache added per ApexBranchTarget.clearCache (packages/parser/src/ast.ts) --
+  // real evidence: concurrent-manager, pages/p00351-lookup-manager1.apx:960-968.
+  target: { page: null, url: 'https://sentinel.example/branch-url', items: null, clearCache: null },
   condition: {
     whenButtonPressed: 'SENTINEL_BRANCH_WHEN_BUTTON',
     type: 'SENTINEL_BRANCH_COND_TYPE',

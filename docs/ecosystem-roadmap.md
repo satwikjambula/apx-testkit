@@ -3234,3 +3234,44 @@ constraint as the Eleventh/Fourteenth rounds. The evidence string and doc
 comments are written to be honest about that specific residual gap
 (one app confirmed for `redirectThisApp`, zero for `redirectOtherApp`)
 rather than overclaiming it away.
+
+## Fifteenth round (2026-08-14): `ApexBranchTarget.clearCache` typed (Compiler/Parser Engineer) — `flow.ts` follow-up filed, not made
+
+Closes the gap the Fourteenth round's `flow.ts` substitution-syntax audit
+filed to `/parser` (`docs/grammar-assumptions.md`'s "Still open" section,
+now resolved in place — see the dated entry there for the full evidence
+trail): `ApexBranchTarget` (`packages/parser/src/ast.ts`) never typed a
+`clearCache` field, unlike its three siblings sharing
+`projectPageTarget()` (`ApexButtonTarget`/`ApexColumnLinkTarget`/
+`ApexRegionActionTarget`), even though real branches carry one
+(`concurrent-manager`, `pages/p00351-lookup-manager1.apx:960-968`, the
+"Redirect to all" branch). Fixed: `ApexBranchTarget.clearCache: string |
+null` added, `projectBranchTarget()` (`packages/parser/src/parser.ts`)
+now reads it the same way `projectPageTarget()` already does for the
+three siblings. `packages/generator/src/diff.ts` needed no code change —
+`diffBranchFields()` already diffs the whole `target` object as one
+`JSON.stringify`-compared unit, so `clearCache` is automatically covered;
+confirmed via `packages/generator/test/diff-field-coverage.test.ts`.
+Regression tests added in `packages/parser/test/parser.test.ts` citing
+the real `p00351-lookup-manager1.apx:960-975` two-branch shape verbatim.
+Full regression sweep green (build, lint, both test suites, `spike`
+typecheck, zero warnings across all four accessible real exports,
+byte-identical `reference-fixtures` regeneration via both `apx-testgen`
+and `apx-docs`).
+
+**Filed follow-up for Runtime & Test Automation Engineer, NOT made in
+this pass** (outside `/parser`'s ownership, same courtesy the Fourteenth
+round's `flow.ts` audit extended to `/parser` when it found this gap):
+now that `ApexBranchTarget.clearCache` is real,
+`packages/generator/src/flow.ts`'s `fromBranch()` can drop its hardcoded
+`clearCache: null` and read `t.clearCache` the same way
+`fromRegionAction()`/`fromReportColumn()`/`fromButton()` already do for
+their own sources. `FlowEdge.clearCache`'s own doc comment in that file
+also still describes this as an open, filed-but-unfixed gap ("CORRECTED
+IN PLACE (substitution-syntax audit pass, 2026-08-13)" paragraph) and
+needs a small correction-in-place once the generator-side fix lands.
+`test/flow.test.ts` already has a dedicated regression case locking in
+the current (pre-fix) `branch.*` → `clearCache: null` behavior, per that
+file's own note — expect it to need updating to `'350'` for the
+`concurrent-manager` `p00351-lookup-manager1.apx` branch case once this
+follow-up is picked up.

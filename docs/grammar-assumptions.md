@@ -1997,6 +1997,88 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         `examples/employee-page` output, every real local export
         re-parsed through `@apx/parser` with zero warnings.
 
+- [x] **2026-08-14 — RESOLVED: `ApexBranchTarget.clearCache` typed
+      (Compiler/Parser Engineer), closing the gap the entry directly above
+      filed to `/parser`.** Re-confirmed the cited real evidence directly
+      before touching anything: `concurrent-manager`,
+      `pages/p00351-lookup-manager1.apx:960-975` — the "Redirect to all"
+      branch really does carry `behavior { target: { page: 350
+      clearCache: 350 action: resetPagination } } }`, re-read from the raw
+      export text (its sibling "Redirect to new" branch, same page, has NO
+      `clearCache` — carries `items` instead, so both shapes are locked in
+      by the new regression test, not just the `clearCache`-bearing one).
+      Cross-checked the FULL `branch-a-behavior-property` EBNF production
+      (`apexlang.ebnf:2492-2503`, raw `curl`, every alternative read, not
+      just `target`) — the grammar still types `target` as a single opaque
+      `"target" ":" <ws> <value>` with no `clearCache` sub-property
+      documented anywhere in the production, the identical EBNF-silent
+      pattern already on record for this exact type's `page`/`items`/`url`
+      fields. Real data wins per ADR-004; nothing in the EBNF contradicts
+      the fix, it's simply silent on the internal shape as it already was
+      for the sibling fields.
+      Cross-checked `Sawalhah/apexlang-view`'s independent parser
+      (`src/parser.js`, raw `curl` off GitHub, reference only, never
+      imported) — it has no branch-specific or `clearCache`-specific field
+      extraction at all to diverge from; it parses `target { ... }` as a
+      fully generic nested group (`parseEntries()`) and only pulls
+      `pageNumber` back out for its own nav-graph use case, so it already
+      captures `clearCache` in its generic tree the same way this
+      project's own `raw` bag did before this field was typed. No
+      divergence signal, consistent with every other `target`-shaped field
+      this project has typed off this same shared discovery.
+      **Fix**: `ApexBranchTarget.clearCache: string | null` added
+      (`packages/parser/src/ast.ts`), `projectBranchTarget()`
+      (`packages/parser/src/parser.ts`) now reads it the identical way
+      `projectPageTarget()` already reads it for its three siblings
+      (`ApexButtonTarget`/`ApexColumnLinkTarget`/`ApexRegionActionTarget`)
+      — string/number coerced to `String(...)`, `null` when absent.
+      `projectBranchTarget()` stays its own function rather than switching
+      to `projectPageTarget()` outright, since branch's nested `url`
+      variant (`target: { type: url, url: ... }`) has no equivalent on the
+      three siblings sharing that helper — unchanged from before this fix.
+      **`apx-diff` wiring**: no code change needed in
+      `packages/generator/src/diff.ts` — `diffBranchFields()` already
+      diffs `target` as one `JSON.stringify`-compared unit (matching how
+      `button`/`regionAction`'s own `target` fields are diffed), so a
+      `clearCache` value appearing inside that object is automatically
+      covered by the existing whole-object comparison; confirmed via
+      `packages/generator/test/diff-field-coverage.test.ts` continuing to
+      pass with the fixture's `target` updated to include a `clearCache`
+      value (TypeScript now requires the key on every `ApexBranchTarget`
+      literal).
+      **Tests**: `packages/parser/test/parser.test.ts` — the three
+      pre-existing `apxWithBranches`/external-URL-redirect assertions on
+      `branch.target` updated to include the now-required `clearCache` key
+      (one of them, the "goto edit customer on create" branch, already had
+      a real `clearCache: 50` line in its own fixture source that was
+      previously silently un-projected — now asserted for real), plus a
+      new dedicated test reproducing the exact cited
+      `p00351-lookup-manager1.apx:960-975` two-branch shape verbatim.
+      **Full regression sweep**: `npm run build --workspaces` (0 errors),
+      `cd spike && npx tsc --noEmit` (0 errors), `npm run lint` (clean),
+      `npm test --workspaces --if-present` (227/227 generator + 70/70
+      parser + 5/5 testkit passing, plus the 5 `integration.test.ts` cases
+      re-run explicitly with `APX_EXPORT_DIR` pointed at the real UX
+      Pattern Catalog export), all four accessible real exports
+      (`ux-pattern-catalog`, `apextogo`, `sample-cards`,
+      `concurrent-manager`) re-parsed directly through `@apx/parser` with
+      **zero warnings**, `packages/generator/test/fixtures/reference-fixtures`
+      regenerated via both `apx-testgen` and `apx-docs` and diffed
+      byte-identical against the committed `examples/employee-page`
+      output.
+      **Follow-up flagged, not made here** (outside `packages/parser`'s
+      ownership): `flow.ts`'s `fromBranch()` (`packages/generator/src/flow.ts`)
+      still hardcodes `clearCache: null` for every `branch`-source edge,
+      and `FlowEdge.clearCache`'s own doc comment still describes this as
+      an open, filed-but-unfixed gap. Now that `ApexBranchTarget.clearCache`
+      is real, `fromBranch()` can read `t.clearCache` the same way
+      `fromRegionAction()`/`fromReportColumn()`/`fromButton()` already do,
+      and the doc comment needs a small correction-in-place to match. Filed
+      to Runtime & Test Automation Engineer as a `docs/ecosystem-roadmap.md`
+      entry (same courtesy this project's own "Still open" item extended
+      to `/parser`) rather than touched directly here, since
+      `packages/generator` is outside this role's ownership.
+
 ## Still open
 
 (the quoted, substitution-embedding property KEY item that lived here has
@@ -2028,31 +2110,33 @@ silently removed, per this project's correction discipline.)
 - [ ] `required` property canonical name — build a form with a required item
       and re-export to confirm (`validation.valueRequired` is our guess).
 - [ ] Casing rules; property-order significance (assumed none).
-- [ ] **`ApexBranchTarget` has no typed `clearCache` field, unlike its
-      three siblings (`ApexRegionActionTarget`/`ApexColumnLinkTarget`/
-      `ApexButtonTarget`, all sharing `projectPageTarget()`) — but real
-      branches DO carry one.** Filed to `/parser` (2026-08-13, Runtime &
-      Test Automation Engineer's `flow.ts` substitution-syntax audit — see
-      the dated entry above for the full writeup). Literal evidence:
-      `concurrent-manager`, `pages/p00351-lookup-manager1.apx:960-968`,
-      branch "Redirect to all": `behavior { target: { page: 350
-      clearCache: 350 action: resetPagination } }`. `projectBranchTarget()`
+- [x] **RESOLVED (2026-08-14, Compiler/Parser Engineer) — `ApexBranchTarget`
+      has no typed `clearCache` field, unlike its three siblings
+      (`ApexRegionActionTarget`/`ApexColumnLinkTarget`/`ApexButtonTarget`,
+      all sharing `projectPageTarget()`) — but real branches DO carry
+      one.** Filed to `/parser` (2026-08-13, Runtime & Test Automation
+      Engineer's `flow.ts` substitution-syntax audit — see the dated entry
+      above for the full original writeup) and fixed the next day — see
+      the "RESOLVED: `ApexBranchTarget.clearCache` typed" dated entry
+      further above for the full fix, evidence, and regression-sweep
+      writeup. Left this item visible rather than deleted, per this
+      project's correction discipline. Literal evidence (re-confirmed
+      directly against the raw export text before the fix, not just
+      trusted from this filing): `concurrent-manager`,
+      `pages/p00351-lookup-manager1.apx:960-968`, branch "Redirect to
+      all": `behavior { target: { page: 350 clearCache: 350 action:
+      resetPagination } }`. `projectBranchTarget()`
       (`packages/parser/src/parser.ts`) is a separate, older function that
-      predates `projectPageTarget()` and only reads `page`/`url`/`items` —
-      not fixed in this pass since `packages/parser` is outside
-      `packages/generator`'s ownership; the raw value is not lost
-      (`ApexBranch.raw` still carries `behavior.target.clearCache` per
-      ADR-001), but `FlowEdge.clearCache` is unconditionally `null` for
-      every `branch`-source edge today as a result
-      (`packages/generator/src/flow.ts`, `FlowEdge.clearCache`'s doc
-      comment, corrected in place this same pass). Whoever picks this up:
-      add `clearCache: string | null` to `ApexBranchTarget`
-      (`packages/parser/src/ast.ts`), have `projectBranchTarget()` read it
-      the same way `projectPageTarget()` already does, then remove
-      `fromBranch()`'s hardcoded `clearCache: null` in `flow.ts` and
-      update the now-outdated regression test in `flow.test.ts` (the one
-      citing this exact `p00351-lookup-manager1.apx` branch) to expect
-      `'350'` instead of `null`.
+      predates `projectPageTarget()` and previously only read
+      `page`/`url`/`items` — now also reads `clearCache` the identical way
+      `projectPageTarget()` does for its three siblings.
+      **Still open, filed onward** (outside `/parser`'s own ownership):
+      `fromBranch()`'s hardcoded `clearCache: null` in
+      `packages/generator/src/flow.ts`, and that file's
+      `FlowEdge.clearCache` doc comment describing this as unfixed, both
+      need a follow-up now that the upstream field is real — filed to
+      Runtime & Test Automation Engineer via `docs/ecosystem-roadmap.md`
+      rather than fixed here.
 - [ ] Region/report types beyond this app (calendar, map, tree...); this
       list is the typed-projection backlog. **Correction (this pass,
       concurrent-manager addition)**: the 18-entry list that used to sit

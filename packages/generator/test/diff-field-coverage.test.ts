@@ -282,7 +282,9 @@ const branchFixture: ApexBranch = {
   name: 'My Branch',
   sequence: 10,
   point: 'afterSubmit',
-  target: { page: 5, url: null, items: { P5_ID: '&P1_ID.' } },
+  // clearCache added per ApexBranchTarget.clearCache (packages/parser/src/ast.ts) --
+  // real evidence: concurrent-manager, pages/p00351-lookup-manager1.apx:960-968.
+  target: { page: 5, url: null, items: { P5_ID: '&P1_ID.' }, clearCache: '5' },
   condition: { whenButtonPressed: 'BTN1', type: 'expression', item: 'P1_ITEM', value: '1', plsqlExpression: '1=1' },
   loc: LOC,
   raw: { 'some.rawKey': 'raw value' },

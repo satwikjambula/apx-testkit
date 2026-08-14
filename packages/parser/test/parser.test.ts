@@ -744,7 +744,7 @@ describe('typed branch support (branch (...))', () => {
     const [first] = result.ast.pages[0].branches;
     expect(first.name).toBe('Go To CUSTOMERS after delete');
     expect(first.sequence).toBe(10);
-    expect(first.target).toEqual({ page: 'CUSTOMERS', url: null, items: null });
+    expect(first.target).toEqual({ page: 'CUSTOMERS', url: null, items: null, clearCache: null });
     expect(first.condition).toEqual({
       whenButtonPressed: 'delete',
       type: null,
@@ -757,14 +757,17 @@ describe('typed branch support (branch (...))', () => {
   it('projects a numeric page target with carried items', () => {
     const result = parseApp({ 'p00002-customer-details.apx': apxWithBranches });
     const [, second] = result.ast.pages[0].branches;
-    expect(second.target).toEqual({ page: 50, url: null, items: { P50_ID: '&P2_ID.' } });
+    // This fixture's own `clearCache: 50` line was already present above
+    // (customers starter app shape) but, before ApexBranchTarget.clearCache
+    // was typed, was silently un-projected -- now asserted for real.
+    expect(second.target).toEqual({ page: 50, url: null, items: { P50_ID: '&P2_ID.' }, clearCache: '50' });
   });
 
   it('projects an item-substitution-token page target with a null (unconditional) condition', () => {
     const result = parseApp({ 'p00002-customer-details.apx': apxWithBranches });
     const [, , third] = result.ast.pages[0].branches;
     expect(third.name).toBeNull();
-    expect(third.target).toEqual({ page: '&LAST_VIEW.', url: null, items: null });
+    expect(third.target).toEqual({ page: '&LAST_VIEW.', url: null, items: null, clearCache: null });
     expect(third.condition).toBeNull();
   });
 
@@ -792,7 +795,68 @@ describe('typed branch support (branch (...))', () => {
     const result = parseApp({ 'p20000-account.apx': apx });
     expect(result.warnings).toEqual([]);
     const [branch] = result.ast.pages[0].branches;
-    expect(branch.target).toEqual({ page: null, url: '&LOGOUT_URL.', items: null });
+    expect(branch.target).toEqual({ page: null, url: '&LOGOUT_URL.', items: null, clearCache: null });
+  });
+
+  it('projects clearCache on a branch target -- reproduces concurrent-manager, pages/p00351-lookup-manager1.apx:960-975, branches "Redirect to new" (no clearCache) and "Redirect to all" (clearCache: 350)', () => {
+    // Verbatim real structure re-confirmed directly against the raw export
+    // text before this test was written -- see docs/grammar-assumptions.md
+    // "Still open" -> resolved entry and ApexBranchTarget.clearCache's own
+    // doc comment (packages/parser/src/ast.ts) for the full evidence trail.
+    // This was a genuine parser gap: ApexBranchTarget never typed
+    // `clearCache` at all, unlike its three siblings sharing
+    // projectPageTarget() (ApexButtonTarget/ApexColumnLinkTarget/
+    // ApexRegionActionTarget), even though real branches carry one.
+    const apx = `page 351 (
+  name: Lookup Manager
+  alias: LOOKUP-MANAGER1
+
+  branch (
+    name: Redirect to new
+    execution {
+      sequence: 10
+    }
+    behavior {
+      target: {
+        page: 350
+        items: {
+          P350_LOOKUP_TYPE: &P351_LOOKUP_TYPE.
+        }
+        action: resetPagination
+      }
+    }
+    serverSideCondition {
+      whenButtonPressed: @create
+    }
+  )
+
+  branch (
+    name: Redirect to all
+    execution {
+      sequence: 20
+    }
+    behavior {
+      target: {
+        page: 350
+        clearCache: 350
+        action: resetPagination
+      }
+    }
+    serverSideCondition {
+      whenButtonPressed: @delete
+    }
+  )
+)`;
+    const result = parseApp({ 'p00351-lookup-manager1.apx': apx });
+    expect(result.warnings).toEqual([]);
+    const [redirectToNew, redirectToAll] = result.ast.pages[0].branches;
+    expect(redirectToNew.target).toEqual({
+      page: 350,
+      url: null,
+      items: { P350_LOOKUP_TYPE: '&P351_LOOKUP_TYPE.' },
+      clearCache: null,
+    });
+    expect(redirectToAll.target).toEqual({ page: 350, url: null, items: null, clearCache: '350' });
   });
 });
 
