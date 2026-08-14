@@ -160,7 +160,11 @@ describe('buildFlowMap — source 1: page branches', () => {
     expect(e.from).toBe('page:1');
     expect(e.to).toEqual({ kind: 'page', nodeId: 'page:2', pageId: 2 });
     expect(e.items).toEqual({ P2_ID: '&P1_ID.' });
-    expect(e.clearCache).toBeNull(); // ApexBranchTarget has no clearCache field at all
+    // ApexBranchTarget has no typed clearCache field -- see the dedicated
+    // "branch target with a real clearCache" test below for the corrected,
+    // evidence-backed explanation of why this is a known, filed-to-/parser
+    // gap, not a confirmed absence of the underlying real data.
+    expect(e.clearCache).toBeNull();
     expect(e.confidence).toBe('high');
   });
 
@@ -196,6 +200,32 @@ describe('buildFlowMap — source 1: page branches', () => {
     });
     const result = buildFlowMap(ast([p1]));
     expect(result.edges[0].to).toEqual({ kind: 'unresolvedPage', ref: '&LAST_VIEW.' });
+  });
+
+  it('KNOWN GAP (filed to /parser, not a flow.ts bug): a real branch WITH a ' +
+    'clearCache directive still surfaces clearCache: null, because ApexBranchTarget ' +
+    'never typed that field -- regression fixture for concurrent-manager, ' +
+    'pages/p00351-lookup-manager1.apx:960-968 ("Redirect to all" branch: ' +
+    'behavior { target: { page: 350 clearCache: 350 action: resetPagination } }). ' +
+    'See FlowEdge.clearCache\'s doc comment (corrected in place, substitution-syntax ' +
+    'audit pass 2026-08-13) for the full evidence trail -- this test locks in the ' +
+    'CURRENT, honestly-documented behavior so a future ApexBranchTarget.clearCache ' +
+    'field lands visibly in this diff, not silently.', () => {
+    const p1 = page({
+      id: 351,
+      alias: 'LOOKUP_MANAGER1',
+      branches: [
+        branch({
+          name: 'Redirect to all',
+          target: { page: 350, url: null, items: null },
+        }),
+      ],
+    });
+    const p350 = page({ id: 350, alias: 'LOOKUP_MANAGER2' });
+    const result = buildFlowMap(ast([p1, p350]));
+    const e = result.edges[0];
+    expect(e.to).toEqual({ kind: 'page', nodeId: 'page:350', pageId: 350 });
+    expect(e.clearCache).toBeNull(); // real data has 350 here -- see comment above
   });
 
   it('produces no edge for a branch with no target data at all', () => {
@@ -282,6 +312,35 @@ describe('buildFlowMap — source 2: Cards/List region actions', () => {
     expect(result.edges[0].confidence).toBe('high');
   });
 
+  it('preserves &ITEM. substitution tokens in a region action\'s items verbatim ' +
+    '(real citation: apextogo, pages/p00005-restaurant.apx:262-270, region ' +
+    'restaurant-items, action "action": behavior { target: { page: 7 items: ' +
+    '{ P7_ITEM_ID: &ID. P7_ITEM_NAME: &NAME. } clearCache: 7 } } })', () => {
+    const p5 = page({
+      id: 5,
+      alias: 'RESTAURANT',
+      regions: [
+        region({
+          identifier: 'restaurant-items',
+          actions: [
+            regionAction({
+              identifier: 'action',
+              kind: null,
+              target: { page: 7, items: { P7_ITEM_ID: '&ID.', P7_ITEM_NAME: '&NAME.' }, clearCache: '7' },
+            }),
+          ],
+        }),
+      ],
+    });
+    const p7 = page({ id: 7, alias: 'ITEM' });
+    const result = buildFlowMap(ast([p5, p7]));
+    const e = result.edges[0];
+    expect(e.to).toEqual({ kind: 'page', nodeId: 'page:7', pageId: 7 });
+    // Verbatim -- not resolved, not stripped of sigils, not touched at all.
+    expect(e.items).toEqual({ P7_ITEM_ID: '&ID.', P7_ITEM_NAME: '&NAME.' });
+    expect(e.clearCache).toBe('7');
+  });
+
   it('produces no edge for an action with neither target nor url (e.g. a triggerAction-type action)', () => {
     const p1 = page({
       id: 1,
@@ -340,6 +399,71 @@ describe('buildFlowMap — source 3: report/IR/IG column links', () => {
     expect(result.edges[0].mechanism).toBe('reportColumnLink.url');
     expect(result.edges[0].to).toEqual({ kind: 'url', url: '#' });
     expect(result.edges[0].confidence).toBe('high');
+  });
+
+  it('preserves a #ITEM# substitution token in clearCache verbatim, including when ' +
+    'it is a token rather than a page number (real citation: strategic-planner, ' +
+    'pages/p00003-project-details.apx:2154 -- link { target: { page: #EDIT_PAGE# ' +
+    'items: { "P#EDIT_PAGE#_ID": #DOCUMENT_ID# } clearCache: #EDIT_PAGE# } }; see ' +
+    'docs/grammar-assumptions.md). strategic-planner itself is not in this project\'s ' +
+    'directly accessible local corpus this pass, so this fixture is synthetic but ' +
+    'sourced verbatim from the already-verified real citation on record, not invented.', () => {
+    const p1 = page({
+      id: 3,
+      alias: 'PROJECT_DETAILS',
+      regions: [
+        region({
+          identifier: 'documents',
+          columns: [
+            reportColumn({
+              identifier: 'DOCUMENT_NAME',
+              // #EDIT_PAGE# is not a real page id in this synthetic fixture, so it
+              // resolves to unresolvedPage -- the honest, correct outcome for an
+              // unresolvable substitution-token page reference (same contract as
+              // the branch &LAST_VIEW. case above).
+              linkTarget: {
+                page: '#EDIT_PAGE#',
+                items: { 'P#EDIT_PAGE#_ID': '#DOCUMENT_ID#' },
+                clearCache: '#EDIT_PAGE#',
+                url: null,
+              },
+            }),
+          ],
+        }),
+      ],
+    });
+    const result = buildFlowMap(ast([p1]));
+    const e = result.edges[0];
+    expect(e.to).toEqual({ kind: 'unresolvedPage', ref: '#EDIT_PAGE#' });
+    // The substitution-embedded item KEY (not just value) survives unmangled too.
+    expect(e.items).toEqual({ 'P#EDIT_PAGE#_ID': '#DOCUMENT_ID#' });
+    expect(e.clearCache).toBe('#EDIT_PAGE#');
+  });
+
+  it('preserves a raw, backslash-escaped substitution token in items exactly as the ' +
+    'exporter wrote it, with no re-escaping/unescaping (real citation: ' +
+    'concurrent-manager, pages/p00195-email-template-manager.apx:185 -- ' +
+    'items: { P196_ROWID: \\&ROWID.\\ }, a genuinely real, reproducible export shape, ' +
+    'not a parser artifact)', () => {
+    const p1 = page({
+      id: 195,
+      alias: 'EMAIL_TEMPLATE_MANAGER',
+      regions: [
+        region({
+          identifier: 'email-template-manager',
+          columns: [
+            reportColumn({
+              identifier: 'APEX$LINK',
+              linkTarget: { page: 196, items: { P196_ROWID: '\\&ROWID.\\' }, clearCache: '196', url: null },
+            }),
+          ],
+        }),
+      ],
+    });
+    const p196 = page({ id: 196, alias: 'ROWID_EDIT' });
+    const result = buildFlowMap(ast([p1, p196]));
+    const e = result.edges[0];
+    expect(e.items).toEqual({ P196_ROWID: '\\&ROWID.\\' });
   });
 
   it('produces no edge for a column with no link {} group at all', () => {
@@ -428,6 +552,34 @@ describe('buildFlowMap — source 4: button page/URL redirects', () => {
     expect(e.mechanism).toBe('button.page');
     expect(e.items).toEqual({ P335_MODE: 'NEW', P335_VERSION_NO: '0' });
     expect(e.confidence).toBe('high');
+  });
+
+  it('leaves a button\'s page target unresolved (not silently guessed) when the ' +
+    '"page" value is itself an item-substitution token with NO &/./# sigils at all -- ' +
+    'a bare item name used directly, distinct from the sigil-wrapped &LAST_VIEW. form ' +
+    'already covered for branches (real citation: concurrent-manager, ' +
+    'pages/p00090-request-details-log-viewer.apx:1762-1768, button btn-view-run-log: ' +
+    'behavior { action: redirectThisApp target: { page: P185_RUN_ID items: { ' +
+    'P185_RUN_ID: &P90_REQUEST_ID. } clearCache: 185 } } -- confirmed live against the ' +
+    'real export: buildFlowMap resolves this to unresolvedPage since "P185_RUN_ID" is ' +
+    'neither numeric nor a real page alias in that app)', () => {
+    const p90 = page({
+      id: 90,
+      alias: 'REQUEST_DETAILS_LOG_VIEWER',
+      buttons: [
+        button({
+          identifier: 'btn-view-run-log',
+          label: 'View Full Log',
+          target: { page: 'P185_RUN_ID', items: { P185_RUN_ID: '&P90_REQUEST_ID.' }, clearCache: '185' },
+        }),
+      ],
+    });
+    const result = buildFlowMap(ast([p90]));
+    const e = result.edges[0];
+    expect(e.mechanism).toBe('button.page');
+    expect(e.to).toEqual({ kind: 'unresolvedPage', ref: 'P185_RUN_ID' });
+    expect(e.items).toEqual({ P185_RUN_ID: '&P90_REQUEST_ID.' });
+    expect(e.clearCache).toBe('185'); // unlike branch, ApexButtonTarget DOES type clearCache
   });
 
   it('does not double-count a region-owned button (page.buttons is the single source of truth, not also iterated per-region)', () => {

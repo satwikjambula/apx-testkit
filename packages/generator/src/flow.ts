@@ -62,6 +62,52 @@
  * meets the same bar already used for `branch.url`/`button.url`'s `'high'`
  * entries (both also single-app-sourced).
  *
+ * **Substitution-syntax audit (Runtime & Test Automation Engineer,
+ * 2026-08-13)** — a full sweep of every field on all four Phase 1a
+ * sources (not just `to`/`page`/`url`, which `FlowTarget`'s
+ * `unresolvedPage` variant was already designed for) across every real,
+ * locally accessible export (`ux-pattern-catalog`, `apextogo`,
+ * `sample-cards`, `concurrent-manager`), cross-checked directly against
+ * the official EBNF (`docs.oracle.com/.../apexlang.ebnf`, raw `curl`,
+ * never a summarizing fetch, per ADR-004). Findings:
+ *   - `to` (`page`/`url`): confirmed correctly classified on every real
+ *     occurrence found, including a case NOT previously covered by any
+ *     regression test — a button's `target.page` value that is itself a
+ *     bare item name with no `&`/`.`/`#` sigils at all (`concurrent-manager`,
+ *     `pages/p00090-request-details-log-viewer.apx:1762-1768`,
+ *     `target: { page: P185_RUN_ID items: { P185_RUN_ID: &P90_REQUEST_ID. }
+ *     clearCache: 185 }`) — correctly falls through to `unresolvedPage`
+ *     (not numeric, not a real page alias), the same honest-non-guess
+ *     behavior already proven for the `&LAST_VIEW.`-style sigil form. Now
+ *     locked in as its own regression case in `test/flow.test.ts`.
+ *   - `items`: confirmed passed through completely verbatim on every real
+ *     occurrence checked (`&ITEM.`, `#ITEM#`, and even a raw
+ *     backslash-escaped token straight from the exporter,
+ *     `\&ROWID.\` — see `FlowEdge.items`'s own doc comment) — never
+ *     resolved, matching this project's permanent, deliberate scope
+ *     boundary (resolving these needs live session state, which this
+ *     module will never have).
+ *   - `condition` (branch-only field): zero real occurrences of
+ *     substitution syntax in `whenButtonPressed`/`type`/`item`/`value`/
+ *     `plsqlExpression` across the accessible corpus (15 real branches, 9
+ *     with a condition) — `whenButtonPressed` is a component REFERENCE
+ *     (`@identifier`, EBNF `<reference>`), a structurally different
+ *     syntax from item-substitution, already correctly unwrapped by the
+ *     parser's `refName()`, not something this module needs to change.
+ *     Nothing to fix; nothing more to lock in without inventing an
+ *     unwitnessed case.
+ *   - `clearCache`: confirmed real data shows both a plain page number and
+ *     a real item-substitution token (`#EDIT_PAGE#`, `strategic-planner`)
+ *     on the three sources that type it — both pass through unmodified.
+ *     BUT found one real, genuine gap: `ApexBranchTarget` never typed a
+ *     `clearCache` field at all (unlike its three siblings), even though
+ *     real branches DO carry one (`concurrent-manager`,
+ *     `pages/p00351-lookup-manager1.apx:960-968`) — see `FlowEdge.clearCache`'s
+ *     own doc comment (corrected in place there) for the full finding.
+ *     This is a `packages/parser` typed-field gap, not a `flow.ts` bug —
+ *     filed to `/parser` via `docs/grammar-assumptions.md`'s "Still open"
+ *     section, out of this module's ownership to fix directly.
+ *
  * **Determinism contract**, identical to every other module in this
  * package: same `ApexAppAst` in -> byte-identical `FlowMap` out. No
  * timestamps, no absolute paths inside the artifact (an exportDir would
@@ -170,13 +216,55 @@ export interface FlowEdge {
    * `ApexReportColumn`/`ApexButton`). */
   condition: ApexServerSideCondition | null;
   /** `ITEM: value` pairs carried across the redirect, when the source
-   * construct's target object carries them; `null` otherwise. */
+   * construct's target object carries them; `null` otherwise. Values are
+   * passed through completely verbatim from the AST -- never resolved,
+   * never re-typed, never re-escaped -- including item-substitution tokens
+   * (`&ITEM.`/`#ITEM#`) and even a raw backslash-escaped token exactly as
+   * the exporter wrote it (`concurrent-manager`,
+   * `pages/p00195-email-template-manager.apx:185`: `P196_ROWID: \&ROWID.\`
+   * -- the literal backslashes are part of the export, not a parser
+   * artifact, and this project's own `targetItems()` helper in
+   * `packages/parser/src/parser.ts` never touches them). Resolving these
+   * would require live session-state evaluation, permanently out of scope
+   * for this static, no-live-app module -- see this file's own doc comment. */
   items: Record<string, string> | null;
-  /** Cache-clear directive, when the source construct's target object
-   * carries one (`ApexRegionActionTarget`/`ApexColumnLinkTarget`/
-   * `ApexButtonTarget` all have it; `ApexBranchTarget` does NOT -- always
-   * `null` for `branch.*` edges, an honest reflection of that real,
-   * confirmed AST shape difference, not an oversight). */
+  /**
+   * Cache-clear directive, when the source construct's target object
+   * carries one. `ApexRegionActionTarget`/`ApexColumnLinkTarget`/
+   * `ApexButtonTarget` all type it (a bare string, verbatim -- real data
+   * confirms both plain page numbers, e.g. `clearCache: 335`
+   * (`concurrent-manager`, `pages/p00330-lookup-manager.apx:281`), and a
+   * real item-substitution token, `clearCache: #EDIT_PAGE#`
+   * (`strategic-planner`, `pages/p00003-project-details.apx:2154`, see
+   * `docs/grammar-assumptions.md`) -- both pass through this field
+   * unresolved and unmodified, matching `items`' own contract above).
+   *
+   * CORRECTED IN PLACE (substitution-syntax audit pass, 2026-08-13): this
+   * comment previously asserted `ApexBranchTarget` genuinely has no
+   * `clearCache` in real data ("an honest reflection of that real,
+   * confirmed AST shape difference, not an oversight"). That claim was
+   * never actually checked against a real branch with a `clearCache` --
+   * it turns out one exists: `concurrent-manager`,
+   * `pages/p00351-lookup-manager1.apx:960-968`, the "Redirect to all"
+   * branch (`behavior { target: { page: 350 clearCache: 350 action:
+   * resetPagination } }`). So `branch.*` edges being `null` here is NOT a
+   * confirmed absence of the underlying data -- it is `ApexBranchTarget`
+   * (`packages/parser/src/ast.ts`) never having typed a `clearCache` field
+   * at all, unlike its three siblings (which all share the
+   * `projectPageTarget()` helper; `projectBranchTarget()` is a separate,
+   * older function that predates it and only reads `page`/`url`/`items`).
+   * The real value is NOT lost -- `ApexBranch.raw` still carries
+   * `behavior.target.clearCache` per ADR-001 -- but it never reaches this
+   * typed `FlowEdge.clearCache` field for a `branch` source. This is a
+   * genuine, real, parser-level typed-field gap, filed to `/parser`
+   * (see `docs/grammar-assumptions.md`'s "Still open" section) -- NOT
+   * fixed in this pass, since `ApexBranchTarget` is outside
+   * `packages/generator`'s ownership. `branch.*` edges will keep
+   * returning `clearCache: null` unconditionally until that field is
+   * added upstream; `test/flow.test.ts` locks in this exact, honestly-
+   * labeled gap (not a silent pass) so the fix is visible in the diff
+   * whenever it lands.
+   */
   clearCache: string | null;
   confidence: FlowConfidence;
   /** Literal, checkable evidence citation for this edge's `confidence` --
