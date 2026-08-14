@@ -11,8 +11,14 @@
  *      one edge PER branch, never merged/flattened, and each edge's
  *      `condition` matches its own originating branch exactly.
  *   3. Confidence tiering — `FLOW_MECHANISM_EVIDENCE` assigns `'high'` to
- *      every mechanism except `button.page`, which is `'medium'`; built
- *      edges carry that same confidence through, per mechanism.
+ *      every one of the eight mechanisms; built edges carry that same
+ *      confidence through, per mechanism. `button.page` was `'medium'`
+ *      until the Fourteenth round (`docs/ecosystem-roadmap.md`) corrected
+ *      a false "found ZERO real occurrences" claim — `concurrent-manager`
+ *      has 17 real `redirectThisApp` occurrences across 12 pages, all
+ *      three `ApexButtonTarget` fields witnessed. The regression case
+ *      below fixtures that exact finding so a future "corpus-wide zero"
+ *      claim gets checked against a real test fixture, not just prose.
  *   4. Determinism — the same `ApexAppAst` produces a byte-identical
  *      `FlowMap` (via `JSON.stringify`) twice, and `computeFlowMap()`
  *      against the real committed reference fixture is stable too.
@@ -360,7 +366,7 @@ describe('buildFlowMap — source 4: button page/URL redirects', () => {
     expect(e.confidence).toBe('high');
   });
 
-  it('resolves a page/app-redirect button (MEDIUM confidence — typed, not live-witnessed)', () => {
+  it('resolves a page/app-redirect button (HIGH confidence — corrected Fourteenth round, real corpus data)', () => {
     const p1 = page({
       id: 1,
       alias: 'PAGE_ONE',
@@ -377,7 +383,51 @@ describe('buildFlowMap — source 4: button page/URL redirects', () => {
     const e = result.edges[0];
     expect(e.mechanism).toBe('button.page');
     expect(e.to).toEqual({ kind: 'page', nodeId: 'page:2', pageId: 2 });
-    expect(e.confidence).toBe('medium');
+    expect(e.confidence).toBe('high');
+  });
+
+  it('resolves a real concurrent-manager button.page shape — clearCache set (regression fixture for the ' +
+    'Fourteenth-round "found ZERO real occurrences" correction; ' +
+    'pages/p00120-request-set-builder.apx:379-383)', () => {
+    const p1 = page({
+      id: 120,
+      alias: 'REQUEST_SET_BUILDER',
+      buttons: [
+        button({
+          identifier: 'add-request',
+          label: 'Add Request',
+          target: { page: 121, items: null, clearCache: '121' },
+        }),
+      ],
+    });
+    const p2 = page({ id: 121, alias: 'REQUEST_SET_BUILDER_DETAIL' });
+    const result = buildFlowMap(ast([p1, p2]));
+    const e = result.edges[0];
+    expect(e.mechanism).toBe('button.page');
+    expect(e.to).toEqual({ kind: 'page', nodeId: 'page:121', pageId: 121 });
+    expect(e.clearCache).toBe('121');
+    expect(e.confidence).toBe('high');
+  });
+
+  it('resolves a real concurrent-manager button.page shape — items set (regression fixture; ' +
+    'pages/p00330-lookup-manager.apx:274-280)', () => {
+    const p1 = page({
+      id: 330,
+      alias: 'LOOKUP_MANAGER',
+      buttons: [
+        button({
+          identifier: 'new-lookup',
+          label: 'New',
+          target: { page: 335, items: { P335_MODE: 'NEW', P335_VERSION_NO: '0' }, clearCache: null },
+        }),
+      ],
+    });
+    const p2 = page({ id: 335, alias: 'LOOKUP_MANAGER_FORM1' });
+    const result = buildFlowMap(ast([p1, p2]));
+    const e = result.edges[0];
+    expect(e.mechanism).toBe('button.page');
+    expect(e.items).toEqual({ P335_MODE: 'NEW', P335_VERSION_NO: '0' });
+    expect(e.confidence).toBe('high');
   });
 
   it('does not double-count a region-owned button (page.buttons is the single source of truth, not also iterated per-region)', () => {
@@ -393,6 +443,15 @@ describe('buildFlowMap — source 4: button page/URL redirects', () => {
 });
 
 describe('FLOW_MECHANISM_EVIDENCE — confidence tiering', () => {
+  // All eight mechanisms are 'high' as of the Fourteenth round
+  // (docs/ecosystem-roadmap.md). `button.page` was 'medium' until this round
+  // corrected a false "found ZERO real occurrences" claim that was only
+  // ever checked against one app (ux-pattern-catalog), never the full
+  // corpus it claimed to represent — concurrent-manager has 17 real
+  // redirectThisApp occurrences across 12 distinct pages, with page/items/
+  // clearCache all independently witnessed. See
+  // FLOW_MECHANISM_EVIDENCE['button.page'] and ApexButtonTarget's doc
+  // comment in packages/parser/src/ast.ts for the full corrected evidence.
   const expectedHigh: FlowEdgeMechanism[] = [
     'branch.page',
     'branch.url',
@@ -400,6 +459,7 @@ describe('FLOW_MECHANISM_EVIDENCE — confidence tiering', () => {
     'regionAction.url',
     'reportColumnLink.page',
     'reportColumnLink.url',
+    'button.page',
     'button.url',
   ];
 
@@ -410,15 +470,17 @@ describe('FLOW_MECHANISM_EVIDENCE — confidence tiering', () => {
     });
   }
 
-  it("button.page is 'medium' — structured/typed, not live-witnessed for this specific variant", () => {
-    expect(FLOW_MECHANISM_EVIDENCE['button.page'].confidence).toBe('medium');
-    expect(FLOW_MECHANISM_EVIDENCE['button.page'].evidence).toMatch(/NOT live-witnessed|not yet confirmed live/);
+  it("button.page's evidence string cites concurrent-manager's real occurrences, not a false 'found ZERO' claim", () => {
+    const evidence = FLOW_MECHANISM_EVIDENCE['button.page'].evidence;
+    expect(evidence).toMatch(/concurrent-manager/);
+    expect(evidence).toMatch(/17 real redirectThisApp/);
+    expect(evidence).not.toMatch(/found ZERO real/);
   });
 
-  it('exactly one mechanism is medium; every other mechanism is high (the tiering must not blur)', () => {
+  it('every mechanism is high — no mechanism blurs its tier into an unqualified claim without evidence text', () => {
     const values = Object.values(FLOW_MECHANISM_EVIDENCE);
-    expect(values.filter((v) => v.confidence === 'medium')).toHaveLength(1);
-    expect(values.filter((v) => v.confidence === 'high')).toHaveLength(7);
+    expect(values.filter((v) => v.confidence === 'high')).toHaveLength(8);
+    expect(values.filter((v) => v.confidence === 'medium')).toHaveLength(0);
   });
 });
 

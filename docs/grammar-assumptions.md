@@ -1460,6 +1460,17 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       that this specific variant has been live-confirmed. `ApexButtonTarget`'s
       doc comment in `ast.ts` states this evidence-tier distinction
       explicitly rather than blurring the two variants together.
+      **UPDATE (Fourteenth round, `docs/ecosystem-roadmap.md`)**: this
+      entry's own scoping was honest ("this session's one
+      directly-accessible corpus app," never "the entire 46+ app corpus"),
+      but the doc comments this entry fed into (`ApexButtonTarget` in
+      `ast.ts`, `FLOW_MECHANISM_EVIDENCE['button.page']` in `flow.ts`)
+      later mis-restated it as a full-corpus "found ZERO" sweep. That has
+      since been corrected — `concurrent-manager` has 17 real
+      `redirectThisApp` occurrences across 12 distinct pages, `page`/
+      `items`/`clearCache` all witnessed, and `button.page` is now `'high'`
+      confidence. `redirectOtherApp` specifically remains unwitnessed. See
+      `ApexButtonTarget`'s corrected doc comment for the full evidence.
   - **`Sawalhah/apexlang-view` cross-check**: fetched
     `github.com/Sawalhah/apexlang-view/blob/main/src/parser.js` directly
     (reference only, never imported/depended on) — no construct-specific

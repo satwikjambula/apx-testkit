@@ -230,6 +230,55 @@ export interface ApexItem {
  * Thirteenth round's explicit scoping call -- not claimed "live-confirmed"
  * for this specific variant, an honest distinction from the `redirectUrl`
  * variant below, which IS directly witnessed.
+ *
+ * CORRECTED IN PLACE (Fourteenth round, QA/Verification Engineer release-gate
+ * pass, `docs/ecosystem-roadmap.md`): the paragraph above was WRONG to
+ * generalize "found ZERO occurrences ... anywhere" beyond what was actually
+ * checked. It was only ever a single-app, single-session grep
+ * (`ux-pattern-catalog`), never the full 46+ app corpus, even though the
+ * sibling `flow.ts` evidence string (incorrectly) restated it as "a full
+ * sweep of this project's entire 46+ app real corpus." `concurrent-manager`
+ * -- already on record in this project's own corpus list
+ * (`.ai/knowledge/verification.md`) before that claim shipped -- contains 17
+ * real `redirectThisApp` occurrences (zero `redirectOtherApp`) across 12
+ * distinct pages, independently re-confirmed line-for-line against the raw
+ * export text, e.g. `pages/p00020-workday-calendar-manager.apx:207-210`:
+ * ```
+ * action: redirectThisApp
+ * target: {
+ *     page: 25
+ * }
+ * ```
+ * All three typed fields on `ApexButtonTarget` are directly witnessed in
+ * that same app, not just `page`: `clearCache`
+ * (`p00120-request-set-builder.apx:379-383`, `target: { page: 121
+ * clearCache: 121 }`), `items` (`p00330-lookup-manager.apx:274-280`,
+ * `target: { page: 335 items: { P335_MODE: NEW P335_VERSION_NO: 0 } }`), and
+ * a `page` value that is itself an item-substitution token rather than a
+ * literal number (`p00090-request-details-log-viewer.apx:1762-1768`,
+ * `target: { page: P185_RUN_ID items: { P185_RUN_ID: &P90_REQUEST_ID. }
+ * clearCache: 185 }`) -- the same "page can be more than a literal number"
+ * pattern already typed for `ApexBranchTarget.page` above.
+ *
+ * This is now `'high'` confidence in `flow.ts`'s
+ * `FLOW_MECHANISM_EVIDENCE['button.page']` -- one real app with this much
+ * occurrence depth (17 hits, 12 distinct pages, all three fields witnessed,
+ * including a non-literal `page` value) meets the same bar this project
+ * already used to grant `'high'` to `ApexBranchTarget.url` and
+ * `ApexButton.url`'s `redirectUrl` variant, both of which are also
+ * single-app-sourced. Per ADR-004's parser/grammar evidence standard (real
+ * export data cross-checked against the full relevant EBNF production --
+ * both now satisfied here), this is "confirmed." ADR-002's live-browser
+ * multi-instance bar (the Chart `widget()` precedent) is a different,
+ * runtime-behavioral standard for inferring a live API's return-value
+ * behavior across widget instances -- it does not govern this kind of
+ * static, syntactic corpus finding, where the shape witnessed is the
+ * identical `{ page, items, clearCache }` structure already proven three
+ * times over via the shared `projectPageTarget()` helper, not a new
+ * behavioral claim. `redirectOtherApp` specifically remains unwitnessed in
+ * real data -- only `redirectThisApp` has been seen so far; it is typed on
+ * the same EBNF production and enum-value symmetry as `redirectThisApp`,
+ * not independently re-verified.
  */
 export interface ApexButtonTarget {
   page: number | string | null;
@@ -243,7 +292,10 @@ export interface ApexButton {
   action: string | null;
   /** `behavior.target` -- `null` unless `action` is `redirectThisApp`/
    * `redirectOtherApp`. See `ApexButtonTarget`'s doc comment for the EBNF
-   * production and the honest evidence-tier distinction from `url` below. */
+   * production and the corrected-in-place evidence trail (`'high'`
+   * confidence as of the Fourteenth round, `redirectThisApp` real-data-
+   * confirmed via `concurrent-manager`, `redirectOtherApp` still
+   * unwitnessed). */
   target: ApexButtonTarget | null;
   /**
    * `behavior.targetUrl` -- the flat external-URL-redirect variant

@@ -3128,3 +3128,109 @@ regression-test addition), not a redesign, and there is real cost to
 shipping a "confirmed zero occurrences" claim known to be false at the
 moment it ships — exactly the gap this project's own evidence discipline
 exists to catch before a release, not after.
+
+### Resolution (2026-08-13): `button.page` evidence corrected, upgraded to `'high'`
+
+Addressed the finding above, in place, per this entry's own "To resolve"
+list:
+
+- **`packages/parser/src/ast.ts`'s `ApexButtonTarget` doc comment**:
+  independently re-confirmed the corpus grep in a fresh shell (17 real
+  `redirectThisApp` occurrences, zero `redirectOtherApp`, across 12
+  distinct pages in `concurrent-manager` — one more page,
+  `p00320-request-value-sets.apx`, than this entry's own 11-page count;
+  worth noting since this entry's own citation is now the second time a
+  count in this exact investigation needed a small correction).
+  Line-for-line re-verified `pages/p00020-workday-calendar-manager.apx:207-210`
+  directly (matches this entry's citation exactly) and additionally
+  confirmed all three `ApexButtonTarget` fields are real, not just `page`:
+  `clearCache` (`p00120-request-set-builder.apx:379-383`), `items`
+  (`p00330-lookup-manager.apx:274-280`), and a `page` value that is itself
+  an item-substitution token, not a literal number
+  (`p00090-request-details-log-viewer.apx:1762-1768`, `page: P185_RUN_ID`).
+  The old "found ZERO real occurrences ... anywhere" paragraph was kept in
+  place, annotated `CORRECTED IN PLACE`, with the new evidence appended —
+  not deleted or silently rewritten, per this project's standing
+  discipline.
+- **Confidence tier decision: upgraded `button.page` from `'medium'` to
+  `'high'`**, not left at `'medium'` and not split into some third tier.
+  Reasoning: the finding's own "to resolve" list raised the fair question
+  of whether one app is enough, citing ADR-002's Chart `widget()`
+  precedent (a single-instance finding that was later wrong). That
+  precedent does not transfer cleanly here. ADR-002 governs *runtime,
+  behavioral* claims — does a live API call return `null` or an object —
+  where behavior can genuinely vary across widget subtypes/versions in
+  ways invisible from the calling code, which is exactly why Chart's
+  claim was wrong on re-test. `button.page` is a *static, syntactic*
+  claim — does this EBNF-documented `{page, items, clearCache}` shape,
+  already proven three times over via the shared `projectPageTarget()`
+  helper (branch/column/regionAction), also occur for buttons in real
+  export text. That is a much lower-risk generalization: the shape is not
+  new, only the source construct is. This project's own existing
+  precedent in this exact file already treats single-app corpus evidence
+  as sufficient for `'high'`: `branch.url` is `'high'` on a single
+  occurrence in a single app (`apextogo`'s sign-out branch), and
+  `button.url`/`redirectUrl` is `'high'` on 17 occurrences in a single app
+  (`ux-pattern-catalog`) — the exact same evidentiary bar `button.page`
+  now clears (17 occurrences, one app), with MORE structural depth than
+  either precedent (12 distinct pages, not one; all three fields
+  witnessed, not just the URL string). ADR-004's parser/grammar evidence
+  standard (real export data + full EBNF production cross-check, both
+  already satisfied for `button.page`) governs this kind of claim, not
+  ADR-002's live-instance-count bar. The residual honest gap —
+  `redirectOtherApp` still has zero real occurrences anywhere, and no
+  second app has been checked yet for `redirectThisApp` — is recorded
+  directly in the corrected evidence string and doc comments rather than
+  used to justify an artificially lower tier for the well-evidenced half
+  of the claim.
+- **`packages/generator/src/flow.ts`**: `FLOW_MECHANISM_EVIDENCE['button.page'].confidence`
+  changed to `'high'`, its `evidence` string rewritten to cite the real
+  `concurrent-manager` occurrences (file/line citations above) in place of
+  "found ZERO," and the module's top-of-file doc comment + the
+  `FlowEdgeMechanism` doc comment both corrected in place (old text kept,
+  annotated, new evidence appended) rather than silently rewritten.
+- **`packages/generator/test/flow.test.ts`**: the `button.page` unit test
+  now asserts `'high'`; two new regression tests fixture the real
+  `concurrent-manager` shapes directly (`clearCache` set, from
+  `p00120-request-set-builder.apx:379-383`; `items` set, from
+  `p00330-lookup-manager.apx:274-280`) so a future false "corpus-wide
+  zero" claim would need to falsify an actual fixture, not just prose; the
+  `FLOW_MECHANISM_EVIDENCE` tiering block now asserts all 8 mechanisms are
+  `'high'`, 0 are `'medium'`, and that the `button.page` evidence string
+  names `concurrent-manager` and no longer contains "found ZERO real."
+- **Documentation kept in sync, not piecemeal** (`DESIGN_GUARDRAILS.md`'s
+  own rule): `README.md`'s Button and Flow Map capability-matrix rows,
+  `docs/tutorial.md`'s Flow Map confidence-tiering section, and
+  `docs/grammar-assumptions.md`'s Navigation Graph prerequisite-pass entry
+  and `packages/parser/test/parser.test.ts`'s inline comment all carried
+  the same "zero occurrences"/`'medium'` claim and are corrected in place
+  with pointers to this entry. `docs/limitations.md`'s superficially
+  similar "found ZERO" text is a different finding entirely (button
+  `htmlDomId`/`staticId`, not `redirectThisApp`/`redirectOtherApp`) and
+  was left untouched after confirming it does not describe this defect.
+- **Re-ran `apx-flow` against `concurrent-manager`** after the fix:
+  regenerated `flow-map.json`, confirmed 55 nodes/39 edges unchanged (9
+  `branch`, 17 `button`, 13 `reportColumnLink`), and every one of the 17
+  `button`-sourced edges with `mechanism: "button.page"` now carries
+  `"confidence": "high"` and an `evidence` string containing
+  `"concurrent-manager"` and `"17 real redirectThisApp occurrences"`, with
+  no edge's evidence field containing the string `"found ZERO"` anywhere
+  in the file. Byte-identical across two independent regenerations
+  (`diff`, zero output) — the determinism contract holds after this
+  change.
+- **Full regression sweep**: `npm run build --workspaces` (0 errors),
+  `npm test --workspaces` (full suite green, including the new/changed
+  `flow.test.ts` cases and the unaffected 292 other tests), `npm run
+  lint` (0 errors), `cd spike && npx tsc --noEmit` (clean), and
+  `examples/employee-page` determinism re-confirmed unaffected (this
+  change touches only `button.page`'s evidence tier, not
+  `employee-page`'s own AST/output, which has no button page-redirect
+  target in it).
+
+**Not addressed in this pass, deliberately** (matches the original
+finding's own scope): re-running the full corpus sweep against the other
+~43 apps once locally accessible again remains open, same access
+constraint as the Eleventh/Fourteenth rounds. The evidence string and doc
+comments are written to be honest about that specific residual gap
+(one app confirmed for `redirectThisApp`, zero for `redirectOtherApp`)
+rather than overclaiming it away.

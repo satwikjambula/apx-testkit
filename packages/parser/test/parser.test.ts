@@ -512,6 +512,11 @@ describe('typed button redirect target (behavior.target / behavior.targetUrl)', 
     // Eleventh round's identical finding). Typed on the strength of the
     // EBNF production + the already-proven projectPageTarget() shape
     // (see ApexButtonTarget's doc comment for the full evidence tiering).
+    // UPDATE (Fourteenth round, docs/ecosystem-roadmap.md): redirectThisApp
+    // WAS since real-data-confirmed via concurrent-manager (17 occurrences,
+    // 12 pages) -- see ApexButtonTarget's corrected doc comment. This test
+    // fixture itself was never inaccurate, only the "not yet witnessed"
+    // framing above is now historical, not current.
     const apx = `page 1 (
   name: Test
   alias: TEST

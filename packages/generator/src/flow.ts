@@ -41,16 +41,26 @@
  * **Confidence tiering — carries real, source-and-variant-specific evidence
  * through to every edge, not a blanket "high."** Eight fine-grained
  * mechanisms (`FlowEdgeMechanism`), each with its own confidence + literal
- * evidence citation in `FLOW_MECHANISM_EVIDENCE` below. Seven are `'high'`
- * (live-witnessed, real data, real line citations). Exactly one —
- * `button.page` (the `redirectThisApp`/`redirectOtherApp` button variant)
- * — is `'medium'`: typed from the full EBNF production plus the
- * already-proven `projectPageTarget()` pattern, but a full sweep of every
- * locally accessible real export (this project's entire 46+ app corpus,
- * per `docs/ecosystem-roadmap.md`'s Eleventh/Thirteenth rounds) found ZERO
- * real occurrences of either enum value. This mirrors `ApexButtonTarget`'s
- * own doc comment in `packages/parser/src/ast.ts` exactly — this module
- * must never blur that distinction into an unqualified "confirmed."
+ * evidence citation in `FLOW_MECHANISM_EVIDENCE` below. All eight are
+ * `'high'` (live-witnessed, real data, real line citations).
+ *
+ * CORRECTED IN PLACE (Fourteenth round, QA/Verification Engineer
+ * release-gate pass, `docs/ecosystem-roadmap.md`): this paragraph
+ * previously read "Seven are `'high'` ... Exactly one — `button.page` ... —
+ * is `'medium'` ... a full sweep of every locally accessible real export
+ * (this project's entire 46+ app corpus ...) found ZERO real occurrences of
+ * either enum value." That claim was false — it was never actually checked
+ * against the full corpus, only a single app (`ux-pattern-catalog`).
+ * `concurrent-manager`, already on record in this project's own corpus list
+ * before that claim shipped, contains 17 real `redirectThisApp`
+ * occurrences (zero `redirectOtherApp`) across 12 distinct pages, with all
+ * three of `ApexButtonTarget`'s fields (`page`, `items`, `clearCache`)
+ * independently witnessed. `button.page` is now `'high'` — see
+ * `FLOW_MECHANISM_EVIDENCE['button.page']` below and `ApexButtonTarget`'s
+ * doc comment in `packages/parser/src/ast.ts` for the full corrected
+ * evidence and the reasoning for why one real app at this occurrence depth
+ * meets the same bar already used for `branch.url`/`button.url`'s `'high'`
+ * entries (both also single-app-sourced).
  *
  * **Determinism contract**, identical to every other module in this
  * package: same `ApexAppAst` in -> byte-identical `FlowMap` out. No
@@ -108,12 +118,13 @@ export type FlowEdgeSource = 'branch' | 'regionAction' | 'reportColumnLink' | 'b
 
 /**
  * Fine-grained mechanism per edge -- one of the four sources, split by
- * page-target vs. URL-redirect variant, since (per `ast.ts`'s own doc
- * comments) those two variants of the SAME source carry genuinely
- * different evidence tiers for `button` specifically (see this module's
- * own doc comment above). Kept fine-grained for every source, not just
- * `button`, so `FLOW_MECHANISM_EVIDENCE`'s citations stay precise and
- * individually checkable rather than lumped per source.
+ * page-target vs. URL-redirect variant. `button.page`/`button.url` now
+ * carry the same `'high'` confidence tier (corrected Fourteenth round --
+ * they previously differed, `button.page` was `'medium'`), but the split
+ * is kept for every source, `button` included, so `FLOW_MECHANISM_EVIDENCE`'s
+ * citations stay precise and individually checkable -- each variant has its
+ * own distinct real-data citation (see `ast.ts`'s doc comments) even when
+ * the resulting tier happens to match.
  */
 export type FlowEdgeMechanism =
   | 'branch.page'
@@ -269,15 +280,23 @@ export const FLOW_MECHANISM_EVIDENCE: Record<FlowEdgeMechanism, MechanismEvidenc
       '`behavior { action: redirectUrl targetUrl: # }`). See packages/parser/src/ast.ts ApexButton.url doc comment.',
   },
   'button.page': {
-    confidence: 'medium',
+    confidence: 'high',
     evidence:
       'ApexButtonTarget (`behavior.target`, action: redirectThisApp/redirectOtherApp) — typed from the FULL ' +
       '`button-behavior-property` EBNF production (apexlang.ebnf:2578-2589) plus the already-proven ' +
-      'projectPageTarget() helper shared with branch/regionAction/reportColumnLink, but NOT live-witnessed: ' +
-      "a full sweep of this project's entire 46+ app real corpus (docs/ecosystem-roadmap.md Eleventh/" +
-      'Thirteenth rounds) found ZERO real redirectThisApp/redirectOtherApp buttons. Structured and typed, ' +
-      'not yet confirmed live for this specific variant — see packages/parser/src/ast.ts ApexButtonTarget ' +
-      'doc comment for the full honest evidence-tier accounting this edge preserves.',
+      'projectPageTarget() helper shared with branch/regionAction/reportColumnLink. Live-witnessed: ' +
+      "concurrent-manager (this project's own corpus, docs/ecosystem-roadmap.md Fourteenth round) contains " +
+      '17 real redirectThisApp occurrences (zero redirectOtherApp) across 12 distinct pages, e.g. ' +
+      'pages/p00020-workday-calendar-manager.apx:207-210 (`action: redirectThisApp target: { page: 25 }`). ' +
+      'All three ApexButtonTarget fields are independently witnessed in that same app: clearCache ' +
+      '(p00120-request-set-builder.apx:379-383), items (p00330-lookup-manager.apx:274-280), and a page value ' +
+      'that is itself an item-substitution token rather than a literal number ' +
+      "(p00090-request-details-log-viewer.apx:1762-1768). CORRECTED from a prior `'medium'` tier whose evidence " +
+      'string wrongly claimed a full corpus sweep found no real occurrences -- that sweep was only ever a ' +
+      'single-app check (ux-pattern-catalog), never the full corpus it described — see ' +
+      'packages/parser/src/ast.ts ApexButtonTarget doc comment for the full corrected evidence and the ' +
+      "reasoning for treating one real app at this occurrence depth as 'high', matching the bar " +
+      'already used for branch.url/button.url. redirectOtherApp specifically remains unwitnessed in real data.',
   },
 };
 

@@ -1146,16 +1146,19 @@ branch's condition verbatim.
 "high."** Every edge carries a `mechanism` (one of eight fine-grained
 values — each of the four sources split into its page-target vs.
 URL-redirect variant) plus a `confidence` and literal `evidence` citation.
-Seven of the eight are `'high'` — live-witnessed against real exports (see
+All eight are `'high'` — live-witnessed against real exports (see
 `packages/generator/src/flow.ts`'s `FLOW_MECHANISM_EVIDENCE` for every
-citation). Exactly one, `button.page` (the `redirectThisApp`/
-`redirectOtherApp` button variant), is `'medium'`: typed from the full
-EBNF production plus the already-proven `projectPageTarget()` pattern, but
-a full sweep of this project's entire 46+ app real corpus found zero real
-occurrences of either enum value — see `ApexButtonTarget`'s own doc
-comment in `packages/parser/src/ast.ts` for the full accounting. This
-distinction is deliberate and load-bearing — do not read `apx-flow`'s
-output as uniformly "confirmed."
+citation). CORRECTED (Fourteenth round, `docs/ecosystem-roadmap.md`): this
+section previously said `button.page` (the `redirectThisApp`/
+`redirectOtherApp` button variant) was `'medium'` because "a full sweep of
+this project's entire 46+ app real corpus found zero real occurrences of
+either enum value" — that sweep claim was false, it only ever checked one
+app (`ux-pattern-catalog`). `concurrent-manager` has 17 real
+`redirectThisApp` occurrences across 12 distinct pages, with `page`,
+`items`, and `clearCache` all independently witnessed — see
+`ApexButtonTarget`'s own doc comment in `packages/parser/src/ast.ts` for
+the full corrected accounting. `redirectOtherApp` specifically remains
+unwitnessed in real data.
 
 **A target that can't be resolved to one of this app's own real pages
 stays honestly unresolved** (`{ kind: 'unresolvedPage', ref: ... }`) rather
