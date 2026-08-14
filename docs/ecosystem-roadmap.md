@@ -3612,3 +3612,65 @@ references pinned to stable AST fields rather than `flow-map.json`'s ordinal
 edge ids (point 4), and a hard-fail existence check on generation (point 9).
 None of these change today's verdict of "not now" — they're the standing
 architectural bar for whenever "now" arrives.
+
+### Final disposition (2026-08-14): closed out as Deferred, not Rejected
+
+Maintainer-directed closeout of this round. This corrects/extends the
+entry in place — nothing above is rewritten, this is the status framing
+that makes the disposition explicit and gives the full design a
+preserved home instead of leaving it scattered across roadmap prose.
+
+**Status: Deferred**
+**Reason:** Insufficient evidence of user demand.
+**Architecture:** Viable with corrections.
+**Revisit trigger:** A real external user identifies functional scenario
+authoring as a material testing bottleneck, ideally after Flow Map has
+seen real-world adoption.
+
+"Deferred" rather than "Rejected" is the accurate framing: nothing about
+Product Architect's "not now" or this review's nine architectural
+corrections found the idea unsound — both found it well-designed but
+un-evidenced and (per this review) not yet enforceable as drafted. The
+full RFC — agent mandate, scenario-spec format, FACT/INFERENCE/ASSUMPTION
+discipline, and the corrected architecture incorporating all nine points
+above — is preserved, not deleted, at
+`.ai/proposals/functional-scenario-authoring.md`. That file is the actual
+repository of the design; this roadmap entry stays the record of *why*
+it's parked and what would unpark it, not a second copy of the design
+itself.
+
+**Four general-purpose guardrails this RFC's review surfaced, now
+standing project rules** (added to `DESIGN_GUARDRAILS.md`, not scoped to
+this RFC): stable-identity references over traversal-order ids (point 4
+above), semantic identifiers over presentation strings in evidence/
+references (point 5 above), machine-enforced approval via a recomputed
+content hash rather than a documented convention (point 7 above), and
+immutable ids assigned once at approval time rather than re-derived from
+live state (point 8 above). These apply to any future artifact this
+project builds, not just this one — see `DESIGN_GUARDRAILS.md` for the
+enforceable form.
+
+**Flow Map becomes more important now.** The single biggest reason this
+RFC isn't ready — "Flow Map grounds navigation well but not enough
+business semantics yet" (Product Architect, Q2) — is itself useful
+signal about direction. The near-term priority this surfaces is
+strengthening the deterministic Flow Map/AST evidence layer itself (e.g.
+eventually chaining Page → Button → Process → Branch → Page as reliable
+structured fact), not adding an LLM layer on top of what exists today.
+If the Functional QA capability is ever revisited, it should start from
+a richer deterministic evidence base than it would have today, not from
+scratch — which is also exactly the "Flow Map itself getting real usage"
+half of the revisit trigger above.
+
+**Future direction worth keeping in mind, not building now: a
+deterministic "scenario candidate" concept.** A purely deterministic,
+non-AI "observation" record — e.g.
+`{ type: "navigation", sourcePageId, action: { buttonIdentifier },
+targetPageId }` — derived directly off Flow Map/AST traversal, with no
+LLM involved, would cleanly separate fact (what the AST/Flow Map actually
+shows) from interpretation (what a human or LLM concludes it means for
+testing). This isn't a spec to build today, just groundwork worth
+remembering: it would make any eventual AI authoring layer's job both
+easier and more tightly constrained, since the layer would be
+interpreting pre-extracted deterministic candidates rather than reading
+raw AST/Flow Map data itself.

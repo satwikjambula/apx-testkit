@@ -40,6 +40,25 @@ line lives in `.ai/ADR/`; this file is the enforceable summary.
   documented API already exists.** Guessed selectors are exactly what
   `packages/testkit`'s "treadmill rule" exists to prevent (see
   `.ai/knowledge/runtime.md`).
+- **Persistently reference a Flow Map edge by its generated `id`.**
+  `edgeId()` (`packages/generator/src/flow.ts`) is traversal/ordinal-based
+  — an index into a page's `branches`/`actions`/`columns`/`buttons` array
+  — not a stable identifier. Reordering any construct on a page silently
+  shifts other edges' ids even when nothing relevant to a given reference
+  changed. Anything needing to persistently reference a flow-map edge
+  must instead reference stable semantic AST identity (page `id`/`alias`
+  plus `buttonIdentifier`/`regionIdentifier`, etc.), never the edge's own
+  generated `id`. Surfaced by the Functional Scenario Authoring RFC
+  review (`docs/ecosystem-roadmap.md`, Sixteenth round), but the rule is
+  general.
+- **Store evidence or references in any artifact as display text** — a
+  button's visible label, a region's title. Always use semantic
+  identifiers the generator can deterministically resolve (e.g.
+  `pageId: 20, buttonIdentifier: APPROVE`, never `button: "Approve"`).
+  This is the same "semantic identifiers over presentation strings"
+  principle this project already lives by everywhere else — the typed
+  AST, never scraped DOM text — applied to any future artifact's
+  evidence fields too.
 
 ## Always
 
@@ -68,6 +87,31 @@ line lives in `.ai/ADR/`; this file is the enforceable summary.
   all workspaces, run the full test suite, typecheck `spike/`, confirm
   byte-identical regeneration against `examples/employee-page`, and
   confirm zero parser warnings across every real `.apx` export available.
+- **Machine-enforce human approval on any artifact with non-deterministic
+  input** — never rely on a documented convention alone. A required
+  `approval` block carrying a content hash (`contentHash: sha256:...`) of
+  the canonical byte form of everything the hash covers. The consuming
+  generator must: read the artifact → check approved status → recompute
+  the hash and check it matches → generate only on success, hard failure
+  (not a warning) on a missing approval block or a hash mismatch.
+- **Assign ids on any approved/frozen artifact once, at approval time,
+  and freeze them** — never re-derive or regenerate an id from the AST or
+  other live state, which has no stable identity across regenerations.
+  Treat the assigned id plus the artifact's file path as the durable
+  identity, the same way a `.apx` export's own identity is assigned
+  externally, not derived in-band.
+
+## Persistent artifacts and provenance
+
+Two broader principles the four rules above are instances of — apply
+these to any future artifact this project builds, not just the ones that
+prompted them:
+
+- **Persistent artifacts must reference stable semantic identifiers,
+  never traversal-order identifiers, generated DOM labels, or
+  presentation text.**
+- **Any artifact that influences deterministic generation must have an
+  explicit, machine-verifiable provenance or approval state.**
 
 ## Where the rest of this lives
 
