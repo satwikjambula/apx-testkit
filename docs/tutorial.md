@@ -1499,13 +1499,58 @@ await login(page, {
 });
 ```
 
+**Success detection is configurable (`options.success`).** By default
+(no `success` passed), `login()` waits for the URL to change away from the
+login page at all — kept only for backward compatibility, and it's a
+genuinely weak signal: a redirect to an MFA step, or an error page
+re-rendered with a different query string, would also satisfy it even
+though the user isn't really logged in. Pass an explicit, stronger
+condition instead:
+
+```ts
+// The final URL must actually match a pattern you expect the
+// authenticated app to land on -- not merely differ from the login URL.
+await login(page, credentials, { success: { url: /\/home/ } });
+
+// A locator that only renders once the authenticated shell has loaded.
+await login(page, credentials, {
+  success: { locator: page.getByRole('link', { name: 'Logout' }) },
+});
+
+// An arbitrary custom predicate, polled until it returns true or the
+// timeout elapses.
+await login(page, credentials, {
+  success: async (page) => (await page.getByText('Welcome').count()) > 0,
+});
+```
+
+Each of these throws a specific, actionable error if the condition is
+never satisfied within `timeoutMs` (e.g. "URL never matched
+`options.success.url`" / "`options.success.locator` never became
+visible") — never silently returns as if login succeeded when it didn't.
+
+`login()` also checks that BOTH the username field and the password field
+exist before filling either — if the password field specifically is
+missing, it throws naming the exact selector it looked for (e.g. "Could
+not find password field #P101_PASSWORD"), pointing at this section for
+apps using a custom authentication scheme, rather than failing later with
+a confusing "fill on a null element" error.
+
 **Status: partially verified.** Field ids (`P101_USERNAME`/
 `P101_PASSWORD`) are confirmed live against a real second APEX app with a
 genuine login page — no changes needed there. `login()` also had one real
 race-condition bug found and fixed (it now waits for an actual URL change
 via `page.waitForURL` instead of a single point-in-time check) — see
 docs/grammar-assumptions.md for the full story of how that was found. The
-fix itself hasn't been independently re-verified yet.
+fix itself hasn't been independently re-verified yet. The `options.success`
+configurability described above is new (P1 maintainer-review hardening
+pass) and is regression-tested against a synthetic fake-Page/Locator
+harness (`packages/testkit/test/auth.test.ts`), but has not yet been
+independently re-verified against a real live app either — see
+docs/quirks/26.1.json `login-race-condition.secondPass` for exactly what
+was and wasn't checked live this round (the known-good instance was
+reachable again this pass; blocked specifically on test credentials, not
+on the app being down).
 
 **Never hardcode credentials in a committed spec** — read them from
 environment variables, the way `spike/tests/auth-login-verify.spec.ts`
