@@ -1,0 +1,63 @@
+page 1 (
+  name: Region Resolution
+  alias: REGION-RESOLUTION
+  title: Region Resolution
+  security {
+    authentication: public
+  }
+  region projects (
+    name: Projects
+    type: interactiveReport
+    advanced {
+      htmlDomId: projects_report
+    }
+    source {
+      location: localDatabase
+      sql: select * from projects
+    }
+  )
+  region plain-report (
+    name: Plain Report
+    type: interactiveReport
+    source {
+      location: localDatabase
+      sql: select * from plain
+    }
+  )
+  region pie-chart (
+    name: Pie Chart
+    type: chart
+    advanced {
+      htmlDomId: pie1
+    }
+    chart {
+      type: pie
+    }
+  )
+  region unwired-chart (
+    name: Unwired Chart
+    type: chart
+    chart {
+      type: area
+    }
+  )
+  region basic-editing (
+    name: Basic Editing
+    type: interactiveGrid
+    advanced {
+      htmlDomId: emp
+    }
+    source {
+      location: localDatabase
+      tableName: EMP
+    }
+  )
+  region unwired-grid (
+    name: Unwired Grid
+    type: interactiveGrid
+    source {
+      location: localDatabase
+      tableName: DEPT
+    }
+  )
+)

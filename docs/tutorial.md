@@ -387,12 +387,33 @@ Interactive Report/Cards/Faceted Search regions in this project's local
 corpus), but treat that as a fallback, not a guarantee:
 
 ```ts
-import { expectRegionsResolve } from '@apx/testkit';
+import { resolveRegion, regionCandidatesFromAst, expectRegionsResolve } from '@apx/testkit';
 
-// Resolve per ADR-003 before calling -- the generator does this
-// automatically for interactiveReport/cards/facetedSearch regions.
-const runtimeId = region.htmlDomId ?? region.identifier;
+// resolveRegion() tries each evidence-backed candidate LIVE, in order --
+// it does NOT statically pick `region.htmlDomId ?? region.identifier`
+// and trust it. regionCandidatesFromAst() builds the standard ADR-003
+// candidate order (htmlDomId first when set, then the export identifier)
+// from parsed AST data; @apx/testgen emits the same literal candidates
+// directly into generated specs (packages/generator/src/lib.ts).
+const { runtimeId, strategy } = await resolveRegion(page, regionCandidatesFromAst(region));
+console.log(`resolved via ${strategy}`); // 'htmlDomId' | 'export-identifier' | 'override'
 await expectRegionsResolve(page, [runtimeId]);
+```
+
+`resolveRegion()` throws a specific, actionable error (naming every
+candidate tried) if NONE of them resolve — it never falls back to a DOM
+heuristic or a CSS-selector guess (see DESIGN_GUARDRAILS.md). Hand-written
+specs that have already discovered a region's real runtime id via live
+DOM inspection (ADR-003 layer 3 — e.g. Interactive Grid's export
+`basic-editing` resolving at runtime as `emp`) can supply it as a third,
+`strategy: 'override'` candidate, still routed through the same
+live-confirmation path rather than trusted blindly:
+
+```ts
+await resolveRegion(page, [
+  ...regionCandidatesFromAst(region),
+  { value: 'emp', strategy: 'override' },
+]);
 ```
 
 `expectRegionsResolve` is a safe pass/fail assertion specifically for
@@ -400,9 +421,11 @@ await expectRegionsResolve(page, [runtimeId]);
 that all three resolve as real `apex.region()` widget regions. Do NOT
 call it against `form`/`staticContent` regions; those are confirmed NOT
 to resolve as widget regions at all, by design. `@apx/testgen` auto-emits
-this check per page for every region of a resolvable type, with an
-explicit comment listing which other region types on that page were
-skipped and why — never a silent omission.
+a `resolveRegion()` call per page for every region of a resolvable type
+(and for Chart/Interactive Grid regions with `htmlDomId` set — see 2.11
+and 2.13 below), with an explicit comment listing which other region
+types/regions on that page were skipped and why — never a silent
+omission, and never a static id baked into the generated file.
 
 `apex.region(id).call(action)` — the generic action-dispatch API some APEX
 widgets support — was tested against Interactive Report with a dozen
@@ -768,10 +791,17 @@ basic-editing (type: interactiveGrid ...)` in the export resolved at
 runtime to static id `emp` (DOM widget container `#emp_ig`) --
 `apex.region('basic-editing')` returned `null`; `apex.region('emp')`
 worked. This is why `@apx/testgen` cannot auto-wire this component up from
-metadata alone, unlike Interactive Report/Cards/Faceted Search (where the
-export identifier has matched the runtime id in every app checked). To
-find the real static id, inspect the live DOM for a widget container whose
-id follows `<static id>_ig`.
+metadata alone when `htmlDomId` is absent — CORRECTED in place: an earlier
+version of this line claimed the export identifier "has matched the
+runtime id in every app checked" for Interactive Report/Cards/Faceted
+Search; that was wrong (a real interactiveReport region in `sample-charts`,
+export identifier `projects`, resolves at runtime as `projects_report`
+via its own `htmlDomId`) — see `docs/quirks/26.1.json`
+`region-id-not-static-id` and ADR-003. The export identifier is a
+majority-case FALLBACK for those three types (~93% of the local corpus),
+not a guarantee. To find the real static id when `htmlDomId` is absent,
+inspect the live DOM for a widget container whose id follows
+`<static id>_ig`.
 
 **Confirmed working** (via `apex.region(id).widget().interactiveGrid(method)`,
 the jQuery UI widget-factory pattern): `getActions`, `getViews`,
@@ -798,7 +828,10 @@ evidence.
 
 **Auto-generated assertion**: `@apx/testgen` emits a test per page for
 every Interactive Grid region whose `htmlDomId` is set (ADR-003 layer 1)
-— `expect(typeof await ig.getCurrentViewId()).toBe('string')`, confirming
+— it resolves the runtime id LIVE via `resolveRegion()` first (a single
+`htmlDomId`-only candidate; the export identifier is confirmed NOT to
+work as a fallback for this component), then
+`expect(typeof await ig.getCurrentViewId()).toBe('string')`, confirming
 the region wired up correctly. Regions without `htmlDomId` are listed in
 the generated file's header comment as explicitly skipped, not silently
 omitted — their runtime id is genuinely unconstructible from static data.
@@ -930,8 +963,11 @@ docs/quirks/26.1.json (`chart-region-widget-returns-null`,
 three findings with complete evidence.
 
 **Auto-generated assertion**: `@apx/testgen` emits a test per page for
-every Chart region whose `htmlDomId` is set, waiting for the
-initialization-race precondition automatically and asserting the live
+every Chart region whose `htmlDomId` is set. It resolves the runtime id
+LIVE first, via `resolveRegion()` with a single `htmlDomId`-only
+candidate (the export identifier is confirmed NOT to work as a fallback
+for Chart — see the caveat above), then waits for the
+initialization-race precondition automatically and asserts the live
 type resolves to a real, non-empty string. This is deliberately **not**
 an exact-match assertion against the declared `chartSettings.type` —
 confirmed live that APEX's declarative `donut` type reports as JET's
@@ -1360,19 +1396,22 @@ Full list in docs/limitations.md and docs/ecosystem-roadmap.md; the
 headline gaps:
 
 - **Interactive Grid generator support** — `ApexInteractiveGridRegion` (2.11)
-  is real and live-verified, but the generator cannot auto-construct it:
-  the region's runtime static id can differ from its `.apx` identifier
-  (confirmed live). Construct it by hand with the real static id.
+  is real and live-verified. The generator DOES auto-construct it (and
+  resolves the runtime id LIVE via `resolveRegion()` before doing so) when
+  `htmlDomId` is set; when it's absent the runtime id is genuinely
+  unconstructible from static data at all (confirmed: the export
+  identifier does NOT work as a fallback for this type) — construct it by
+  hand with the real static id, discovered from the live DOM, in that
+  case.
 - **Trees as a content/data-display pattern** — the only Tree widget seen
   is the universal left-nav, reused for one app's login picker; not a
   distinct page-content region.
 - **Chart generator support** — `ApexChartRegion` (2.13) is real and
-  live-verified, but the generator cannot always auto-construct it: the
-  region's runtime static id can differ from its `.apx` identifier, same
-  pattern as 2.11 — predictable via `ApexRegion.htmlDomId` when set,
-  otherwise undiscoverable from the export alone (confirmed on 66/97 real
-  chart regions in Oracle's "Sample Charts" app). Construct it by hand
-  with the real static id when `htmlDomId` is absent.
+  live-verified. The generator DOES auto-construct it (resolved LIVE via
+  `resolveRegion()`) when `htmlDomId` is set — predictable via
+  `ApexRegion.htmlDomId`; otherwise undiscoverable from the export alone
+  (confirmed on 66/97 real chart regions in Oracle's "Sample Charts" app).
+  Construct it by hand with the real static id when `htmlDomId` is absent.
 - **Region *assertions* for most region types** (as opposed to the
   `ApexRegion` API, which exists) — CORRECTED: the generator DOES emit
   region resolve-checks for `interactiveReport`/`cards`/`facetedSearch`,

@@ -71,13 +71,43 @@ const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 const RESOLVABLE_REGION_TYPES = new Set(['interactiveReport', 'cards', 'facetedSearch']);
 
 /**
- * ADR-003 layered resolution: htmlDomId (when set) IS the runtime id,
- * verbatim, for ANY region type -- not just Chart/Interactive Grid.
- * Falls back to the .apx export identifier otherwise (true for the
- * large majority of regions, but not a guarantee -- see the ADR).
+ * ADR-003 layered resolution, emitted as a RUNTIME check via
+ * @apx/testkit's resolveRegion() -- NOT a static `htmlDomId ??
+ * identifier` string baked into the generated file at generation time.
+ * The old static fallback picked a candidate and never confirmed it
+ * actually resolved; resolveRegion() tries each evidence-backed
+ * candidate live, in order, and hard-fails with a specific message
+ * naming every candidate tried if none of them resolve -- see
+ * packages/testkit/src/components/resolve-region.ts and
+ * docs/quirks/26.1.json `region-id-not-static-id`.
+ *
+ * Two variants, matching the two evidence classes this project actually
+ * has:
+ * - `resolvableRegionCandidatesLiteral` -- IR/Cards/Faceted Search: try
+ *   htmlDomId (when set), THEN fall back to the export identifier --
+ *   confirmed the majority-case fallback for these three types (ADR-003
+ *   layer 2).
+ * - `wiredRegionCandidatesLiteral` -- Chart/Interactive Grid: htmlDomId
+ *   ONLY. The export identifier is CONFIRMED NOT to work as a fallback
+ *   for these two types when htmlDomId is absent (e.g. IG's
+ *   'basic-editing' resolves to null; only 'emp' -- the htmlDomId value
+ *   -- resolves) -- including it as a candidate would misrepresent
+ *   unverified evidence as a real fallback, so it is deliberately
+ *   omitted, not merely unused.
  */
-function resolvedRegionId(region: { identifier: string; htmlDomId: string | null }): string {
-  return region.htmlDomId ?? region.identifier;
+function candidateLiteral(value: string, strategy: 'htmlDomId' | 'export-identifier'): string {
+  return `{ value: '${esc(value)}', strategy: '${strategy}' as const }`;
+}
+
+function resolvableRegionCandidatesLiteral(region: { identifier: string; htmlDomId: string | null }): string {
+  const parts: string[] = [];
+  if (region.htmlDomId) parts.push(candidateLiteral(region.htmlDomId, 'htmlDomId'));
+  parts.push(candidateLiteral(region.identifier, 'export-identifier'));
+  return `[${parts.join(', ')}]`;
+}
+
+function wiredRegionCandidatesLiteral(region: { htmlDomId: string | null }): string {
+  return `[${candidateLiteral(region.htmlDomId!, 'htmlDomId')}]`;
 }
 
 function specFor(page: ApexPage): string {
@@ -90,7 +120,7 @@ function specFor(page: ApexPage): string {
   const labeledButtons = page.buttons.filter((b) => b.label);
   const allButtonLabels = labeledButtons.map((b) => `'${esc(b.label!)}'`).join(', ');
   const resolvableRegions = page.regions.filter((r) => r.type && RESOLVABLE_REGION_TYPES.has(r.type));
-  const resolvableRegionIds = resolvableRegions.map((r) => `'${esc(resolvedRegionId(r))}'`).join(', ');
+  const resolvableRegionCandidateSets = resolvableRegions.map((r) => resolvableRegionCandidatesLiteral(r)).join(',\n      ');
 
   // Chart/Interactive Grid: only auto-wireable when htmlDomId predicts the
   // runtime id (ADR-003 layer 1) -- without it, the runtime id is an
@@ -125,16 +155,16 @@ function specFor(page: ApexPage): string {
  * Regions present in metadata: ${page.regions.map((r) => r.identifier).join(', ') || '(none)'}
 ${[
    resolvableRegions.length > 0
-     ? ` * Region resolve-check emitted for ${resolvableRegions.length} interactiveReport/cards/facetedSearch region(s) below (ADR-003 htmlDomId-resolved where set).`
+     ? ` * Region resolve-check emitted for ${resolvableRegions.length} interactiveReport/cards/facetedSearch region(s) below -- resolved LIVE via resolveRegion() (ADR-003: htmlDomId tried first when set, then the export identifier), never a static id baked in at generation time.`
      : ' * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.',
    wiredChartRegions.length > 0
-     ? ` * Chart type-check emitted for ${wiredChartRegions.length} region(s) with a known runtime id (htmlDomId set).`
+     ? ` * Chart type-check emitted for ${wiredChartRegions.length} region(s) with a known runtime id (htmlDomId set), resolved live via resolveRegion() before use.`
      : null,
    unwiredChartRegions.length > 0
      ? ` * ${unwiredChartRegions.length} chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredChartRegions.map((r) => r.identifier).join(', ')}.`
      : null,
    wiredIgRegions.length > 0
-     ? ` * Interactive Grid view-check emitted for ${wiredIgRegions.length} region(s) with a known runtime id (htmlDomId set).`
+     ? ` * Interactive Grid view-check emitted for ${wiredIgRegions.length} region(s) with a known runtime id (htmlDomId set), resolved live via resolveRegion() before use.`
      : null,
    unwiredIgRegions.length > 0
      ? ` * ${unwiredIgRegions.length} Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredIgRegions.map((r) => r.identifier).join(', ')}.`
@@ -159,7 +189,7 @@ ${[
  * bug to work around here.`}
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 ? ', expectRegionsResolve' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
+import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 || wiredChartRegions.length > 0 || wiredIgRegions.length > 0 ? ', resolveRegion' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
 import { ${className} } from './${poBase}.js';${isPublic ? '' : `
 import { APP_BASE } from '../playwright.config.js';`}
 `;
@@ -224,7 +254,16 @@ import { APP_BASE } from '../playwright.config.js';`}
     bodyParts.push(`  test('every interactiveReport/cards/facetedSearch region resolves (${resolvableRegions.length} region${resolvableRegions.length === 1 ? '' : 's'})', async ({ page }) => {
     const po = new ${className}(page);
     await po.goto();
-    await expectRegionsResolve(page, [${resolvableRegionIds}]);
+    // ADR-003 layered resolution, confirmed LIVE per region (htmlDomId
+    // tried first when set, then the export identifier) -- resolveRegion()
+    // hard-fails with a specific message if neither candidate resolves,
+    // rather than silently trusting a static guess.
+    const regionCandidateSets = [
+      ${resolvableRegionCandidateSets}
+    ];
+    for (const candidates of regionCandidateSets) {
+      await resolveRegion(page, candidates);
+    }
   });`);
   }
 
@@ -239,26 +278,33 @@ import { APP_BASE } from '../playwright.config.js';`}
     // exhaustive across all 17 declared type values -- asserting equality
     // broadly would assume more than verified (ADR-004). See
     // docs/quirks/26.1.json `chart-declared-type-not-runtime-type`.
-    const chartIdsWithDeclaredType = wiredChartRegions
-      .map((r) => `['${esc(resolvedRegionId(r))}', '${esc(r.chartSettings!.type)}']`)
-      .join(', ');
+    const chartsWithDeclaredType = wiredChartRegions
+      .map((r) => `{ candidates: ${wiredRegionCandidatesLiteral(r)}, declaredType: '${esc(r.chartSettings!.type)}' }`)
+      .join(',\n      ');
     bodyParts.push(`  test('every Chart region with a known runtime id resolves a real chart type (${wiredChartRegions.length} region${wiredChartRegions.length === 1 ? '' : 's'})', async ({ page }) => {
     const po = new ${className}(page);
     await po.goto();
-    // [runtime id, declared chartSettings.type] -- the declared type is
-    // NOT asserted for equality (confirmed NOT always the same as the
-    // live JET type, e.g. declared "donut" reports live "pie" -- see
+    // declaredType is the region's chartSettings.type and is NOT asserted
+    // for equality against the live type (confirmed NOT always the same,
+    // e.g. declared "donut" reports live "pie" -- see
     // docs/quirks/26.1.json). Kept here for context only.
-    const charts: Array<[string, string]> = [${chartIdsWithDeclaredType}];
-    for (const [id] of charts) {
+    const charts = [
+      ${chartsWithDeclaredType}
+    ];
+    for (const { candidates } of charts) {
+      // ADR-003: htmlDomId is the ONLY evidence-backed candidate for
+      // Chart -- the export identifier is confirmed NOT to work as a
+      // fallback for this component type. resolveRegion() still confirms
+      // it live rather than trusting the static field.
+      const { runtimeId } = await resolveRegion(page, candidates);
       // JET chart widgets attach ojChart asynchronously -- wait for the
       // actual precondition (see ApexChartRegion's module doc) rather
       // than a fixed delay.
       await page.waitForFunction((regionId) => {
         const region = (window as any).apex?.region?.(regionId);
         return typeof region?.widget?.()?.ojChart === 'function';
-      }, id);
-      const chart = new ApexChartRegion(page, id);
+      }, runtimeId);
+      const chart = new ApexChartRegion(page, runtimeId);
       const liveType = await chart.getOption('type');
       expect(typeof liveType).toBe('string');
       expect(liveType).not.toBe('');
@@ -267,12 +313,20 @@ import { APP_BASE } from '../playwright.config.js';`}
   }
 
   if (wiredIgRegions.length > 0) {
-    const igIds = wiredIgRegions.map((r) => `'${esc(resolvedRegionId(r))}'`).join(', ');
+    const igRegionCandidateSets = wiredIgRegions.map((r) => wiredRegionCandidatesLiteral(r)).join(',\n      ');
     bodyParts.push(`  test('every Interactive Grid region with a known runtime id resolves a current view (${wiredIgRegions.length} region${wiredIgRegions.length === 1 ? '' : 's'})', async ({ page }) => {
     const po = new ${className}(page);
     await po.goto();
-    for (const id of [${igIds}]) {
-      const ig = new ApexInteractiveGridRegion(page, id);
+    // ADR-003: htmlDomId is the ONLY evidence-backed candidate for
+    // Interactive Grid -- the export identifier is confirmed NOT to work
+    // as a fallback for this component type (e.g. 'basic-editing'
+    // resolves to null; only 'emp', the htmlDomId value, resolves).
+    const regionCandidateSets = [
+      ${igRegionCandidateSets}
+    ];
+    for (const candidates of regionCandidateSets) {
+      const { runtimeId } = await resolveRegion(page, candidates);
+      const ig = new ApexInteractiveGridRegion(page, runtimeId);
       expect(typeof await ig.getCurrentViewId()).toBe('string');
     }
   });`);

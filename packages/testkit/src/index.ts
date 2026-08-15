@@ -32,6 +32,13 @@ export {
   type RegionProbe,
 } from './components/region.js';
 export {
+  resolveRegion,
+  regionCandidatesFromAst,
+  type RegionCandidate,
+  type ResolvedRegion,
+  type RegionResolutionStrategy,
+} from './components/resolve-region.js';
+export {
   buttonByLabel,
   clickButton,
   buttonsPresent,

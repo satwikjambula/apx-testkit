@@ -12,11 +12,18 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   context this generator doesn't construct. Generated tests for such pages
   will fail until this is addressed — that's expected, not a regression.
 - **Interactive Grid has a real, live-verified component
-  (`ApexInteractiveGridRegion`), but the generator cannot auto-wire it up.**
-  Confirmed live: the region's runtime static id can differ from its `.apx`
-  identifier (`basic-editing` in the export, `emp` at runtime) — see
-  docs/quirks/26.1.json `region-id-not-static-id`. Construct it by hand
-  with the real static id, discovered from the live DOM.
+  (`ApexInteractiveGridRegion`).** The generator DOES auto-wire it up when
+  `ApexRegion.htmlDomId` is set — resolving the runtime id LIVE via
+  `@apx/testkit`'s `resolveRegion()` (packages/testkit/src/components/
+  resolve-region.ts, runtime-review P0 item 1) before constructing the
+  wrapper, rather than trusting a static `htmlDomId ?? identifier` guess.
+  When `htmlDomId` is absent, auto-wiring remains genuinely impossible:
+  confirmed live, the region's runtime static id can differ from its
+  `.apx` identifier (`basic-editing` in the export, `emp` at runtime), AND
+  the export identifier is confirmed NOT to work as a fallback for this
+  component type — see docs/quirks/26.1.json `region-id-not-static-id`.
+  Construct it by hand with the real static id, discovered from the live
+  DOM, in that case.
 - **Region assertions don't exist for arbitrary region types** — the
   region identifier -> DOM convention is still an open ledger item for
   most types (see docs/grammar-assumptions.md "Still open") — no selector

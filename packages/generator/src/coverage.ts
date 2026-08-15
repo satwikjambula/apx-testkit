@@ -108,25 +108,33 @@ function summarize(declared: readonly string[], touched: ReadonlySet<string>): C
 }
 
 /**
- * A recorded region touch is keyed by the RUNTIME id (see
- * fixtures/coverage.ts / testkit's ApexRegion/ApexChartRegion/
- * ApexInteractiveGridRegion, which all construct against a real runtime
- * static id, not necessarily the .apx export identifier). Per ADR-003,
- * that runtime id is `r.htmlDomId ?? r.identifier` -- matching only
- * against `r.identifier` silently under-reported coverage for any region
- * with an `htmlDomId` override (confirmed on real Chart/Interactive
- * Grid/Interactive Report regions) even when a generated or hand-written
- * spec genuinely exercised it. The report still DISPLAYS the export
- * identifier (what's declared in the .apx source, consistent with every
- * other category here) -- only the touch-matching lookup uses the
- * resolved runtime id.
+ * A recorded region touch is keyed by the RUNTIME id actually tried (see
+ * fixtures/coverage.ts / testkit's resolveRegion(), which records a
+ * coverage touch for every ADR-003 candidate it evaluates against
+ * apex.region() -- not just the one that ultimately resolved). Matching
+ * only against `r.htmlDomId ?? r.identifier` (a single, statically-chosen
+ * value) silently under-reports coverage in two real cases: (1) any
+ * region with an `htmlDomId` override that a generated or hand-written
+ * spec genuinely exercised (confirmed on real Chart/Interactive
+ * Grid/Interactive Report regions) -- covered by matching `htmlDomId`
+ * directly; (2) the rarer case where `resolveRegion()` had to fall back
+ * PAST a stale/wrong `htmlDomId` to the export identifier at runtime --
+ * in that case the touch is recorded against the identifier that
+ * actually worked, not the AST's static `htmlDomId` field, so matching
+ * only the static field would wrongly report "untouched" despite a real,
+ * successful exercise. Checking BOTH candidates the AST implies (whichever
+ * one the resolver actually used) is strictly more correct than matching
+ * either alone. The report still DISPLAYS the export identifier (what's
+ * declared in the .apx source, consistent with every other category
+ * here) -- only the touch-matching lookup considers both candidates.
  */
 export function summarizeRegions(declared: readonly ApexRegion[], touched: ReadonlySet<string>): RegionCoverage {
   const trackable = declared.filter((r) => !UNTRACKABLE_REGION_TYPES.has(r.type ?? ''));
   const untrackable = declared
     .filter((r) => UNTRACKABLE_REGION_TYPES.has(r.type ?? ''))
     .map((r): UntrackableRegion => ({ identifier: r.identifier, type: r.type }));
-  const untouched = trackable.filter((r) => !touched.has(r.htmlDomId ?? r.identifier)).map((r) => r.identifier);
+  const wasTouched = (r: ApexRegion): boolean => (r.htmlDomId !== null && touched.has(r.htmlDomId)) || touched.has(r.identifier);
+  const untouched = trackable.filter((r) => !wasTouched(r)).map((r) => r.identifier);
   return { total: trackable.length, touched: trackable.length - untouched.length, untouched, untrackable };
 }
 
