@@ -1,0 +1,19 @@
+page 1 (
+  name: Modal Public
+  alias: MODAL-PUBLIC
+  title: Modal Public
+  appearance {
+    pageMode: modalDialog
+    dialogTemplate: @/drawer
+  }
+  dialog {
+    chained: false
+  }
+  security {
+    authentication: public
+  }
+  button save (
+    label: Save
+    action: submit
+  )
+)

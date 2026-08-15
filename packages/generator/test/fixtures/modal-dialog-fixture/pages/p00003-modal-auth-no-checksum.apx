@@ -1,0 +1,16 @@
+page 3 (
+  name: Modal Auth No Checksum
+  alias: MODAL-AUTH-NO-CHECKSUM
+  title: Modal Auth No Checksum
+  appearance {
+    pageMode: modalDialog
+    dialogTemplate: @/drawer
+  }
+  dialog {
+    chained: false
+  }
+  button save (
+    label: Save
+    action: submit
+  )
+)

@@ -1,0 +1,12 @@
+page 4 (
+  name: Normal
+  alias: NORMAL
+  title: Normal
+  security {
+    authentication: public
+  }
+  button save (
+    label: Save
+    action: submit
+  )
+)

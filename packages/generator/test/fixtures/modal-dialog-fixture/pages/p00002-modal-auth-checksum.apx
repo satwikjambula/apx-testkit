@@ -1,0 +1,19 @@
+page 2 (
+  name: Modal Auth Checksum
+  alias: MODAL-AUTH-CHECKSUM
+  title: Modal Auth Checksum
+  appearance {
+    pageMode: modalDialog
+    dialogTemplate: @/drawer
+  }
+  dialog {
+    chained: false
+  }
+  security {
+    pageAccessProtection: argumentsMustHaveChecksum
+  }
+  button save (
+    label: Save
+    action: submit
+  )
+)

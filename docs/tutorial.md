@@ -1370,11 +1370,43 @@ types a region declares) is separately typed at the parser level as
 
 ### 3.6 Drawer / modal pages
 
-**Known broken, not yet root-caused.** Pages with `pageMode: modalDialog`
-don't load via a plain friendly-URL GET — confirmed live (a real page
-returns 400 on direct navigation). These need a parent-page/dialog context
-that neither the generator nor `gotoApexPage` constructs today. If you hit
-this, it's the known gap, not a regression in your setup.
+**Root cause still not diagnosed; the generator no longer ships a
+guaranteed-failing test for it.** Pages with `pageMode: modalDialog`
+don't load via a plain friendly-URL GET — confirmed live (a real page,
+UX Pattern Catalog's p00420, returns 400 on direct navigation). These
+need a parent-page/dialog context that neither the generator nor
+`gotoApexPage` constructs today — that part of the gap is unchanged.
+
+What DID change (runtime-review P0 item 3): `@apx/testgen` now detects
+`appearance.pageMode: modalDialog` at generation time and emits the
+whole page's `test.describe` block wrapped in an unconditional
+`test.skip('apx-testkit: modalDialog requires parent-page navigation...')`
+instead of a normal test that was guaranteed to fail. This check is
+deliberately **orthogonal to authentication** — p00420 itself is
+`authentication: public` with no checksum protection at all, so the
+failure is intrinsic to the page mode, not a session issue. When a page
+is BOTH `modalDialog` AND navigation-unsafe (3.7 below) — confirmed to
+happen together on 22+ real pages in this project's local corpus — both
+reasons combine into a single skip message, not two separate blocks.
+Reaching these pages for a real (non-skipped) test still requires a real
+parent-page click that opens the dialog — not auto-derivable without
+Flow Map wiring, a genuine follow-up. Separately: the EBNF confirms a
+third, distinct `pageMode` value, `nonModalDialog` — deliberately NOT
+treated as broken by this check, since zero instances exist anywhere in
+this project's real local corpus to confirm or rule out the same failure
+mode for it.
+
+### 3.7 Navigation-protected pages (`argumentsMustHaveChecksum`)
+
+See 2.7 for the full primitives (`assessNavigationSafety`/
+`navigateViaUiPath`/`gotoApexPageAuto`). The generator-facing summary: a
+non-public page declaring `security.pageAccessProtection:
+argumentsMustHaveChecksum` gets the same treatment as 3.6's modal
+pages — an unconditional, clearly-reasoned `test.skip()` instead of a
+normal test guaranteed to redirect to `/login` and fail. A public page
+with the same flag is currently treated as safe (an inference from
+indirect evidence, not independently live-confirmed — see 2.7 and
+`docs/quirks/26.1.json`).
 
 ---
 

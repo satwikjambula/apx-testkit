@@ -70,7 +70,7 @@ const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
  * tests) -- generated CODE imports `@apx/testkit` itself; the generator
  * PROCESS does not need to. Kept from drifting apart the same way
  * `UNTRACKABLE_REGION_TYPES`/`REGION_STUB_TYPES` are:
- * test/navigation-safety-sync.test.ts asserts this function produces the
+ * test/navigation-safety.test.ts asserts this function produces the
  * IDENTICAL verdict to testkit's own `assessNavigationSafety()` across a
  * representative input matrix, so a change to one without the other
  * fails loudly, not silently.
@@ -87,6 +87,41 @@ const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 export function isNavigationUnsafe(pageAccessProtection: string | null, isPublic: boolean): boolean {
   return pageAccessProtection === 'argumentsMustHaveChecksum' && !isPublic;
 }
+
+export const NAVIGATION_UNSAFE_SKIP_REASON =
+  'apx-testkit: navigation unsafe (security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page) -- ' +
+  "a bare page.goto() is confirmed to redirect an authenticated session to /login. See @apx/testkit's " +
+  'navigateViaUiPath() for the confirmed-working alternative, and docs/quirks/26.1.json ' +
+  'page-access-protection-blocks-bare-navigation.';
+
+/**
+ * `pageMode: modalDialog` pages (EBNF `page-appearance-property`,
+ * confirmed real values: `normal` | `modalDialog` | `nonModalDialog`) are
+ * CONFIRMED LIVE to return HTTP 400 on a plain friendly-URL GET, instead
+ * of loading normally -- see docs/quirks/26.1.json
+ * `drawer-modal-pages-400` (UX Pattern Catalog p00420, "Data Entry --
+ * Drawer Form"). This is orthogonal to authentication/checksum
+ * protection -- p00420 is `authentication: public` with NO checksum
+ * protection at all, and still returns 400 on direct GET; the cause is
+ * the page mode itself (these pages expect to be OPENED from a parent
+ * page as a dialog, not navigated to directly).
+ *
+ * `nonModalDialog` is a DIFFERENT, third value the EBNF confirms exists
+ * -- explicitly NOT covered by this check. Zero instances of
+ * `nonModalDialog` were found anywhere in this project's real local
+ * corpus (52+ apps checked), so there is no ground truth, live or
+ * static, either confirming or ruling out the same failure mode for it
+ * -- treating it as broken would be an unverified assumption (ADR-002);
+ * this predicate deliberately only classifies the directly-confirmed
+ * `modalDialog` value as unroutable.
+ */
+export function isModalDialogUnroutable(pageMode: string | null): boolean {
+  return pageMode === 'modalDialog';
+}
+
+export const MODAL_DIALOG_SKIP_REASON =
+  'apx-testkit: modalDialog requires parent-page navigation (a plain GET to this page returns HTTP 400) -- see ' +
+  'docs/quirks/26.1.json drawer-modal-pages-400.';
 
 /**
  * Region types confirmed live to resolve as `apex.region()` widget
@@ -142,6 +177,12 @@ function specFor(page: ApexPage): string {
   const pageAccessProtection =
     typeof page.raw['security.pageAccessProtection'] === 'string' ? (page.raw['security.pageAccessProtection'] as string) : null;
   const navigationUnsafe = isNavigationUnsafe(pageAccessProtection, isPublic);
+  const pageMode = typeof page.raw['appearance.pageMode'] === 'string' ? (page.raw['appearance.pageMode'] as string) : null;
+  const modalDialogUnroutable = isModalDialogUnroutable(pageMode);
+  const notAutoRoutableReasons: string[] = [];
+  if (modalDialogUnroutable) notAutoRoutableReasons.push(MODAL_DIALOG_SKIP_REASON);
+  if (navigationUnsafe) notAutoRoutableReasons.push(NAVIGATION_UNSAFE_SKIP_REASON);
+  const notAutoRoutable = notAutoRoutableReasons.length > 0;
   const alias = page.alias ?? '';
   const path = alias.toLowerCase();
   const hidden = page.items.filter((i) => i.type === 'hidden');
@@ -202,12 +243,15 @@ ${[
    skippedRegions.length > 0
      ? ` * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): ${skippedRegions.map((r) => `${r.identifier} (${r.type ?? 'untyped'})`).join(', ')}.`
      : null,
+   modalDialogUnroutable
+     ? ` * NOT AUTO-ROUTABLE (modalDialog): this page declares appearance.pageMode: modalDialog -- confirmed live that a plain GET returns HTTP 400 instead of loading (docs/quirks/26.1.json 'drawer-modal-pages-400'). Every test below is unconditionally skipped rather than generated to guaranteed-fail.`
+     : null,
    navigationUnsafe
-     ? ` * NAVIGATION UNSAFE: this page declares security.pageAccessProtection: argumentsMustHaveChecksum and is NOT authentication:public -- a bare page.goto() is confirmed to redirect an authenticated session to /login (docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'). Every test below is unconditionally skipped rather than generated to guaranteed-fail; see @apx/testkit's navigateViaUiPath() for the confirmed-working alternative (not auto-derivable here without Flow Map wiring).`
+     ? ` * NOT AUTO-ROUTABLE (navigation unsafe): this page declares security.pageAccessProtection: argumentsMustHaveChecksum and is NOT authentication:public -- a bare page.goto() is confirmed to redirect an authenticated session to /login (docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'). Every test below is unconditionally skipped rather than generated to guaranteed-fail; see @apx/testkit's navigateViaUiPath() for the confirmed-working alternative (not auto-derivable here without Flow Map wiring).`
      : null,
  ]
    .filter((line): line is string => line !== null)
-   .join('\n')}${isPublic || navigationUnsafe ? '' : `
+   .join('\n')}${isPublic || notAutoRoutable ? '' : `
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -222,31 +266,26 @@ ${[
  * bug to work around here.`}
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 || wiredChartRegions.length > 0 || wiredIgRegions.length > 0 ? ', resolveRegion' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic || navigationUnsafe ? '' : ', login'} } from '@apx/testkit';
-import { ${className} } from './${poBase}.js';${isPublic || navigationUnsafe ? '' : `
+import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 || wiredChartRegions.length > 0 || wiredIgRegions.length > 0 ? ', resolveRegion' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic || notAutoRoutable ? '' : ', login'} } from '@apx/testkit';
+import { ${className} } from './${poBase}.js';${isPublic || notAutoRoutable ? '' : `
 import { APP_BASE } from '../playwright.config.js';`}
 `;
 
-  const describeOpen = isPublic
-    ? `test.describe('page ${page.id}: ${esc(page.name ?? alias)}', () => {`
-    : navigationUnsafe
-      ? `test.describe('page ${page.id}: ${esc(page.name ?? alias)} [navigation unsafe -- skipped]', () => {
+  const describeOpen = notAutoRoutable
+    ? `test.describe('page ${page.id}: ${esc(page.name ?? alias)} [not auto-routable -- skipped]', () => {
   test.beforeEach(async () => {
-    // apx-testkit: security.pageAccessProtection: argumentsMustHaveChecksum
-    // on a non-public page -- a bare gotoApexPage() call is CONFIRMED to
-    // redirect an authenticated session to /login (HTTP 200, not an
-    // error), even immediately after a successful login to this exact
-    // page. Every test below is unconditionally skipped rather than
-    // generated to guaranteed-fail. See @apx/testkit's
-    // navigateViaUiPath() for the confirmed-working alternative (a real
-    // sequence of in-app link clicks) -- auto-deriving that path from
-    // the Flow Map is a scoped-out follow-up, not implemented here. See
-    // docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'.
+    // apx-testkit: this page cannot be safely reached by a normal
+    // generated test -- see this file's header comment (NOT
+    // AUTO-ROUTABLE lines) for the specific reason(s). Every test below
+    // is unconditionally skipped rather than generated to
+    // guaranteed-fail.
     test.skip(
       true,
-      'apx-testkit: navigation unsafe (security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page) -- see this file\\'s header comment and docs/quirks/26.1.json page-access-protection-blocks-bare-navigation.',
+      '${esc(notAutoRoutableReasons.join(' '))}',
     );
   });`
+    : isPublic
+      ? `test.describe('page ${page.id}: ${esc(page.name ?? alias)}', () => {`
       : `test.describe('page ${page.id}: ${esc(page.name ?? alias)} [requires auth]', () => {
   test.beforeEach(async ({ page }) => {
     const username = process.env.APX_LOGIN_TEST_USERNAME;

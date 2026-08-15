@@ -97,10 +97,10 @@
       "issue": "Pages using a modal dialog page mode return HTTP 400 on a plain friendly-URL GET, instead of loading normally.",
       "evidence": "Confirmed live on p00420 (Data Entry -- Drawer Form) -- 4 generated tests fail this way, consistently, out of 43 total.",
       "reproducedAgainst": "UX Pattern Catalog app (p00420-data-entry-drawer-form)",
-      "workaround": "None yet -- these pages likely need a parent-page/dialog-opening context that neither the generator nor gotoApexPage constructs today.",
-      "status": "confirmed, root cause not diagnosed",
+      "workaround": "UPDATE (runtime-review P0 item 3, 2026-08-14): the generator no longer emits a normal, guaranteed-to-fail test for these pages. @apx/testgen (packages/generator/src/lib.ts, isModalDialogUnroutable()) now classifies any page with appearance.pageMode === 'modalDialog' as not-auto-routable at generation time and emits the whole test.describe block with an unconditional test.skip() naming the reason, instead of a normal goto-based test -- see packages/generator/test/modal-dialog.test.ts. This check is deliberately orthogonal to authentication -- p00420 is itself authentication:public with NO checksum protection, so the failure mode is intrinsic to the page mode, not an auth/session issue (confirmed by re-inspecting p00420's own .apx source this pass). A REAL parent-page/dialog-opening navigation context (so these pages could actually be tested, not just skipped) is still NOT built -- that remains the genuine root-cause fix, deliberately out of scope for this pass per the task's own framing (a clear, correct failure mode is a legitimate v1). Separately, the EBNF confirms a THIRD, distinct page-appearance-property value, 'nonModalDialog' -- NOT covered by this check; zero instances exist anywhere in this project's real local corpus (52+ apps), so there is no ground truth either way for it, and this predicate deliberately does not assume it shares modalDialog's failure mode.",
+      "status": "confirmed, root cause not diagnosed for WHY modalDialog pages return 400 or how to construct a working dialog-opening navigation context; the GENERATOR-side symptom (guaranteed-failing generated tests) is now fixed -- see workaround",
       "rootCauseDiagnosed": false,
-      "source": "docs/limitations.md, CLAUDE.md Outstanding debts #2"
+      "source": "docs/limitations.md, CLAUDE.md Outstanding debts #2, packages/generator/src/lib.ts (isModalDialogUnroutable), packages/generator/test/modal-dialog.test.ts"
     },
     {
       "id": "interactive-grid-widget-factory-api",

@@ -43,8 +43,8 @@ describe('generator navigation safety (P0 item 2)', () => {
   });
 
   it('non-public + argumentsMustHaveChecksum: emits an unconditional test.skip(), never a normal goto-based test', () => {
-    expect(unsafeSpec).toContain('NAVIGATION UNSAFE');
-    expect(unsafeSpec).toContain("test.describe('page 1: Unsafe [navigation unsafe -- skipped]'");
+    expect(unsafeSpec).toContain('NOT AUTO-ROUTABLE (navigation unsafe)');
+    expect(unsafeSpec).toContain("test.describe('page 1: Unsafe [not auto-routable -- skipped]'");
     expect(unsafeSpec).toContain('test.skip(\n      true,');
     // No login() call -- the page never reaches a point where login matters.
     expect(unsafeSpec).not.toMatch(/\blogin\(/);
@@ -52,13 +52,13 @@ describe('generator navigation safety (P0 item 2)', () => {
   });
 
   it('public + argumentsMustHaveChecksum: treated as safe (inferred, per UX Pattern Catalog evidence) -- a normal test, no skip', () => {
-    expect(publicChecksumSpec).not.toContain('NAVIGATION UNSAFE');
+    expect(publicChecksumSpec).not.toContain('NOT AUTO-ROUTABLE');
     expect(publicChecksumSpec).not.toContain('test.skip(');
     expect(publicChecksumSpec).toContain("test.describe('page 2: Public Checksum'");
   });
 
   it('non-public, no checksum flag: unaffected -- keeps the existing credential-gated login skip, not the navigation-unsafe skip', () => {
-    expect(authNoChecksumSpec).not.toContain('NAVIGATION UNSAFE');
+    expect(authNoChecksumSpec).not.toContain('NOT AUTO-ROUTABLE');
     expect(authNoChecksumSpec).toContain("test.describe('page 3: Auth No Checksum [requires auth]'");
     expect(authNoChecksumSpec).toContain('APX_LOGIN_TEST_USERNAME');
   });

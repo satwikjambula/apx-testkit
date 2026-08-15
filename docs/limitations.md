@@ -9,8 +9,23 @@ workaround isn't obvious; that's exactly the signal M4 needs.
 - **Drawer/modal pages (e.g. `pageMode: modalDialog`) don't load via a plain
   friendly-URL GET.** Confirmed live: p00420 (Data Entry — Drawer Form)
   returns 400 on direct navigation. These pages need a parent-page/dialog
-  context this generator doesn't construct. Generated tests for such pages
-  will fail until this is addressed — that's expected, not a regression.
+  context this generator doesn't construct — that root cause is still not
+  fixed. UPDATE (runtime-review P0 item 3): `@apx/testgen` no longer
+  generates a normal test that would guaranteed-fail for these pages — it
+  classifies them at generation time (`isModalDialogUnroutable()`) and
+  emits an unconditional, clearly-reasoned `test.skip()` instead (the same
+  pattern as the navigation-unsafe case above; the two combine into a
+  single skip with both reasons when a page is both — confirmed to occur
+  on 22+ real pages in this project's local corpus). This check is
+  deliberately orthogonal to authentication — p00420 itself is
+  `authentication: public` with no checksum protection, so the modalDialog
+  failure mode is intrinsic to the page mode, not a session/auth issue. A
+  real parent-page/dialog-opening navigation path (so these pages could
+  actually be exercised, not just skipped) remains unbuilt — a genuine
+  follow-up, not attempted this pass. Note: the EBNF confirms a third,
+  distinct value, `nonModalDialog` — deliberately NOT covered by this
+  check; zero instances exist anywhere in this project's real local corpus,
+  so there is no evidence either way for it yet.
 - **Interactive Grid has a real, live-verified component
   (`ApexInteractiveGridRegion`).** The generator DOES auto-wire it up when
   `ApexRegion.htmlDomId` is set — resolving the runtime id LIVE via
