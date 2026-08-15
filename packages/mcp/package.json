@@ -1,7 +1,7 @@
 {
   "name": "@apx/mcp",
   "version": "0.1.0",
-  "description": "MCP stdio server exposing @apx/parser + @apx/testgen (inspect_apex_export, generate_apex_tests) to MCP-capable agentic coding tools.",
+  "description": "MCP stdio server exposing @apx/testgen's six deterministic CLIs (inspect_apex_export, generate_apex_tests, generate_flow_map, diff_apex_exports, analyze_coverage, generate_apex_docs) to MCP-capable agentic coding tools.",
   "type": "module",
   "main": "dist/server.js",
   "types": "dist/server.d.ts",
@@ -19,12 +19,17 @@
   "engines": { "node": ">=22" },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@apx/testgen": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "zod": "^3.23.0"
   },
-  "devDependencies": { "typescript": "^5.5.0", "@types/node": "^22.0.0" }
+  "devDependencies": {
+    "typescript": "^5.5.0",
+    "@types/node": "^22.0.0",
+    "vitest": "^2.0.0"
+  }
 }
