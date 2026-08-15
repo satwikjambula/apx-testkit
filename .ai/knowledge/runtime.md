@@ -9,7 +9,7 @@ scoped to the real layout.
 
 ## What it does
 
-Playwright fixtures + component wrappers for APEX 26.1+ apps, used by
+Playwright fixtures + component wrappers for APEX 26.1 apps, used by
 both generated code (`@apx/testgen`) and hand-written specs (`spike/`) —
 see the "treadmill rule" in `.ai/knowledge/architecture.md`. Every
 capability here is live-verified per ADR-002 — nothing is exposed on

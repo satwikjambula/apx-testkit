@@ -24,7 +24,7 @@ surprises when assumed rather than tested:
 
 ## Decision
 A runtime wrapper method may only be added to `packages/testkit` once it
-has been called against a real, running Oracle APEX 26.1+ instance and
+has been called against a real, running Oracle APEX 26.1 instance and
 its behavior observed directly — never inferred from Oracle's
 documentation prose alone, never guessed from a method's presence in
 minified source, and never assumed to generalize from a single call on a

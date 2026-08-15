@@ -22,7 +22,7 @@ real grammar — confirmed by fetching the raw `.ebnf` file directly.
 No runtime capability, parser field, or documented behavior may be
 marked "confirmed"/"verified" without one of two evidence sources:
 - **Runtime claims**: live evidence against a real, running Oracle APEX
-  26.1+ instance, observed directly (see ADR-002).
+  26.1 instance, observed directly (see ADR-002).
 - **Parser/grammar claims**: real parsed export data from an actual
   Oracle `.apx` export, cross-checked against the **full relevant
   production(s)** in Oracle's official APEXlang EBNF grammar
