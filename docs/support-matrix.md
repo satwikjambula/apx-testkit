@@ -34,13 +34,26 @@ drifted from what the registry would produce — see
 
 ## What "verified against one app" means
 
-Every runtime fact in docs/grammar-assumptions.md's "Runtime verification"
-section came from a single application (UX Pattern Catalog, a reference/demo
-app). A second, independent app with different region types, a real login
-page, and a `required` item would either confirm or break several open
-assumptions (see docs/grammar-assumptions.md "Still open" and CLAUDE.md
-"Outstanding debts"). Treat every "verified" claim in this repo as "verified
-for this one app" until that happens.
+UPDATE (corrected in place — no longer accurate as originally written): this
+section originally said every runtime fact in docs/grammar-assumptions.md's
+"Runtime verification" section came from a single application (UX Pattern
+Catalog) and that a second, independent app was still needed. That has since
+happened, more than once: live runtime verification now spans **four** real
+running APEX 26.1 apps — UX Pattern Catalog, Sample File Upload and Download
+(real login page, second app), Sample Interactive Grids (third app, first
+live ground truth for Interactive Grid), and Sample Charts (fourth app,
+first live ground truth for Chart) — see docs/grammar-assumptions.md's
+"Runtime verification" section for the full per-app ledger. Separately, the
+much larger **static parser corpus is 46 real apps** (13 Oracle gallery + 11
+`ujnak/APEXlang-exports` + 18 `oracle/apex` GitHub + 3 independent + 1 user's
+own app — see `.ai/knowledge/verification.md`), all parsing with zero
+warnings — but static parsing and live runtime verification are different
+claims and should not be conflated: most of the 46 have no running instance
+available, so their region/item *types* are confirmed to exist and parse
+correctly, not confirmed to behave a specific way live. Treat every
+"verified live" claim in this repo as scoped to the specific one of these
+four apps named next to it, and every "parses correctly" claim as scoped to
+the 46-app static corpus — not as blanket, project-wide facts.
 
 ## Not supported, by design
 

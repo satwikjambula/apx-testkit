@@ -1645,6 +1645,22 @@ Engineer's job per this project's own division of labor, not a Product
 Architect scope decision). Flagged for that agent to correct in the same
 spirit as every other "update together" fix in this project's history.
 
+**UPDATE:** fixed by Documentation & DX Engineer (GitHub issue #9,
+`feature/stale-doc-fixes`) — `docs/support-matrix.md`'s Chart row now states
+the corrected finding in place (`widget()` does not return `null`; a real
+jQuery-wrapped element is returned, exactly like IG/Cards/IR), matching
+`docs/quirks/26.1.json`, `README.md`'s capability matrix, and
+`docs/tutorial.md` §2.13. Same pass also found and corrected a second,
+unrelated instance of the same "doc not updated when a fact changed
+elsewhere" pattern — a stale "verified against exactly one app"/"one real
+APEX 26.1 application" claim in `README.md`'s Current status section and
+Roadmap table, and in `docs/limitations.md`'s Grammar/parser section — all
+now state the current 46-app static corpus and the narrower 4-app live-
+verified set (UX Pattern Catalog, Sample File Upload and Download, Sample
+Interactive Grids, Sample Charts). See `docs/support-matrix.md`'s "What
+'verified against one app' means" section, corrected in place with the same
+UPDATE discipline.
+
 ### Prioritized build-now list
 
 1. **Column/Action live-discovery pass** (Runtime & Test Automation
