@@ -4,7 +4,7 @@ The discipline behind ADR-004, and the concrete mechanics of it.
 
 ## Three evidence sources, none authoritative alone
 
-1. **Live browser verification** — a real, running Oracle APEX 26.1+
+1. **Live browser verification** — a real, running Oracle APEX 26.1
    instance, driven directly (`apex.region()`, `apex.jQuery`,
    `page.evaluate`), never assumed from documentation.
 2. **Real export parsing** — actual `.apx` export data from real Oracle
@@ -427,6 +427,55 @@ Same idea, for parser/grammar claims: what was checked, against which
 EBNF production(s), against which real export data, what was found. Has
 a "Still open" section for questions without an answer yet.
 
+## `docs/verification/26.1.json` — the machine-readable verification registry
+
+A structured INDEX over the evidence in `docs/quirks/26.1.json`,
+`docs/grammar-assumptions.md`, and the "confirmed live"/EBNF-cross-checked
+doc comments in `packages/testkit/src/**`/`packages/parser/src/ast.ts` —
+not a new evidence source, and not a replacement for either ledger. Built
+so prose docs can eventually be *generated from* evidence instead of
+hand-copied into N places (the same fact has drifted between files at
+least three times now — the Chart `widget()` claim, twice more found stale
+in `docs/grammar-assumptions.md` and `docs/support-matrix.md` during the
+registry's own extraction pass, and the button `htmlDomId` "zero buttons"
+overclaim in `docs/support-matrix.md`, all corrected in place). One real
+consumer is wired: `scripts/generate-support-matrix.mjs` renders
+`docs/support-matrix.md`'s table from the registry's `supportMatrixRow`
+entries, with `--check` failing on drift. See `docs/verification/README.md`
+for the full schema, evidence-level taxonomy (VERIFIED/DOCUMENTED/
+OBSERVED/UNVERIFIED/UNSUPPORTED), and how to add/correct an entry.
+
+`node scripts/validate-verification-registry.mjs` and
+`node scripts/generate-support-matrix.mjs --check` are now part of the
+regression sweep below — run both before considering any change to the
+registry, `docs/quirks/26.1.json`, `docs/grammar-assumptions.md`, or
+`docs/support-matrix.md` done.
+
+### Relationship to the project constitution's evidence sections
+
+`docs/verification/26.1.json`'s `status` field
+(verified/documented/observed/unverified/unsupported) is the same
+five-way evidence-level taxonomy the project constitution's §16
+describes (VERIFIED/DOCUMENTED/OBSERVED/UNVERIFIED/UNSUPPORTED) — this
+is a citation, not a coincidence; the registry was already built against
+that exact taxonomy. §17's preferred evidence order (Oracle docs + real
+runtime verification + reproducible fixture, over blog posts/memory/LLM
+recall) is ADR-002/004, already enforced. §44's proposal for an
+`oracle/{apis/,components/,runtime/,grammar/,versions/}` directory tree
+and §45's grammar-reproducibility mechanism are **not adopted
+separately** — `docs/verification/26.1.json` plus this file's own
+per-EBNF-production citation discipline already cover the same ground in
+a different, already-built shape (one structured JSON file with a
+documented schema, rather than a directory of per-capability files). Do
+not start a parallel `oracle/` directory tree; if the registry's shape
+genuinely needs to change, that's a redesign of the existing file, not a
+second system. §46's SQLcl-as-parser-oracle idea (mutation-testing
+APEXlang fixtures against Oracle's own validator) is **not built** and
+is flagged as a separate proposal needing its own review — see
+`.ai/knowledge/constitution-reconciliation.md` §D — not something this
+file's existing three evidence sources (live browser, real export, EBNF)
+should be silently expanded to include.
+
 ## `spike/` — hand-written live verification specs
 
 Real Playwright specs run by hand against real running apps (not part of
@@ -445,3 +494,8 @@ either is unset, and **never hardcodes a credential**.
   byte-identical.
 - Parse every real local export through `@apx/parser` — must be zero
   warnings across all of them.
+- `node scripts/validate-verification-registry.mjs` — the verification
+  registry is internally valid (required fields, unique ids, every
+  citation resolves to a real file/quirk).
+- `node scripts/generate-support-matrix.mjs --check` — `docs/support-matrix.md`
+  has not drifted from what the registry would generate.

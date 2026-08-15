@@ -7,7 +7,7 @@ line lives in `.ai/ADR/`; this file is the enforceable summary.
 ## Never
 
 - **Depend on an Oracle API — documented or internal — without live
-  verification** against a real, running APEX 26.1+ instance. A method
+  verification** against a real, running APEX 26.1 instance. A method
   existing in Oracle's docs or minified source is not evidence it works
   the way you expect. See ADR-002.
 - **Lose information while parsing.** Every construct the typed AST
@@ -59,9 +59,50 @@ line lives in `.ai/ADR/`; this file is the enforceable summary.
   principle this project already lives by everywhere else — the typed
   AST, never scraped DOM text — applied to any future artifact's
   evidence fields too.
+- **Guess, default, or silently fall through when evidence is
+  insufficient** — an ambiguous component identity, an unrecognized
+  APEXlang/manifest version, an unresolved authentication scheme, an
+  unverified runtime capability, an invalid scenario approval hash. Fail
+  loudly and specifically instead. This is the explicit, general form of
+  what ADR-002/003/004 already require in their own specific domains
+  (runtime APIs, region resolution, evidence sourcing) — a deterministic
+  wrong answer produced by guessing is still wrong, and worse than a
+  clear failure because it looks like success. See
+  `.ai/knowledge/constitution-reconciliation.md` §C.
+- **Use `page.waitForTimeout()` as a synchronization strategy without a
+  documented reason no real readiness signal exists.** Prefer a verified
+  lifecycle event (`callRegionMethodAndWaitForEvent`/
+  `waitForRegionEvent`, `packages/testkit/src/fixtures/lifecycle.ts`),
+  network completion, or an explicit DOM/state assertion. The one
+  existing exception — the `page.waitForTimeout(1000)` in generated
+  "clean console" specs (`packages/generator/src/lib.ts`) — stays,
+  because it's collecting evidence of *late, unpredictable* async
+  console errors with no single "nothing more will happen" event to wait
+  on instead, and that reasoning is written down at the call site. Any
+  new timeout needs the same kind of documented justification, not a
+  silent copy-paste.
+- **Give a generated or hand-written test a name that claims more than
+  it asserts.** A test named "button exists" that only checks a label
+  string, or "every item exists in DOM" that only calls `apex.item(id)`,
+  is a false claim about coverage. Name it for exactly what it verifies.
 
 ## Always
 
+- **Order locator strategies by evidence, not convenience** — a verified
+  static/DOM id or a value ADR-003's layered resolution actually
+  confirms first, a verified accessible role/name next (see `button.ts`'s
+  deliberate accessible-role-first approach), a raw guessed selector
+  never. Every locator this project produces should be able to answer
+  "why this selector, not another" with a citation, not "it seemed
+  right."
+- **Tag mixed fact/interpretation content as FACT, INFERENCE, or
+  ASSUMPTION** when an artifact or agent output combines something
+  directly readable from the AST/a live instance with something derived
+  or guessed from it. This project already does this in two places —
+  `packages/generator/src/flow.ts`'s `FLOW_MECHANISM_EVIDENCE` confidence
+  tiers, and `docs/verification/26.1.json`'s `status`/`confidence`
+  fields — apply the same discipline to whatever's built next rather
+  than presenting an inference with the same confidence as a fact.
 - **Preserve raw metadata for every unmodeled construct** — the typed AST
   is additive, never destructive.
 - **Cross-check the full relevant EBNF production(s)** for any parser
@@ -118,6 +159,15 @@ prompted them:
 - `.ai/AGENT.md` — entry point for any AI session working in this repo.
 - `.ai/ADR/` — the four decisions this file summarizes, with full context.
 - `.ai/knowledge/` — what each package actually does today.
+- `.ai/knowledge/testing.md` — test layering, fixture strategy, generated-
+  test/scenario philosophy, and "definition of done" across the whole
+  project (not scoped to one package the way the other `knowledge/` files
+  are).
+- `.ai/knowledge/constitution-reconciliation.md` — the section-by-section
+  audit that produced the newest rules in this file (and, separately, a
+  set of explicitly-NOT-adopted scope proposals that still need their own
+  product/architecture review — don't treat everything in that source
+  document as settled just because it's referenced here).
 - `.ai/checklists/` — step-by-step procedures for common changes.
 - `.claude/agents/` — eight role-scoped subagents, organized by decision
   authority (Product Architect, Software Architect, Oracle APEX

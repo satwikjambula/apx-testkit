@@ -289,6 +289,28 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       verified-for-its-own-sake). Verified via
       `spike/tests/chart-demo.spec.ts`.
 
+      **CORRECTED IN PLACE (verification-registry extraction pass,
+      2026-08-15) -- point 2 above (`apex.region(id).widget()` returns
+      `null` for chart regions) is WRONG, based on a single region
+      ("area1") tested once, and was never corrected here even though it
+      WAS corrected elsewhere (`docs/quirks/26.1.json`
+      `chart-region-widget-returns-null`, `packages/testkit/src/components/chart.ts`'s
+      module doc, `docs/component-coverage-matrix.md`, `README.md`) --
+      this entry itself was the drift this pass was built to catch. Found
+      FALSE on re-test: `apex.region(id).widget()` returns a real
+      jQuery-wrapped element for chart regions, confirmed independently on
+      THREE chart types (`area1`, `stackCategoryChart`, `pie1`),
+      corroborated by the Sample Charts app's OWN exported JS calling
+      `apex.region("stackCategoryChart").widget().ojChart(...)` directly.
+      `widget().ojChart('option', ...)` IS a real, working getter/setter
+      widget-factory API -- not a dead end requiring a raw
+      `apex.jQuery('#area1_jet').ojChart(...)` selector as this entry
+      originally concluded. `ApexChartRegion` (chart.ts) was subsequently
+      built on this corrected finding. See `docs/quirks/26.1.json`
+      `chart-region-widget-returns-null` for the full re-test evidence
+      (this is the "one instance tested once" failure mode this project's
+      own evidence discipline exists to catch -- see `.ai/knowledge/verification.md`).**
+
 - [x] Dynamic Actions promoted to a TYPED AST field (`ApexPage.
       dynamicActions: ApexDynamicAction[]`) -- parser-only work, no live
       app needed, evidenced by Oracle's own "Sample Dynamic Actions"

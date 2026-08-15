@@ -38,6 +38,30 @@ org-chart-before-the-org, contrary to ADR-004. Tracked as a
 capability itself exists and needs an owner. Product Architect enforces
 this same test on any future proposal.
 
+**Relationship to the project constitution's five generic roles**: the
+project constitution (see `.ai/knowledge/constitution-reconciliation.md`)
+independently describes five roles — Product Architect, Software
+Architect, Oracle APEX Engineer, Test Automation Engineer, Software
+Engineer — and a six-step sequential review. This project's real
+eight-role roster above is a refinement of that, not a different
+system: "Software Engineer" is split into Compiler/Parser Engineer and
+Runtime & Test Automation Engineer because parsing (lossless, no live
+verification needed) and runtime dispatch (live-verified, flaky-prone)
+carry genuinely different risk; "Oracle APEX Engineer" is renamed Oracle
+APEX *Architect* here because its actual mandate is a veto ("Oracle does
+not expose a public API for this"), not implementation; QA/Verification
+Engineer exists as a separate role from Runtime & Test Automation
+Engineer specifically because "has this been verified against a real
+instance" and "will this be flaky" are different questions with
+different failure modes; Documentation & DX Engineer and Release
+Engineer are explicit final gates the constitution's five-role version
+doesn't separately name. The "How a feature typically flows" pipeline
+below and `.ai/prompts/multi-agent-review.md`'s parallel-review mode
+already satisfy the constitution's sequential-review requirement,
+including "any single legitimate objection blocks it" — which the
+constitution implies but doesn't state as explicitly as
+`multi-agent-review.md` does.
+
 ## Invoking these agents
 
 Three ways, from most to least automatic. None of them is "it just

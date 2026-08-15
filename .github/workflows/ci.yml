@@ -9,6 +9,10 @@ jobs:
         with: { node-version: 22 }
       - run: npm ci
       - run: npm run lint
+      - name: Validate verification registry (docs/verification/26.1.json)
+        run: node scripts/validate-verification-registry.mjs
+      - name: Confirm docs/support-matrix.md matches the verification registry
+        run: node scripts/generate-support-matrix.mjs --check
   test:
     runs-on: ubuntu-latest
     steps:
