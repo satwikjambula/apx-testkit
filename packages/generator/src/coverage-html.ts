@@ -5,9 +5,10 @@
  * docs/ecosystem-roadmap.md "Ninth round" for why this is scoped as a thin
  * rendering layer, not a new coverage engine.
  *
- * Two entry points, deliberately split for reuse (a future scoped CI
- * dashboard, tracked separately, is expected to embed this output rather
- * than shell out and re-parse text):
+ * Two entry points, deliberately split for reuse -- `report.ts`'s scoped
+ * CI dashboard (`apx-report`, GitHub issue #3) embeds `renderCoverageHtmlFragment()`
+ * directly rather than shelling out and re-parsing text, exactly as
+ * anticipated when this split was introduced:
  *
  * - `renderCoverageHtmlFragment()` -- the report content only, as a single
  *   `<section class="apx-coverage-report">`, with all styling scoped under
@@ -26,7 +27,14 @@
  */
 import type { CategoryCoverage, CoverageReport, PageCoverage, RegionCoverage } from './coverage.js';
 
-function escapeHtml(value: string): string {
+/**
+ * Exported (not just an internal helper) so `report.ts` -- the CI
+ * dashboard that composes this module's fragment alongside a diff section
+ * and a parser-warnings section -- can escape its own text content with
+ * the exact same rules, rather than re-implementing an equivalent
+ * function. No behavior change for this module's own use below.
+ */
+export function escapeHtml(value: string): string {
   return value
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')

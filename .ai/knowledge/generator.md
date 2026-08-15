@@ -63,11 +63,26 @@ generation; it never authors assertions — determinism is the product").
   rendered here would go unnoticed the same way `calendarSettings` once
   did for `apx-diff` — see `diff-field-coverage.test.ts`'s doc comment for
   the precedent this mirrors) plus a determinism check.
+- `src/report.ts` — `apx-report`: a self-contained HTML CI dashboard
+  bundling coverage + regression diff + a parser-warning summary into one
+  artifact (GitHub issue #3, `docs/ecosystem-roadmap.md` "Ninth round" "A
+  scoped-down CI dashboard"). No new analysis — pure composition of
+  already-real functions: `computeCoverage()`/`renderCoverageHtmlFragment()`
+  (coverage.ts/coverage-html.ts, embedded verbatim), `computeDiff()`/
+  `formatDiffHuman()` (diff.ts, embedded verbatim inside a `<pre>` block so
+  it can never drift from `apx-diff --format human`'s own output), and
+  `@apx/parser`'s own `ParseResult.warnings`. Deliberately does NOT include
+  screenshots, performance metrics, or accessibility results — none of
+  those exist anywhere in this project, so there's nothing real to bundle;
+  see the roadmap entry before proposing to add placeholder sections for
+  any of them. Same determinism contract as every other generated
+  artifact: same three inputs (old export dir, new export dir, touch log)
+  -> byte-identical HTML.
 - `src/lib.ts` — shared `loadExport()`/`generate()`/`inspect()`, also
   imported directly by `packages/mcp`.
-- `src/cli.ts` / `diff-cli.ts` / `coverage-cli.ts` / `docs-cli.ts` — the
-  four CLI entrypoints (`apx-generate`/equivalent, `apx-diff`,
-  `apx-coverage`, `apx-docs`).
+- `src/cli.ts` / `diff-cli.ts` / `coverage-cli.ts` / `docs-cli.ts` /
+  `report-cli.ts` — the five CLI entrypoints (`apx-generate`/equivalent,
+  `apx-diff`, `apx-coverage`, `apx-docs`, `apx-report`).
 
 ## `packages/mcp` (`@apx/mcp`)
 

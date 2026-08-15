@@ -31,6 +31,7 @@ number of real apps, and honest about what doesn't work yet.
    - [2.15 Region actions (Cards/List row-level)](#215-region-actions-cardslist-row-level)
    - [2.16 Documentation generation](#216-documentation-generation)
    - [2.17 Flow Map (navigation graph)](#217-flow-map-navigation-graph)
+   - [2.18 CI dashboard](#218-ci-dashboard)
 3. [Page types & patterns](#3-page-types--patterns)
    - [3.1 Forms / data entry](#31-forms--data-entry)
    - [3.2 Reports](#32-reports)
@@ -1338,6 +1339,66 @@ deliberately NOT attempted, not a gap to work around:
 - A visual Flow Map UI — logged in `docs/ecosystem-roadmap.md`, deliberately
   unbuilt until a real user hits a concrete wall `apx-flow`'s JSON/CLI
   output can't solve.
+
+---
+
+### 2.18 CI dashboard
+
+**Status: VERIFIED**, and composes three already-verified pieces above —
+coverage mapping (2.9), regression detection (2.10), and the parser's own
+warning collection — into one self-contained HTML artifact, with no new
+analysis of its own:
+
+```bash
+node /path/to/apx-testkit/packages/generator/dist/report-cli.js \
+  <old-export-dir> <new-export-dir> <touch-log-path> --out apx-report.html
+```
+
+```
+CI dashboard written to apx-report.html
+  coverage -- items: 6/9 (67%), regions: 3/5 (60%), buttons: 1/1 (100%)
+  diff     -- 1 added, 0 removed, 1 changed, 4 unchanged
+  parser warnings -- 0
+```
+
+`<old-export-dir>`/`<new-export-dir>` are the same two directories you'd
+pass to `apx-diff` (2.10); `<touch-log-path>` is the same file
+`APX_COVERAGE_LOG` points your Playwright run at, read the same way
+`apx-coverage` (2.9) reads it. Coverage and the parser-warning summary are
+both computed against `<new-export-dir>` — the export a CI run is actually
+testing today, not the baseline it's being diffed against.
+
+The output is one file, no external CSS/JS/fonts, safe to open directly
+from disk or attach as a CI artifact. Three sections, in this order:
+
+- **Coverage** — `renderCoverageHtmlFragment()` (2.9) embedded verbatim:
+  the exact same summary cards, per-page heatmap, and untouched/
+  untrackable checklists `apx-coverage --html` produces on its own.
+- **Regression diff** — `formatDiffHuman()` (2.10) embedded verbatim
+  inside a `<pre>` block: the exact same prose `apx-diff --format human`
+  prints, byte-for-byte. Deliberately not re-rendered as a new HTML diff
+  view — embedding the existing text output guarantees this can never
+  drift from what the `apx-diff` CLI itself reports.
+- **Parser warnings** — every `ParseIssue` from `@apx/parser`'s own
+  `ParseResult.warnings` (the same array `apx-testgen`'s `--out` step and
+  `apx-docs` already surface to the console), one `<file>:<line> <message>`
+  entry per line, or a positive "No parser warnings" line when the export
+  parses clean.
+
+**Explicitly out of scope** (see `docs/ecosystem-roadmap.md` "Ninth
+round", "A scoped-down CI dashboard", and GitHub issue #3) — not stubbed
+in, not a placeholder: screenshots, performance metrics, and accessibility
+results. None of those exist anywhere in this project yet, so there is
+nothing real to bundle them from; adding empty sections for them would
+misrepresent what this dashboard actually checks.
+
+Same determinism guarantee as every other generated artifact in this
+project: the same three inputs (old export dir, new export dir, touch log)
+always render byte-identical HTML. `computeReport()`/`renderReportHtml()`/
+`renderReportHtmlFragment()` are exported from `@apx/testgen/report` for
+programmatic use (e.g. embedding this dashboard's markup into a larger
+host page, the same reuse `renderCoverageHtmlFragment()` was already
+built for — see 2.9).
 
 ---
 

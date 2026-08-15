@@ -1943,15 +1943,25 @@ more careful split than the maintainer's own framing gives it.
   the maintainer's own framing ("the coverage data already computed")
   is accurate and is exactly the bar this project uses elsewhere for
   "buildable now." **Build now.**
-- **A scoped-down CI dashboard, from the larger item 16 pitch.** The full
-  `apx report` bundling coverage/diffs/screenshots/perf/failures/a11y/
-  parser-warnings is premature — three of those seven inputs
-  (screenshots, perf, a11y) don't exist yet (see below). But
-  coverage + diff + parser-warning-summary in one HTML output is three
-  already-real data sources with nothing new to verify. Worth scoping as
-  a small standalone item, not as the full seven-input bundle the
-  proposal describes — the smaller version is buildable now; the full
-  version isn't until its missing inputs exist.
+- **A scoped-down CI dashboard, from the larger item 16 pitch — DONE.**
+  Shipped as `apx-report` (`packages/generator/src/report.ts` +
+  `report-cli.ts`), a single self-contained HTML artifact bundling exactly
+  the three already-real data sources this entry called for: coverage
+  (embeds `renderCoverageHtmlFragment()` verbatim), regression diff
+  (embeds `formatDiffHuman()` verbatim, inside a `<pre>` block, so it can
+  never drift from what `apx-diff --format human` itself prints), and a
+  parser-warning summary (`@apx/parser`'s own `ParseResult.warnings`, the
+  same array `apx-testgen`/`apx-docs` already surface). No new analysis
+  anywhere in it — pure composition, same discipline as
+  `renderCoverageHtmlFragment()`'s own doc comment anticipated ("a future
+  scoped CI dashboard... is expected to embed this output rather than
+  shell out and re-parse text"). The full `apx report` bundling
+  coverage/diffs/screenshots/perf/failures/a11y/parser-warnings from the
+  original item 16 pitch remains premature — screenshots, performance
+  metrics, and accessibility results still don't exist anywhere in this
+  project (see below) — and this scoped version deliberately does not
+  stub in placeholder sections for any of them. See GitHub issue #3 and
+  `docs/tutorial.md` 2.17 for the full example and usage.
 
 ### The CRUD / Dynamic Action / Interactive Grid "recorder" idea (item 1) — three sub-questions, three different verdicts, not one
 

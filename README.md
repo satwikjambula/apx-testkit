@@ -170,8 +170,10 @@ The pipeline is four packages wired together, AST-first:
                  apx-coverage CLI (touch log -> coverage report), the
                  apx-diff CLI (pure AST-to-AST regression report), the
                  apx-docs CLI (AST -> per-page Markdown docs, no live app),
-                 and the apx-flow CLI (AST -> Flow Map navigation graph
-                 JSON, no live app)
+                 the apx-flow CLI (AST -> Flow Map navigation graph
+                 JSON, no live app), and apx-report (self-contained HTML CI
+                 dashboard bundling coverage + diff + parser warnings -- no
+                 new analysis, pure composition of the above)
     ▼
 @apx/testkit   — the primitives BOTH generated and hand-written specs
                  import: item.ts (apex.item, VERIFIED), region.ts
@@ -279,6 +281,7 @@ not existing).
 | Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed; `--format human` for prose output alongside the default structured tree) | — |
 | Documentation generation (`apx-docs`) | — | ✅ (pure AST read, no live app needed) | — |
 | Flow Map / navigation graph (`apx-flow`) | — | ✅ (pure AST read, no live app needed) — Phase 1a scope: `ApexPage.branches`, `ApexRegion.actions` (Cards/List), `ApexRegion.columns[].linkTarget`, `ApexButton.target`/`.url`. Every edge carries a real confidence tier: `'high'` (all 8 of 8 mechanisms — live-witnessed real data; button page/app-redirect targets were `'medium'` until the Fourteenth round corrected a false "zero real occurrences" claim that had only ever checked one app — `concurrent-manager` has 17 real `redirectThisApp` occurrences across 12 pages, `redirectOtherApp` specifically still unwitnessed). Breadcrumbs/navigation lists (shared-component parser support needed), dialog-page detection (cross-page join needed), Dynamic Action redirects (no declarative metadata found), and `apex.navigation` (runtime JS API) are all explicitly out of scope — see `docs/ecosystem-roadmap.md`'s Thirteenth and Fourteenth rounds | — |
+| CI dashboard (`apx-report`) | — | ✅ (self-contained HTML bundling coverage + diff + parser-warning-summary; no new data source, pure composition of the three rows above) | — |
 
 Full list of limitations in docs/limitations.md; a few of the stories
 behind specific rows:
@@ -380,7 +383,18 @@ docs/tutorial.md 2.9). Also done: `apx-docs <export-dir> --out
 row-level actions — dynamic actions, branches, validations, processes,
 computations) straight from the already-typed AST, no live app needed;
 see `docs/tutorial.md` §2.16 and `examples/employee-page/` for real
-output. Still open: snapshot testing (needs a masking-policy design), and
+output. Also done: `apx-report <old-export-dir> <new-export-dir>
+<touch-log-path> --out <report.html>` — a single self-contained HTML CI
+dashboard bundling coverage (embeds `renderCoverageHtmlFragment()`
+verbatim), regression diff (embeds `formatDiffHuman()` verbatim — the
+exact text `apx-diff --format human` prints), and a parser-warning
+summary (`@apx/parser`'s own `ParseResult.warnings`) in one artifact, safe
+to attach to a CI run. Deliberately scoped to exactly these three already-
+real data sources, not the larger coverage/diff/screenshots/perf/
+failures/a11y/parser-warnings pitch — screenshots, performance metrics,
+and accessibility results don't exist anywhere in this project yet, so
+there's nothing to compose them from; see docs/tutorial.md §2.17. Still
+open: snapshot testing (needs a masking-policy design), and
 Trees as content — the only Tree widget seen live so far is the universal
 left-nav reused for a login picker (see docs/ecosystem-roadmap.md), not a
 distinct page-content pattern.
