@@ -43,9 +43,8 @@ export interface RegionProbe {
  * failure, it is the documented gap. Use this for diagnostics, not
  * pass/fail assertions, until the DOM convention is verified.
  */
-export async function probeRegions(page: Page, ids: readonly string[]): Promise<RegionProbe[]> {
-  for (const id of ids) recordCoverageTouch('region', id);
-  return page.evaluate(
+export async function probeRegions(page: Page, ids: readonly string[], pageId?: number): Promise<RegionProbe[]> {
+  const probes = await page.evaluate(
     (ids: readonly string[]) =>
       ids.map((id) => ({
         id,
@@ -53,6 +52,8 @@ export async function probeRegions(page: Page, ids: readonly string[]): Promise<
       })),
     ids,
   );
+  for (const probe of probes) if (probe.isWidgetRegion) recordCoverageTouch('region', probe.id, pageId);
+  return probes;
 }
 
 /**
@@ -82,8 +83,8 @@ export async function probeRegions(page: Page, ids: readonly string[]): Promise<
  * resolves this per-region before calling this function; hand-written
  * specs must do the same.
  */
-export async function expectRegionsResolve(page: Page, ids: readonly string[]): Promise<void> {
-  const probes = await probeRegions(page, ids);
+export async function expectRegionsResolve(page: Page, ids: readonly string[], pageId?: number): Promise<void> {
+  const probes = await probeRegions(page, ids, pageId);
   const unresolved = probes.filter((p) => !p.isWidgetRegion).map((p) => p.id);
   expect(unresolved, 'regions expected to resolve as apex.region() widget regions but did not').toEqual([]);
 }
@@ -94,8 +95,7 @@ export async function expectRegionsResolve(page: Page, ids: readonly string[]): 
  * recognized widget region -- see the module doc for why this doesn't fall
  * back to a guessed selector.
  */
-export async function refreshRegion(page: Page, id: string): Promise<void> {
-  recordCoverageTouch('region', id);
+export async function refreshRegion(page: Page, id: string, pageId?: number): Promise<void> {
   const ok = await page.evaluate((id: string) => {
     const region = (window as any).apex?.region?.(id);
     if (!region) return false;
@@ -110,6 +110,7 @@ export async function refreshRegion(page: Page, id: string): Promise<void> {
         'docs/grammar-assumptions.md "Still open" before assuming this is a bug.',
     );
   }
+  recordCoverageTouch('region', id, pageId);
 }
 
 /**
@@ -118,9 +119,14 @@ export async function refreshRegion(page: Page, id: string): Promise<void> {
  * found vs. method not supported on this widget type -- never silently
  * returns undefined for a typo'd or unsupported method name.
  */
-export async function callRegionMethod<T>(page: Page, id: string, method: string, args: unknown[] = []): Promise<T> {
-  recordCoverageTouch('region', id);
-  return page.evaluate(
+export async function callRegionMethod<T>(
+  page: Page,
+  id: string,
+  method: string,
+  args: unknown[] = [],
+  pageId?: number,
+): Promise<T> {
+  const result = await page.evaluate(
     ([id, method, args]: [string, string, unknown[]]) => {
       const region = (window as any).apex?.region?.(id);
       if (!region) {
@@ -133,6 +139,8 @@ export async function callRegionMethod<T>(page: Page, id: string, method: string
     },
     [id, method, args] as [string, string, unknown[]],
   );
+  recordCoverageTouch('region', id, pageId);
+  return result;
 }
 
 /**
@@ -145,10 +153,11 @@ export class ApexRegion {
   constructor(
     protected readonly page: Page,
     public readonly id: string,
+    public readonly pageId?: number,
   ) {}
 
   protected invoke<T>(method: string, ...args: unknown[]): Promise<T> {
-    return callRegionMethod<T>(this.page, this.id, method, args);
+    return callRegionMethod<T>(this.page, this.id, method, args, this.pageId);
   }
 
   refresh(): Promise<void> {

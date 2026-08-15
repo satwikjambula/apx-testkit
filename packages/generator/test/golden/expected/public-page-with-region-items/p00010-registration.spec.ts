@@ -30,7 +30,7 @@ test.describe('page 10: Registration', () => {
   test('every .apx pageItem exists in DOM/apex.item registry (3 items, 1 hidden)', async ({ page }) => {
     const po = new RegistrationPage(page);
     await po.goto();
-    await expectItemsPresent(page, ['P10_CUSTOMER_ID', 'P10_FIRST_NAME', 'P10_EMAIL']);
+    await expectItemsPresent(page, ['P10_CUSTOMER_ID', 'P10_FIRST_NAME', 'P10_EMAIL'], 10);
   });
 
   test('apex.item round-trip on P10_FIRST_NAME', async ({ page }) => {
@@ -40,9 +40,9 @@ test.describe('page 10: Registration', () => {
     expect(await po.firstName.getValue()).toBe('apx-testgen');
   });
 
-  test('every labeled .apx button exists (2 buttons)', async ({ page }) => {
+  test('every uniquely labeled .apx button exists (2 buttons)', async ({ page }) => {
     const po = new RegistrationPage(page);
     await po.goto();
-    await expectButtonsPresent(page, ['Submit', 'Reset']);
+    await expectButtonsPresent(page, ['Submit', 'Reset'], [{ pageId: 10, identifier: 'submit_registration' }, { pageId: 10, identifier: 'reset_form' }]);
   });
 });

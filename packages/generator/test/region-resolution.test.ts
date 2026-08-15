@@ -71,8 +71,8 @@ describe('generator region resolution (ADR-003 runtime resolveRegion wiring)', (
 
   it('Interactive Grid with htmlDomId set: candidate list is htmlDomId ONLY, resolved live before constructing the wrapper', () => {
     expect(specText).toContain("[{ value: 'emp', strategy: 'htmlDomId' as const }]");
-    expect(specText).toContain('const { runtimeId } = await resolveRegion(page, candidates);');
-    expect(specText).toContain('new ApexInteractiveGridRegion(page, runtimeId)');
+    expect(specText).toContain('const { runtimeId } = await resolveRegion(page, candidates, 1);');
+    expect(specText).toContain('new ApexInteractiveGridRegion(page, runtimeId, 1)');
   });
 
   it('Interactive Grid with no htmlDomId: correctly SKIPPED, not silently wired with the export identifier', () => {
@@ -83,7 +83,7 @@ describe('generator region resolution (ADR-003 runtime resolveRegion wiring)', (
   });
 
   it('Chart resolves its runtime id live before waiting for the ojChart widget-factory precondition', () => {
-    const resolveIdx = specText.indexOf('const { runtimeId } = await resolveRegion(page, candidates);');
+    const resolveIdx = specText.indexOf('const { runtimeId } = await resolveRegion(page, candidates, 1);');
     const waitIdx = specText.indexOf('await page.waitForFunction((regionId)');
     expect(resolveIdx).toBeGreaterThan(-1);
     expect(waitIdx).toBeGreaterThan(resolveIdx);

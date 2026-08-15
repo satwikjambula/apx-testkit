@@ -7,7 +7,7 @@ tone per venue; keep the ask concrete.
 ---
 
 **Title: Would you use a tool that generates a Playwright regression suite
-straight from your APEXlang (.apx) export? (26.1+)**
+straight from your APEXlang (.apx) export? (verified on 26.1)**
 
 With 26.1, our apps finally exist as readable source (.apx files), and AI
 agents can now edit pages and PL/SQL directly. What I keep running into is

@@ -62,9 +62,8 @@ import type { Page } from '@playwright/test';
 import { ApexRegion } from './region.js';
 import { recordCoverageTouch } from '../fixtures/coverage.js';
 
-async function callChartWidget<T>(page: Page, id: string, method: string, args: unknown[] = []): Promise<T> {
-  recordCoverageTouch('region', id);
-  return page.evaluate(
+async function callChartWidget<T>(page: Page, id: string, method: string, args: unknown[] = [], pageId?: number): Promise<T> {
+  const result = await page.evaluate(
     ([id, method, args]: [string, string, unknown[]]) => {
       const region = (window as any).apex?.region?.(id);
       if (!region) {
@@ -84,11 +83,13 @@ async function callChartWidget<T>(page: Page, id: string, method: string, args: 
     },
     [id, method, args] as [string, string, unknown[]],
   );
+  recordCoverageTouch('region', id, pageId);
+  return result;
 }
 
 export class ApexChartRegion extends ApexRegion {
   protected invokeWidget<T>(method: string, ...args: unknown[]): Promise<T> {
-    return callChartWidget<T>(this.page, this.id, method, args);
+    return callChartWidget<T>(this.page, this.id, method, args, this.pageId);
   }
 
   /** Confirmed live: the full chart config object (type/series/groups/xAxis/legend/styleDefaults/...). */

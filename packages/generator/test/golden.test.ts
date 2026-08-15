@@ -1,4 +1,4 @@
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
@@ -128,4 +128,23 @@ describe('golden generator fixtures (P0 item 5)', () => {
       });
     });
   }
+});
+
+describe('regeneration cleanup', () => {
+  it('removes obsolete generated tests while preserving similarly named hand-written files', () => {
+    const out = mkdtempSync(join(tmpdir(), 'apx-regeneration-cleanup-'));
+    try {
+      generate(join(FIXTURES_DIR, 'public-page-with-region-items'), out);
+      const stale = 'p00010-registration.spec.ts';
+      expect(existsSync(join(out, stale))).toBe(true);
+      const handWritten = 'p99999-hand-written.spec.ts';
+      writeFileSync(join(out, handWritten), '// maintained by a human\n');
+
+      generate(join(FIXTURES_DIR, 'cards-region'), out);
+      expect(existsSync(join(out, stale))).toBe(false);
+      expect(readFileSync(join(out, handWritten), 'utf8')).toBe('// maintained by a human\n');
+    } finally {
+      rmSync(out, { recursive: true, force: true });
+    }
+  });
 });

@@ -38,7 +38,7 @@ test.describe('page 50: Projects', () => {
       [{ value: 'archived-projects', strategy: 'export-identifier' as const }]
     ];
     for (const candidates of regionCandidateSets) {
-      await resolveRegion(page, candidates);
+      await resolveRegion(page, candidates, 50);
     }
   });
 });

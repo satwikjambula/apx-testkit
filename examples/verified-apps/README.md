@@ -1,7 +1,7 @@
-# Verified apps — real APEX 26.1+ app results
+# Verified apps — real APEX 26.1 app results
 
 Generated `@apx/testgen` output (page objects + smoke specs) and results
-summaries for 46 real APEX 26.1+ applications this project has used to
+summaries for 46 real APEX 26.1 applications this project has used to
 verify `@apx/parser` and `@apx/testkit` against a genuinely wide variety of
 real, structurally different apps: the original 13 Oracle sample-gallery
 apps, 32 more added in a later corpus-expansion pass — 11 independent
@@ -144,8 +144,10 @@ records the runtime id; the coverage cross-reference doesn't yet resolve
 through `htmlDomId` to match it back to the export identifier. Both
 apps' `RESULTS.md` report this honestly (0% shown, with the reason why)
 rather than omitting the coverage section or fabricating a clean result.
-This is tracked as a follow-up for `runtime-test-automation-engineer`
-(`/runtime`), not fixed in this pass.
+The coverage matcher now resolves both candidates and records successful
+runtime touches with page scope. The committed reports remain historical
+captures of the original live runs; they are not rewritten without a new
+run against those instances.
 
 ## Regenerating this yourself
 

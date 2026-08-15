@@ -18,11 +18,11 @@
  * even the one that was never actually exercised. Touches recorded WITH
  * identity (`pageId` set -- always true for generated code, see
  * page-object.ts) are matched by the `(pageId, identifier)` pair. Touches
- * recorded WITHOUT identity (`pageId: null` -- a degraded case, only
- * possible from a hand-written spec calling `buttonByLabel()` without its
- * optional third argument) fall back to matching by LABEL, exactly as
- * before this fix, so existing hand-written specs are not penalized for
- * not yet having been updated to pass identity.
+ * recorded WITHOUT identity (`pageId: null` -- a degraded case from older
+ * hand-written specs) fall back to matching by LABEL only when that label
+ * identifies exactly one declared button across the export. Ambiguous
+ * legacy touches are deliberately left unmatched rather than credited to
+ * multiple components that may never have been exercised.
  *
  * Regions get one extra distinction: a region whose TYPE has no
  * @apx/testkit component at all (tree, calendar, map -- see
@@ -106,7 +106,11 @@ function readTouches(touchLogPath: string): RawTouch[] {
     if (!trimmed) continue;
     try {
       const parsed = JSON.parse(trimmed);
-      if (parsed && typeof parsed.identifier === 'string' && typeof parsed.kind === 'string') {
+      if (
+        parsed &&
+        typeof parsed.identifier === 'string' &&
+        (parsed.kind === 'item' || parsed.kind === 'region' || parsed.kind === 'button')
+      ) {
         touches.push({
           kind: parsed.kind,
           identifier: parsed.identifier,
@@ -120,16 +124,48 @@ function readTouches(touchLogPath: string): RawTouch[] {
   return touches;
 }
 
+type ScopedTouches = Record<'item' | 'region', Map<number, Set<string>>>;
+type UnscopedTouches = Record<'item' | 'region', Set<string>>;
+
+function addScopedTouch(scoped: ScopedTouches, kind: 'item' | 'region', pageId: number, identifier: string): void {
+  const pageTouches = scoped[kind].get(pageId) ?? new Set<string>();
+  pageTouches.add(identifier);
+  scoped[kind].set(pageId, pageTouches);
+}
+
+function componentIdentifierCounts(components: readonly (readonly string[])[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const identifiers of components) {
+    // Multiple runtime candidates on one component are aliases, not
+    // multiple declarations. Count each distinct candidate once per
+    // component (notably when identifier === htmlDomId).
+    for (const value of new Set(identifiers)) counts.set(value, (counts.get(value) ?? 0) + 1);
+  }
+  return counts;
+}
+
+function touchesForPage(
+  kind: 'item' | 'region',
+  pageId: number,
+  scoped: ScopedTouches,
+  unscoped: UnscopedTouches,
+  globalCounts: ReadonlyMap<string, number>,
+): Set<string> {
+  const result = new Set(scoped[kind].get(pageId) ?? []);
+  for (const identifier of unscoped[kind]) {
+    if (globalCounts.get(identifier) === 1) result.add(identifier);
+  }
+  return result;
+}
+
 function summarize(declared: readonly string[], touched: ReadonlySet<string>): CategoryCoverage {
   const untouched = declared.filter((id) => !touched.has(id));
   return { total: declared.length, touched: declared.length - untouched.length, untouched };
 }
 
 /**
- * A recorded region touch is keyed by the RUNTIME id actually tried (see
- * fixtures/coverage.ts / testkit's resolveRegion(), which records a
- * coverage touch for every ADR-003 candidate it evaluates against
- * apex.region() -- not just the one that ultimately resolved). Matching
+ * A recorded region touch is keyed by the RUNTIME id that successfully
+ * resolved (see fixtures/coverage.ts / testkit's resolveRegion()). Matching
  * only against `r.htmlDomId ?? r.identifier` (a single, statically-chosen
  * value) silently under-reports coverage in two real cases: (1) any
  * region with an `htmlDomId` override that a generated or hand-written
@@ -162,11 +198,18 @@ export function summarizeRegions(declared: readonly ApexRegion[], touched: Reado
  * scopes the identity match to `pageId` itself, and separately supports
  * the degraded, identity-free (`pageId: null`) label-matching fallback.
  */
-export function summarizeButtons(declared: readonly ApexButton[], pageId: number, touches: readonly RawTouch[]): CategoryCoverage {
+export function summarizeButtons(
+  declared: readonly ApexButton[],
+  pageId: number,
+  touches: readonly RawTouch[],
+  globalLabelCounts?: ReadonlyMap<string, number>,
+): CategoryCoverage {
   const labeled = declared.filter((b) => b.label !== null);
   const identifiedTouches = new Set(touches.filter((t) => t.pageId === pageId).map((t) => t.identifier));
   const degradedLabelTouches = new Set(touches.filter((t) => t.pageId === null).map((t) => t.identifier));
-  const wasTouched = (b: ApexButton): boolean => identifiedTouches.has(b.identifier) || degradedLabelTouches.has(b.label!);
+  const legacyLabelMatches = (label: string): boolean =>
+    degradedLabelTouches.has(label) && (globalLabelCounts === undefined || globalLabelCounts.get(label) === 1);
+  const wasTouched = (b: ApexButton): boolean => identifiedTouches.has(b.identifier) || legacyLabelMatches(b.label!);
   const untouched = labeled.filter((b) => !wasTouched(b)).map((b) => b.identifier);
   return { total: labeled.length, touched: labeled.length - untouched.length, untouched };
 }
@@ -186,28 +229,43 @@ export function computeCoverage(exportDir: string, touchLogPath: string): Covera
   const result = parseApp(loadExport(resolve(exportDir)));
   const touches = readTouches(touchLogPath);
 
-  const touchedByKind: Record<'item' | 'region', Set<string>> = {
+  const scopedTouches: ScopedTouches = {
+    item: new Map(),
+    region: new Map(),
+  };
+  const unscopedTouches: UnscopedTouches = {
     item: new Set(),
     region: new Set(),
   };
   const buttonTouches: RawTouch[] = [];
   for (const t of touches) {
     if (t.kind === 'button') buttonTouches.push(t);
-    else touchedByKind[t.kind].add(t.identifier);
+    else if (t.pageId === null) unscopedTouches[t.kind].add(t.identifier);
+    else addScopedTouch(scopedTouches, t.kind, t.pageId, t.identifier);
   }
 
-  const pages = [...result.ast.pages]
-    .filter((p) => p.id !== 0 && p.alias)
+  const realPages = result.ast.pages.filter((p) => p.id !== 0 && p.alias);
+  const itemCounts = componentIdentifierCounts(realPages.flatMap((p) => p.items.map((i) => [i.identifier])));
+  const regionCounts = componentIdentifierCounts(
+    realPages.flatMap((p) => p.regions.map((r) => [r.identifier, ...(r.htmlDomId ? [r.htmlDomId] : [])])),
+  );
+  const buttonLabelCounts = componentIdentifierCounts(
+    realPages.flatMap((p) => p.buttons.flatMap((b) => (b.label === null ? [] : [[b.label]]))),
+  );
+
+  const pages = [...realPages]
     .sort((a, b) => a.id - b.id)
     .map((p): PageCoverage => {
       const itemIds = p.items.map((i) => i.identifier);
+      const itemTouches = touchesForPage('item', p.id, scopedTouches, unscopedTouches, itemCounts);
+      const regionTouches = touchesForPage('region', p.id, scopedTouches, unscopedTouches, regionCounts);
       return {
         id: p.id,
         alias: p.alias,
         name: p.name,
-        items: summarize(itemIds, touchedByKind.item),
-        regions: summarizeRegions(p.regions, touchedByKind.region),
-        buttons: summarizeButtons(p.buttons, p.id, buttonTouches),
+        items: summarize(itemIds, itemTouches),
+        regions: summarizeRegions(p.regions, regionTouches),
+        buttons: summarizeButtons(p.buttons, p.id, buttonTouches, buttonLabelCounts),
       };
     });
 

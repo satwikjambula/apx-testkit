@@ -10,7 +10,7 @@ const out = outIdx >= 0 ? args[outIdx + 1] : './docs-out';
 
 if (!dir) {
   console.error('Usage: apx-docs <export-dir> --out <docs-dir>');
-  console.error('  <export-dir> must contain application.apx and a pages/ subdirectory.');
+  console.error('  <export-dir> must contain a pages/ subdirectory; application.apx is read when present.');
   console.error('  Writes one Markdown file per page plus an index.md summary into <docs-dir> --');
   console.error('  pure read of the already-typed AST, no live app or browser needed.');
   process.exit(2);

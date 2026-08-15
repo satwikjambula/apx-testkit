@@ -105,7 +105,7 @@ describe('pageObjectFor -- duplicate button label handling (real-corpus fixture)
     expect(output).toContain('No advanced { htmlDomId } is set on this button');
     // The non-colliding button is completely unaffected.
     expect(output).toContain('async clickCancel(): Promise<void>');
-    expect(output).toContain("buttonByLabel(this.page, 'Cancel', { pageId: 1, identifier: 'cancel' })");
+    expect(output).toContain("clickButton(this.page, 'Cancel', { pageId: 1, identifier: 'cancel' })");
   });
 
   it('a colliding button WITH htmlDomId set: still no click method generated, but the comment names the escape hatch', () => {
@@ -123,9 +123,9 @@ describe('pageObjectFor -- duplicate button label handling (real-corpus fixture)
     expect(output).toContain('advanced { htmlDomId: saveEmployeeBtn }');
     expect(output).toContain('buttonByHtmlDomId()');
     expect(output).toContain('NOT YET LIVE-VERIFIED');
-    // buttonByLabel is unused on this page (both buttons ambiguous) --
+    // clickButton is unused on this page (both buttons ambiguous) --
     // must not be imported at all.
-    expect(output).not.toMatch(/import \{[^}]*\bbuttonByLabel\b/);
+    expect(output).not.toMatch(/import \{[^}]*\bclickButton\b/);
   });
 
   it('every click method carries { pageId, identifier } -- coverage can never collapse two different buttons again', () => {
@@ -135,8 +135,8 @@ describe('pageObjectFor -- duplicate button label handling (real-corpus fixture)
       buttons: [button({ identifier: 'save', label: 'Save' }), button({ identifier: 'cancel', label: 'Cancel' })],
     });
     const output = pageObjectFor(p);
-    expect(output).toContain("buttonByLabel(this.page, 'Save', { pageId: 3, identifier: 'save' })");
-    expect(output).toContain("buttonByLabel(this.page, 'Cancel', { pageId: 3, identifier: 'cancel' })");
+    expect(output).toContain("clickButton(this.page, 'Save', { pageId: 3, identifier: 'save' })");
+    expect(output).toContain("clickButton(this.page, 'Cancel', { pageId: 3, identifier: 'cancel' })");
   });
 
   it('matches the real fixture files on disk (sanity: fixtures actually parse to what these unit tests assume)', () => {

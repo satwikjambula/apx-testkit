@@ -5,14 +5,14 @@
  * methods use accessible-role/label locators (region/button DOM convention
  * still open — see docs/grammar-assumptions.md). Click methods pass their
  * button's semantic identity (pageId + .apx identifier) through to
- * buttonByLabel() so coverage tracking never collapses two different,
+ * clickButton() so coverage tracking never collapses two different,
  * same-labeled buttons into one entry -- see @apx/testkit's coverage.ts.
  * Buttons whose label collides with another button's on this same page do
  * NOT get a generated click method at all -- see the comment in their
  * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { ApexItem, apexPageUrl, buttonByLabel, gotoApexPage } from '@apx/testkit';
+import { ApexItem, apexPageUrl, clickButton, gotoApexPage } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class QuickEditDrawerPage {
@@ -31,16 +31,16 @@ export class QuickEditDrawerPage {
 
   /** hidden */
   get noteId(): ApexItem {
-    return new ApexItem(this.page, 'P30_NOTE_ID');
+    return new ApexItem(this.page, 'P30_NOTE_ID', 30);
   }
 
   /** textarea, "Note" */
   get noteText(): ApexItem {
-    return new ApexItem(this.page, 'P30_NOTE_TEXT');
+    return new ApexItem(this.page, 'P30_NOTE_TEXT', 30);
   }
 
   /** "Save" */
   async clickSaveNote(): Promise<void> {
-    await buttonByLabel(this.page, 'Save', { pageId: 30, identifier: 'save_note' }).click();
+    await clickButton(this.page, 'Save', { pageId: 30, identifier: 'save_note' });
   }
 }

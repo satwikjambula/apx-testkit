@@ -37,7 +37,7 @@ test.describe('page 60: Movies', () => {
       [{ value: 'movie-cards', strategy: 'export-identifier' as const }]
     ];
     for (const candidates of regionCandidateSets) {
-      await resolveRegion(page, candidates);
+      await resolveRegion(page, candidates, 60);
     }
   });
 });

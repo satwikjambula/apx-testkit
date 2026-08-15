@@ -42,7 +42,7 @@ test.describe('page 30: Quick Edit Drawer [not auto-routable -- skipped]', () =>
   test('every .apx pageItem exists in DOM/apex.item registry (2 items, 1 hidden)', async ({ page }) => {
     const po = new QuickEditDrawerPage(page);
     await po.goto();
-    await expectItemsPresent(page, ['P30_NOTE_ID', 'P30_NOTE_TEXT']);
+    await expectItemsPresent(page, ['P30_NOTE_ID', 'P30_NOTE_TEXT'], 30);
   });
 
   test('apex.item round-trip on P30_NOTE_TEXT', async ({ page }) => {
@@ -52,9 +52,9 @@ test.describe('page 30: Quick Edit Drawer [not auto-routable -- skipped]', () =>
     expect(await po.noteText.getValue()).toBe('apx-testgen');
   });
 
-  test('every labeled .apx button exists (1 button)', async ({ page }) => {
+  test('every uniquely labeled .apx button exists (1 button)', async ({ page }) => {
     const po = new QuickEditDrawerPage(page);
     await po.goto();
-    await expectButtonsPresent(page, ['Save']);
+    await expectButtonsPresent(page, ['Save'], [{ pageId: 30, identifier: 'save_note' }]);
   });
 });

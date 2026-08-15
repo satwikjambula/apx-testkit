@@ -21,7 +21,7 @@
  *      `ApexRegion.items`/`buttons` against `apx-diff`).
  */
 import { describe, expect, it } from 'vitest';
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type {
@@ -435,6 +435,21 @@ describe('generateDocs — against the real committed reference fixture', () => 
     } finally {
       rmSync(outDir1, { recursive: true, force: true });
       rmSync(outDir2, { recursive: true, force: true });
+    }
+  });
+
+  it('removes obsolete generated docs but preserves similarly named hand-written files', () => {
+    const outDir = mkdtempSync(join(tmpdir(), 'apx-docs-cleanup-'));
+    try {
+      generateDocs(exportDir, outDir);
+      expect(existsSync(join(outDir, 'p00003-employee.docs.md'))).toBe(true);
+      writeFileSync(join(outDir, 'p99999-hand-written.docs.md'), '# Human-authored\n');
+
+      generateDocs(join(__dirname, 'golden', 'fixtures', 'cards-region'), outDir);
+      expect(existsSync(join(outDir, 'p00003-employee.docs.md'))).toBe(false);
+      expect(readFileSync(join(outDir, 'p99999-hand-written.docs.md'), 'utf8')).toBe('# Human-authored\n');
+    } finally {
+      rmSync(outDir, { recursive: true, force: true });
     }
   });
 });

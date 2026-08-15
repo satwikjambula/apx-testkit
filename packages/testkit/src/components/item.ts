@@ -17,9 +17,8 @@ export interface ItemPresence {
 }
 
 /** Check that every declared pageItem id resolves in the DOM / apex.item registry. */
-export async function itemsPresent(page: Page, ids: readonly string[]): Promise<ItemPresence[]> {
-  for (const id of ids) recordCoverageTouch('item', id);
-  return page.evaluate(
+export async function itemsPresent(page: Page, ids: readonly string[], pageId?: number): Promise<ItemPresence[]> {
+  const presence = await page.evaluate(
     (ids: readonly string[]) =>
       ids.map((id) => ({
         id,
@@ -27,32 +26,34 @@ export async function itemsPresent(page: Page, ids: readonly string[]): Promise<
       })),
     ids,
   );
+  for (const item of presence) if (item.ok) recordCoverageTouch('item', item.id, pageId);
+  return presence;
 }
 
 /** Assert every declared pageItem id resolves; fails with the list of missing ids. */
-export async function expectItemsPresent(page: Page, ids: readonly string[]): Promise<void> {
-  const presence = await itemsPresent(page, ids);
+export async function expectItemsPresent(page: Page, ids: readonly string[], pageId?: number): Promise<void> {
+  const presence = await itemsPresent(page, ids, pageId);
   const missing = presence.filter((p) => !p.ok).map((p) => p.id);
   expect(missing, 'items declared in .apx but absent at runtime').toEqual([]);
 }
 
-export async function getItemValue(page: Page, id: string): Promise<string> {
-  recordCoverageTouch('item', id);
-  return page.evaluate((id: string) => (window as any).apex.item(id).getValue(), id);
+export async function getItemValue(page: Page, id: string, pageId?: number): Promise<string> {
+  const value = await page.evaluate((id: string) => (window as any).apex.item(id).getValue(), id);
+  recordCoverageTouch('item', id, pageId);
+  return value;
 }
 
-export async function setItemValue(page: Page, id: string, value: string): Promise<void> {
-  recordCoverageTouch('item', id);
+export async function setItemValue(page: Page, id: string, value: string, pageId?: number): Promise<void> {
   await page.evaluate(
     (args: [string, string]) => (window as any).apex.item(args[0]).setValue(args[1]),
     [id, value] as [string, string],
   );
+  recordCoverageTouch('item', id, pageId);
 }
 
 /** Round-trip a value through apex.item(id) and return what getValue() reports back. */
-export async function itemRoundTrip(page: Page, id: string, value: string): Promise<string> {
-  recordCoverageTouch('item', id);
-  return page.evaluate(
+export async function itemRoundTrip(page: Page, id: string, value: string, pageId?: number): Promise<string> {
+  const result = await page.evaluate(
     (args: [string, string]) => {
       const it = (window as any).apex.item(args[0]);
       it.setValue(args[1]);
@@ -60,6 +61,8 @@ export async function itemRoundTrip(page: Page, id: string, value: string): Prom
     },
     [id, value] as [string, string],
   );
+  recordCoverageTouch('item', id, pageId);
+  return result;
 }
 
 /**
@@ -71,20 +74,24 @@ export class ApexItem {
   constructor(
     private readonly page: Page,
     public readonly id: string,
+    public readonly pageId?: number,
   ) {}
 
   exists(): Promise<boolean> {
-    recordCoverageTouch('item', this.id);
     return this.page
       .evaluate((id: string) => !!document.getElementById(id) || !!(window as any).apex.item(id)?.node, this.id)
-      .then(Boolean);
+      .then((value) => {
+        const exists = Boolean(value);
+        if (exists) recordCoverageTouch('item', this.id, this.pageId);
+        return exists;
+      });
   }
 
   getValue(): Promise<string> {
-    return getItemValue(this.page, this.id);
+    return getItemValue(this.page, this.id, this.pageId);
   }
 
   setValue(value: string): Promise<void> {
-    return setItemValue(this.page, this.id, value);
+    return setItemValue(this.page, this.id, value, this.pageId);
   }
 }

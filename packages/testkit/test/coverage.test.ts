@@ -37,14 +37,19 @@ describe('coverage touch recording', () => {
       .map((l) => JSON.parse(l));
   }
 
-  it('item/region touches keep the simple identifier-only shape, pageId/runtimeLocator null', () => {
-    recordCoverageTouch('item', 'P3_ENAME');
-    recordCoverageTouch('region', 'projects_report');
+  it('item/region touches carry page identity when supplied', () => {
+    recordCoverageTouch('item', 'P3_ENAME', 3);
+    recordCoverageTouch('region', 'projects_report', 3);
     const touches = readTouches();
     expect(touches).toEqual([
-      { kind: 'item', identifier: 'P3_ENAME', pageId: null, runtimeLocator: null, ts: expect.any(Number) },
-      { kind: 'region', identifier: 'projects_report', pageId: null, runtimeLocator: null, ts: expect.any(Number) },
+      { kind: 'item', identifier: 'P3_ENAME', pageId: 3, runtimeLocator: null, ts: expect.any(Number) },
+      { kind: 'region', identifier: 'projects_report', pageId: 3, runtimeLocator: null, ts: expect.any(Number) },
     ]);
+  });
+
+  it('retains null pageId for backward-compatible identity-free callers', () => {
+    recordCoverageTouch('region', 'legacy-region');
+    expect(readTouches()[0]).toMatchObject({ identifier: 'legacy-region', pageId: null });
   });
 
   it('two DIFFERENT buttons sharing the SAME label produce DISTINCT touch entries when identity is supplied', () => {

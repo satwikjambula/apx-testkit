@@ -30,7 +30,7 @@ test.describe('page 3: Employee', () => {
   test('every .apx pageItem exists in DOM/apex.item registry (2 items, 1 hidden)', async ({ page }) => {
     const po = new EmployeePage(page);
     await po.goto();
-    await expectItemsPresent(page, ['P3_EMPNO', 'P3_ENAME']);
+    await expectItemsPresent(page, ['P3_EMPNO', 'P3_ENAME'], 3);
   });
 
   test('apex.item round-trip on P3_ENAME', async ({ page }) => {
@@ -40,9 +40,9 @@ test.describe('page 3: Employee', () => {
     expect(await po.ename.getValue()).toBe('apx-testgen');
   });
 
-  test('every labeled .apx button exists (1 button)', async ({ page }) => {
+  test('every uniquely labeled .apx button exists (1 button)', async ({ page }) => {
     const po = new EmployeePage(page);
     await po.goto();
-    await expectButtonsPresent(page, ['Save']);
+    await expectButtonsPresent(page, ['Save'], [{ pageId: 3, identifier: 'save' }]);
   });
 });

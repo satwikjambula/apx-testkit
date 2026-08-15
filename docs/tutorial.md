@@ -60,7 +60,7 @@ actually type" walkthrough.
 ### Prerequisites
 
 - **Node 22.**
-- An **APEXlang export** of an Oracle APEX 26.1+ app: a folder containing
+- An **APEXlang export** of an Oracle APEX 26.1 app: a folder containing
   `application.apx` and a `pages/` subdirectory of `.apx` text files. This
   is a text-based snapshot of your app's pages that *Oracle itself*
   generates — apx-testkit only ever reads it, never writes it (there is
@@ -159,7 +159,7 @@ output of the command above. In plain terms, for the one page
 - **types into the Name field and reads it back** — catches a field that
   looks present but is actually broken (disabled, wrong id, breaks on
   input);
-- **checks every labeled button the export declares is actually present**
+- **checks every uniquely labeled button the export declares is actually present**
   — catches a Save/Cancel/etc. button that disappeared.
 
 None of these know or care what your data means — they check that the
@@ -301,13 +301,13 @@ through it.
 import { ApexItem, expectItemsPresent, itemRoundTrip } from '@apx/testkit';
 
 // Ergonomic class, for hand-written specs:
-const name = new ApexItem(page, 'P410_NAME');
+const name = new ApexItem(page, 'P410_NAME', 410);
 await name.setValue('Ada Lovelace');
 console.log(await name.getValue());     // 'Ada Lovelace'
 console.log(await name.exists());       // true
 
 // Plain functions, what generated code uses:
-await expectItemsPresent(page, ['P410_NAME', 'P410_EMAIL', 'P410_ID']); // throws listing any missing
+await expectItemsPresent(page, ['P410_NAME', 'P410_EMAIL', 'P410_ID'], 410); // throws listing any missing
 const roundTripped = await itemRoundTrip(page, 'P410_NAME', 'apx-testgen');
 ```
 
@@ -326,10 +326,10 @@ Playwright's accessibility tree:
 import { buttonByLabel, clickButton, expectButtonsPresent } from '@apx/testkit';
 
 await expect(buttonByLabel(page, 'Save')).toBeVisible();
-await clickButton(page, 'Save'); // same as buttonByLabel(page, 'Save').click()
+await clickButton(page, 'Save', { pageId: 3, identifier: 'SAVE_EMPLOYEE' });
 
 // Non-mutating presence check -- confirmed live against 9 real buttons
-// (Sample Charts, Area page). Auto-generated for every labeled button on
+// (Sample Charts, Area page). Auto-generated for every uniquely labeled button on
 // every page -- see 2.9.
 await expectButtonsPresent(page, ['Save', 'Cancel']);
 ```
@@ -346,12 +346,12 @@ app can have multiple buttons sharing a label — confirmed on real
 exports (UX Pattern Catalog's "Dashboard Advanced" page has FIVE buttons
 all labeled "View Details"). `buttonByLabel(page, 'Save')`'s locator
 resolves ALL of them; calling `.click()` on it is ambiguous. Pass a
-button's semantic identity as the optional third argument so coverage
-tracking can tell same-labeled buttons apart (`@apx/testgen`'s generated
-click methods always do this):
+button's semantic identity to `clickButton()` so coverage tracking can
+tell same-labeled buttons apart (`@apx/testgen`'s generated click methods
+always do this):
 
 ```ts
-await buttonByLabel(page, 'Save', { pageId: 3, identifier: 'SAVE_EMPLOYEE' }).click();
+await clickButton(page, 'Save', { pageId: 3, identifier: 'SAVE_EMPLOYEE' });
 ```
 
 `@apx/testgen` goes further: it detects duplicate labels PER PAGE at

@@ -44,13 +44,22 @@ jobs:
           node-version: 22
           registry-url: 'https://registry.npmjs.org'
 
-      - run: npm install
+      - run: npm ci
+
+      - name: Confirm tag matches every package version
+        run: node scripts/validate-release-tag.mjs "$GITHUB_REF_NAME"
 
       - name: Full release gate (build + test + typecheck spike + determinism)
         run: |
-          npm run build --workspaces --if-present
-          npm run test --workspaces --if-present
-          cd spike && npm install && npx tsc --noEmit -p tsconfig.json && cd ..
+          npm run build
+          npm run typecheck
+          npm test
+          npm run lint
+          npm run verify:registry
+          npm run docs:support-matrix:check
+          npm run verify:packages
+          npm audit --omit=dev --audit-level=high
+          cd spike && npm ci && npx tsc --noEmit -p tsconfig.json && cd ..
           node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/gen1
           node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/gen2
           diff -r /tmp/gen1 /tmp/gen2

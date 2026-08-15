@@ -26,6 +26,8 @@ jobs:
         run: cd packages/testkit && npx vitest run
       - name: Build parser + testkit + generator + mcp
         run: npm run build
+      - name: Validate packed package entry points
+        run: npm run verify:packages
       - name: Typecheck parser + testkit + generator + mcp
         run: npm run typecheck
       - name: Generator unit tests (pure functions -- coverage.ts's region-touch matching, etc.)
@@ -39,3 +41,5 @@ jobs:
           diff -r /tmp/gen1 /tmp/gen2
       - name: Typecheck spike (generated + hand-written specs against @apx/testkit)
         run: cd spike && npm ci && npx tsc --noEmit -p tsconfig.json
+      - name: Audit production dependency graph
+        run: npm audit --omit=dev --audit-level=high

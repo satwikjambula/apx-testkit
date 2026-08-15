@@ -43,7 +43,7 @@ test.describe('page 80: Sales Chart', () => {
       // Chart -- the export identifier is confirmed NOT to work as a
       // fallback for this component type. resolveRegion() still confirms
       // it live rather than trusting the static field.
-      const { runtimeId } = await resolveRegion(page, candidates);
+      const { runtimeId } = await resolveRegion(page, candidates, 80);
       // JET chart widgets attach ojChart asynchronously -- wait for the
       // actual precondition (see ApexChartRegion's module doc) rather
       // than a fixed delay.
@@ -51,7 +51,7 @@ test.describe('page 80: Sales Chart', () => {
         const region = (window as any).apex?.region?.(regionId);
         return typeof region?.widget?.()?.ojChart === 'function';
       }, runtimeId);
-      const chart = new ApexChartRegion(page, runtimeId);
+      const chart = new ApexChartRegion(page, runtimeId, 80);
       const liveType = await chart.getOption('type');
       expect(typeof liveType).toBe('string');
       expect(liveType).not.toBe('');

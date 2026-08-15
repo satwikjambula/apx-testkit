@@ -1,7 +1,7 @@
 {
   "name": "@apx/testkit",
   "version": "0.1.0",
-  "description": "Live-verified Playwright fixtures and component wrappers for Oracle APEX 26.1+ apps.",
+  "description": "Live-verified Playwright fixtures and component wrappers for Oracle APEX 26.1 apps.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -28,7 +28,7 @@
     "@playwright/test": "^1.48.0",
     "@types/node": "^22.0.0",
     "typescript": "^5.5.0",
-    "vitest": "^2.0.0"
+    "vitest": "^4.1.10"
   },
   "exports": {
     ".": "./dist/index.js",

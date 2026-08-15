@@ -51,8 +51,8 @@ test.describe('page 90: Employee Grid [not auto-routable -- skipped]', () => {
       [{ value: 'emp', strategy: 'htmlDomId' as const }]
     ];
     for (const candidates of regionCandidateSets) {
-      const { runtimeId } = await resolveRegion(page, candidates);
-      const ig = new ApexInteractiveGridRegion(page, runtimeId);
+      const { runtimeId } = await resolveRegion(page, candidates, 90);
+      const ig = new ApexInteractiveGridRegion(page, runtimeId, 90);
       expect(typeof await ig.getCurrentViewId()).toBe('string');
     }
   });
