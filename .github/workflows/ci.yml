@@ -7,7 +7,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm install
+      - run: npm ci
       - run: npm run lint
   test:
     runs-on: ubuntu-latest
@@ -15,17 +15,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 22 }
-      - run: npm install
+      - run: npm ci
       - name: Parser unit tests (fixtures only; integration skips without APX_EXPORT_DIR)
         run: cd packages/parser && npx vitest run --exclude '**/integration.test.ts'
       - name: Testkit unit tests (pure helpers only; DOM-facing code needs a live instance)
         run: cd packages/testkit && npx vitest run
       - name: Build parser + testkit + generator + mcp
-        run: |
-          (cd packages/parser && npx tsc -p tsconfig.json)
-          (cd packages/testkit && npx tsc -p tsconfig.json)
-          (cd packages/generator && npx tsc -p tsconfig.json)
-          (cd packages/mcp && npx tsc -p tsconfig.json)
+        run: npm run build
+      - name: Typecheck parser + testkit + generator + mcp
+        run: npm run typecheck
       - name: Generator unit tests (pure functions -- coverage.ts's region-touch matching, etc.)
         run: cd packages/generator && npx vitest run
       - name: Determinism gate (hand-written reference-fixtures fixture, generate twice, diff)
@@ -34,4 +32,4 @@ jobs:
           node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/gen2
           diff -r /tmp/gen1 /tmp/gen2
       - name: Typecheck spike (generated + hand-written specs against @apx/testkit)
-        run: cd spike && npm install && npx tsc --noEmit -p tsconfig.json
+        run: cd spike && npm ci && npx tsc --noEmit -p tsconfig.json

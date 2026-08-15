@@ -17,7 +17,10 @@
   "bugs": "https://github.com/satwikjambula/apx-testkit/issues",
   "publishConfig": { "access": "public" },
   "engines": { "node": ">=22" },
-  "scripts": { "build": "tsc -p tsconfig.json" },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
   "dependencies": {
     "@apx/testgen": "^0.1.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
