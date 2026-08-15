@@ -2,8 +2,11 @@
 
 @AGENTS.md
 
-Deterministic Playwright test generation for Oracle APEX 26.1+ from APEXlang
-(.apx) exports. Monorepo, npm workspaces, TypeScript/ESM, Node 22.
+Deterministic Playwright test generation for Oracle APEX 26.1 from APEXlang
+(.apx) exports. Monorepo, npm workspaces, TypeScript/ESM, Node 22. ("26.1",
+not "26.1+" — see constitution §3/`.ai/knowledge/constitution-reconciliation.md`:
+this project has not verified parser/runtime behavior against any later
+release, so it doesn't claim compatibility with one.)
 
 ## AI agent governance — read before making any change
 
@@ -24,6 +27,19 @@ undifferentiated pass. Fastest way in: the `/product`, `/architect`,
 (see `.ai/AGENT.md`
 "Invoking these agents" for all three invocation methods and a
 path-to-agent quick reference).
+
+A 65-section project constitution was reconciled against this codebase
+on 2026-08-15 — see `.ai/knowledge/constitution-reconciliation.md` for
+the full section-by-section audit (what's already real, what's partial,
+what's newly adopted into `DESIGN_GUARDRAILS.md`, and what's flagged as
+a separate scope proposal — SQLcl validation, Oracle Skills/MCP
+ecosystem integration, Oracle Blueprints, AI Agent/Tool verification,
+and `npm run verify` all need their own product/architecture review
+before anyone builds toward them, not silent adoption). That pass also
+found `callRegionMethod` (`packages/testkit/src/components/region.ts`,
+publicly exported from `index.ts`) is a real, currently-unrestricted
+generic runtime-method escape hatch — flagged for Software Architect +
+Runtime & Test Automation Engineer review, not yet resolved either way.
 
 ## What this is
 - `packages/parser` (@apx/parser): .apx -> typed JSON AST. Read-only by
@@ -154,6 +170,22 @@ detail, even though it lives inside `@apx/parser`.
   RESETS to host root. Always build absolute URLs (see `pageUrl()` helpers).
 
 ## Outstanding debts (highest value first — ask the user for these)
+
+Recently resolved, noted here only so this list doesn't read as stale
+relative to this repo's own recent commits: checksum-protected-page
+navigation now gets an explicit `ui-navigation` skip instead of a
+guaranteed-fail bare `goto()` (`assessNavigationSafety`,
+`packages/testkit/src/fixtures/navigation.ts`); `modalDialog` pages get
+the same explicit-skip treatment (`isModalDialogUnroutable`,
+`packages/generator/src/lib.ts`); button-label collisions now resolve to
+semantic coverage identity instead of collapsing on label text
+(`ButtonCoverageIdentity`, `packages/testkit/src/fixtures/coverage.ts`);
+`packages/generator/test/golden/` adds a real correctness gate on top of
+the double-generate determinism check (self-consistency alone doesn't
+prove the output is right — see `.ai/knowledge/generator.md`); and
+`npm ci` plus canonical build/typecheck commands are now used
+everywhere. See `.ai/knowledge/constitution-reconciliation.md`'s §62
+table for the fuller P0/P1/P2 cross-check.
 1. REGION/BUTTON DOM convention: the spike's `REGION DISCOVERY` and
    `BUTTON DISCOVERY` console blocks from the user's last green run were
    never captured. `packages/testkit/src/components/region.ts` only exposes
@@ -285,6 +317,15 @@ rather than silently picking one side.
   (or found and left open) by live verification, one JSON record per
   quirk with evidence/workaround/status. Documentation, not (yet) wired
   into runtime warnings — see docs/ecosystem-roadmap.md.
+- docs/verification/26.1.json + docs/verification/README.md — the
+  machine-readable verification registry (evidence-level taxonomy,
+  schema, the one wired consumer). Indexes the two ledgers above; does
+  not replace either.
+- .ai/knowledge/testing.md — test layering, fixture strategy, and
+  "definition of done" across all four packages (not one package's own
+  `knowledge/` file).
+- .ai/knowledge/constitution-reconciliation.md — section-by-section audit
+  of the project constitution against this codebase's actual state.
 
 ## Style
 - Boring, conventional TypeScript over clever. Strict mode. ESM (`.js`

@@ -4,7 +4,7 @@ The discipline behind ADR-004, and the concrete mechanics of it.
 
 ## Three evidence sources, none authoritative alone
 
-1. **Live browser verification** — a real, running Oracle APEX 26.1+
+1. **Live browser verification** — a real, running Oracle APEX 26.1
    instance, driven directly (`apex.region()`, `apex.jQuery`,
    `page.evaluate`), never assumed from documentation.
 2. **Real export parsing** — actual `.apx` export data from real Oracle
@@ -450,6 +450,31 @@ OBSERVED/UNVERIFIED/UNSUPPORTED), and how to add/correct an entry.
 regression sweep below — run both before considering any change to the
 registry, `docs/quirks/26.1.json`, `docs/grammar-assumptions.md`, or
 `docs/support-matrix.md` done.
+
+### Relationship to the project constitution's evidence sections
+
+`docs/verification/26.1.json`'s `status` field
+(verified/documented/observed/unverified/unsupported) is the same
+five-way evidence-level taxonomy the project constitution's §16
+describes (VERIFIED/DOCUMENTED/OBSERVED/UNVERIFIED/UNSUPPORTED) — this
+is a citation, not a coincidence; the registry was already built against
+that exact taxonomy. §17's preferred evidence order (Oracle docs + real
+runtime verification + reproducible fixture, over blog posts/memory/LLM
+recall) is ADR-002/004, already enforced. §44's proposal for an
+`oracle/{apis/,components/,runtime/,grammar/,versions/}` directory tree
+and §45's grammar-reproducibility mechanism are **not adopted
+separately** — `docs/verification/26.1.json` plus this file's own
+per-EBNF-production citation discipline already cover the same ground in
+a different, already-built shape (one structured JSON file with a
+documented schema, rather than a directory of per-capability files). Do
+not start a parallel `oracle/` directory tree; if the registry's shape
+genuinely needs to change, that's a redesign of the existing file, not a
+second system. §46's SQLcl-as-parser-oracle idea (mutation-testing
+APEXlang fixtures against Oracle's own validator) is **not built** and
+is flagged as a separate proposal needing its own review — see
+`.ai/knowledge/constitution-reconciliation.md` §D — not something this
+file's existing three evidence sources (live browser, real export, EBNF)
+should be silently expanded to include.
 
 ## `spike/` — hand-written live verification specs
 
