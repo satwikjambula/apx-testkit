@@ -1,0 +1,12 @@
+page 1 (
+  name: Unsafe
+  alias: UNSAFE
+  title: Unsafe
+  security {
+    pageAccessProtection: argumentsMustHaveChecksum
+  }
+  button save (
+    label: Save
+    action: submit
+  )
+)

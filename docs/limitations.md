@@ -55,11 +55,26 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   placeholder affordances); see docs/quirks/26.1.json
   `region-action-cards-not-unique-inert`.
 - **Pages with `security.pageAccessProtection: argumentsMustHaveChecksum`
-  cannot be reached via `gotoApexPage()`'s bare-goto navigation**, even
-  immediately after a verified login. Confirmed live: only real in-app link
-  clicks preserve the session; a bare `page.goto()` to any page (including
-  the exact page just landed on) redirects to `/login`. Navigate via real
-  UI clicks for apps/pages configured this way — see
+  cannot be reached via `gotoApexPage()`'s bare-goto navigation** when the
+  page is NOT `authentication: public`, even immediately after a verified
+  login. Confirmed live: only real in-app link clicks preserve the
+  session; a bare `page.goto()` to any page (including the exact page
+  just landed on) redirects to `/login`. UPDATE (runtime-review P0 item
+  2): `@apx/testgen` now DETECTS this at generation time
+  (`isNavigationUnsafe()`/`@apx/testkit`'s `assessNavigationSafety()`) and
+  emits an unconditional `test.skip()` with a specific reason instead of
+  a normal test guaranteed to redirect and fail — it no longer silently
+  generates a broken test for these pages. `@apx/testkit`'s
+  `navigateViaUiPath(page, steps)` formalizes the real workaround (a
+  hand-supplied sequence of in-app link clicks) into a reusable
+  primitive for hand-written specs — auto-deriving that click path from
+  the Flow Map is a real, deliberately scoped-out follow-up, not built
+  this pass (see docs/ecosystem-roadmap.md). A PUBLIC page with the same
+  flag set (e.g. UX Pattern Catalog's own pages, which all declare it) is
+  treated as safe for direct-url navigation — an INFERENCE from indirect
+  evidence (p00420 returns a page-level 400, not a `/login` redirect, on
+  direct GET — see `drawer-modal-pages-400`), not independently
+  live-reconfirmed; flagged for a future live pass. See
   docs/quirks/26.1.json `page-access-protection-blocks-bare-navigation`.
 - **`ApexCardsRegion.getRecords()`/`.getModel()` are confirmed broken** in
   the one app tested — they throw a genuine runtime error from inside

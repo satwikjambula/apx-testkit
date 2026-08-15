@@ -62,6 +62,33 @@ export function loadExport(dir: string): Record<string, string> {
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
 /**
+ * Mirrors @apx/testkit's `assessNavigationSafety()`
+ * (packages/testkit/src/fixtures/navigation.ts) EXACTLY -- kept as a
+ * separate, local predicate (rather than an actual runtime import) so
+ * `@apx/testgen` does not need `@apx/testkit` as a real, shipped
+ * dependency (it's a devDependency here, used only by this package's own
+ * tests) -- generated CODE imports `@apx/testkit` itself; the generator
+ * PROCESS does not need to. Kept from drifting apart the same way
+ * `UNTRACKABLE_REGION_TYPES`/`REGION_STUB_TYPES` are:
+ * test/navigation-safety-sync.test.ts asserts this function produces the
+ * IDENTICAL verdict to testkit's own `assessNavigationSafety()` across a
+ * representative input matrix, so a change to one without the other
+ * fails loudly, not silently.
+ *
+ * DIRECTLY CONFIRMED unsafe: `security.pageAccessProtection:
+ * argumentsMustHaveChecksum` on a NON-PUBLIC page (Sample Interactive
+ * Grids Home/Basic Editing, Sample Charts -- see
+ * docs/quirks/26.1.json `page-access-protection-blocks-bare-navigation`).
+ * INFERRED (not directly live-confirmed) safe for a PUBLIC page with the
+ * same flag set -- see testkit's navigation.ts module doc for the full
+ * reasoning (UX Pattern Catalog's p00420 returns a page-level 400, not a
+ * /login redirect, on a direct GET).
+ */
+export function isNavigationUnsafe(pageAccessProtection: string | null, isPublic: boolean): boolean {
+  return pageAccessProtection === 'argumentsMustHaveChecksum' && !isPublic;
+}
+
+/**
  * Region types confirmed live to resolve as `apex.region()` widget
  * regions (ADR-003) -- `form`/`staticContent` are confirmed NOT to
  * resolve at all, by design, and every other type either has no runtime
@@ -112,6 +139,9 @@ function wiredRegionCandidatesLiteral(region: { htmlDomId: string | null }): str
 
 function specFor(page: ApexPage): string {
   const isPublic = page.raw['security.authentication'] === 'public';
+  const pageAccessProtection =
+    typeof page.raw['security.pageAccessProtection'] === 'string' ? (page.raw['security.pageAccessProtection'] as string) : null;
+  const navigationUnsafe = isNavigationUnsafe(pageAccessProtection, isPublic);
   const alias = page.alias ?? '';
   const path = alias.toLowerCase();
   const hidden = page.items.filter((i) => i.type === 'hidden');
@@ -172,9 +202,12 @@ ${[
    skippedRegions.length > 0
      ? ` * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): ${skippedRegions.map((r) => `${r.identifier} (${r.type ?? 'untyped'})`).join(', ')}.`
      : null,
+   navigationUnsafe
+     ? ` * NAVIGATION UNSAFE: this page declares security.pageAccessProtection: argumentsMustHaveChecksum and is NOT authentication:public -- a bare page.goto() is confirmed to redirect an authenticated session to /login (docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'). Every test below is unconditionally skipped rather than generated to guaranteed-fail; see @apx/testkit's navigateViaUiPath() for the confirmed-working alternative (not auto-derivable here without Flow Map wiring).`
+     : null,
  ]
    .filter((line): line is string => line !== null)
-   .join('\n')}${isPublic ? '' : `
+   .join('\n')}${isPublic || navigationUnsafe ? '' : `
  * This page is not authentication:public. Tests log in via @apx/testkit's
  * login() in a beforeEach, gated on APX_LOGIN_TEST_USERNAME/
  * APX_LOGIN_TEST_PASSWORD -- skips cleanly at runtime if either is unset,
@@ -189,14 +222,32 @@ ${[
  * bug to work around here.`}
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 || wiredChartRegions.length > 0 || wiredIgRegions.length > 0 ? ', resolveRegion' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic ? '' : ', login'} } from '@apx/testkit';
-import { ${className} } from './${poBase}.js';${isPublic ? '' : `
+import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 || wiredChartRegions.length > 0 || wiredIgRegions.length > 0 ? ', resolveRegion' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic || navigationUnsafe ? '' : ', login'} } from '@apx/testkit';
+import { ${className} } from './${poBase}.js';${isPublic || navigationUnsafe ? '' : `
 import { APP_BASE } from '../playwright.config.js';`}
 `;
 
   const describeOpen = isPublic
     ? `test.describe('page ${page.id}: ${esc(page.name ?? alias)}', () => {`
-    : `test.describe('page ${page.id}: ${esc(page.name ?? alias)} [requires auth]', () => {
+    : navigationUnsafe
+      ? `test.describe('page ${page.id}: ${esc(page.name ?? alias)} [navigation unsafe -- skipped]', () => {
+  test.beforeEach(async () => {
+    // apx-testkit: security.pageAccessProtection: argumentsMustHaveChecksum
+    // on a non-public page -- a bare gotoApexPage() call is CONFIRMED to
+    // redirect an authenticated session to /login (HTTP 200, not an
+    // error), even immediately after a successful login to this exact
+    // page. Every test below is unconditionally skipped rather than
+    // generated to guaranteed-fail. See @apx/testkit's
+    // navigateViaUiPath() for the confirmed-working alternative (a real
+    // sequence of in-app link clicks) -- auto-deriving that path from
+    // the Flow Map is a scoped-out follow-up, not implemented here. See
+    // docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'.
+    test.skip(
+      true,
+      'apx-testkit: navigation unsafe (security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page) -- see this file\\'s header comment and docs/quirks/26.1.json page-access-protection-blocks-bare-navigation.',
+    );
+  });`
+      : `test.describe('page ${page.id}: ${esc(page.name ?? alias)} [requires auth]', () => {
   test.beforeEach(async ({ page }) => {
     const username = process.env.APX_LOGIN_TEST_USERNAME;
     const password = process.env.APX_LOGIN_TEST_PASSWORD;

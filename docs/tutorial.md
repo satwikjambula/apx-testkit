@@ -571,6 +571,46 @@ expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Employee'));
 const rawErrors = armConsoleGuard(page);
 ```
 
+**Navigation modes (runtime-review P0 item 2).** `gotoApexPage()`'s bare
+`page.goto()` is confirmed live to be UNSAFE against a page with
+`security.pageAccessProtection: argumentsMustHaveChecksum` that is NOT
+`authentication: public` — it silently redirects an authenticated
+session to `/login` (see `docs/quirks/26.1.json`
+`page-access-protection-blocks-bare-navigation`). Three primitives, all
+exported from `@apx/testkit`:
+
+```ts
+import { assessNavigationSafety, navigateViaUiPath, gotoApexPageAuto } from '@apx/testkit';
+
+// Decide safe/unsafe from static .apx security metadata alone -- never a
+// live probe. Directly confirmed unsafe for a non-public page with the
+// checksum flag set; an INFERRED-safe case for a public page with the
+// same flag set (see the function's own doc comment for the evidence
+// and why it's flagged as an inference, not an equally strong claim).
+const safety = assessNavigationSafety({ pageAccessProtection: 'argumentsMustHaveChecksum', isPublic: false });
+// -> { mode: 'ui-navigation', reason: '...' }
+
+// 'direct-url': just call gotoApexPage() as normal.
+// 'ui-navigation': supply a real, hand-verified click path -- this does
+// NOT auto-derive one from the Flow Map (a real, scoped-out follow-up).
+const errors = await navigateViaUiPath(page, ['Editing', 'Basic Editing']);
+
+// Or let gotoApexPageAuto() do the branching for you -- it throws a
+// specific, actionable error (naming what's unsafe and pointing at
+// navigateViaUiPath()) rather than silently attempting a goto that's
+// already known to fail:
+await gotoApexPageAuto(page, url, safety);
+```
+
+`@apx/testgen` computes the equivalent decision at GENERATION time (from
+the parsed `.apx` AST, via a locally-mirrored predicate kept in sync with
+`assessNavigationSafety()` by `packages/generator/test/
+navigation-safety.test.ts`) and, for an unsafe page, emits the whole
+generated `test.describe` block with an unconditional
+`test.skip(true, '...')` in a `beforeEach` — never a normal
+`gotoApexPage()`-based test that would guaranteed-fail at runtime. See
+`packages/generator/src/lib.ts` and `docs/limitations.md`.
+
 ### 2.8 Lifecycle waits
 
 **Status: VERIFIED**, general-purpose. Waits for a real APEX client event
@@ -813,18 +853,25 @@ REJECTED** with a clear "no such method" error (not a silent failure):
 `pageAccessProtection: argumentsMustHaveChecksum`, which blocks
 `gotoApexPage()`'s bare-`page.goto()` navigation strategy -- even
 immediately after a successful login, even to the exact page just landed
-on. Reach protected pages via real UI link clicks instead:
+on. Reach protected pages via `@apx/testkit`'s `navigateViaUiPath()`
+(2.7), which formalizes exactly this pattern:
 
 ```ts
-await page.getByRole('link', { name: /^Editing/ }).click();
-await page.waitForLoadState('domcontentloaded');
-await page.getByRole('link', { name: /^Basic Editing/ }).click();
-await page.waitForLoadState('domcontentloaded');
+import { navigateViaUiPath } from '@apx/testkit';
+
+await navigateViaUiPath(page, ['Editing', 'Basic Editing']);
+// equivalent to, and formalizing, the hand-written pattern:
+//   await page.getByRole('link', { name: /^Editing/ }).click();
+//   await page.waitForLoadState('domcontentloaded');
+//   await page.getByRole('link', { name: /^Basic Editing/ }).click();
+//   await page.waitForLoadState('domcontentloaded');
 ```
 
 See `spike/tests/interactive-grid-demo.spec.ts` for the full working
 example, and docs/quirks/26.1.json for both findings with complete
-evidence.
+evidence. `@apx/testgen` now detects this condition automatically (see
+2.7) and emits a clear, unconditional skip instead of a normal
+goto-based test for affected pages.
 
 **Auto-generated assertion**: `@apx/testgen` emits a test per page for
 every Interactive Grid region whose `htmlDomId` is set (ADR-003 layer 1)

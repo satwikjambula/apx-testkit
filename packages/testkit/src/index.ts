@@ -10,6 +10,13 @@ import { armConsoleGuard } from './fixtures/console-guard.js';
 
 export { armConsoleGuard } from './fixtures/console-guard.js';
 export { apexPageUrl, gotoApexPage, normalizeTitle } from './fixtures/session.js';
+export {
+  assessNavigationSafety,
+  navigateViaUiPath,
+  gotoApexPageAuto,
+  type NavigationMode,
+  type NavigationSafetyAssessment,
+} from './fixtures/navigation.js';
 export { login, loginAndSaveState, type ApexCredentials, type LoginOptions } from './fixtures/auth.js';
 export { callRegionMethodAndWaitForEvent, waitForRegionEvent } from './fixtures/lifecycle.js';
 export { coverageEnabled, recordCoverageTouch, type CoverageKind, type CoverageTouch } from './fixtures/coverage.js';

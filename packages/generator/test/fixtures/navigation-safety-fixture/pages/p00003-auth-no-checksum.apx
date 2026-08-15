@@ -1,0 +1,9 @@
+page 3 (
+  name: Auth No Checksum
+  alias: AUTH-NO-CHECKSUM
+  title: Auth No Checksum
+  button save (
+    label: Save
+    action: submit
+  )
+)
