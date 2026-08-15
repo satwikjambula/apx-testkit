@@ -1692,7 +1692,9 @@ UPDATE discipline.
    stubbed, plausible same-mechanism verification as the six already-
    verified item types (`apex.item()` round-trip). Cheapest real item on
    this list — no new app needed, no new mechanism to discover, just
-   execution.
+   execution. **Attempted 2026-08-12 (GitHub issue #8), blocked on an
+   instance-wide access gap, not resolved** — see "Blocked-on-access"
+   below and `docs/quirks/26.1.json` `checkbox-item-live-verification-blocked`.
 5. **`docs/support-matrix.md` chart-widget correction** (Documentation
    & DX Engineer). Not a build item — a factual-accuracy fix, flagged
    above, routed to the agent who owns day-to-day doc accuracy.
@@ -1705,6 +1707,18 @@ UPDATE discipline.
   reproduction was run (`spike/tests/interactive-grid-validation-demo.spec.ts`).
   See the "Resolution (2026-08-01)" subsection under the Seventh round
   follow-up above. No longer blocked, no longer on this list.
+- **Checkbox item-type live verification** (GitHub issue #8) — attempted
+  2026-08-12 by the QA/Verification Engineer; blocked, not resolved. The
+  only no-login live app (UX Pattern Catalog) and 3 other apps on the same
+  Autonomous DB host (Sample Charts, Sample Interactive Grids, Sample File
+  Upload and Download) all returned an identical ORDS-level 404 ("could
+  not be mapped to any database") across 9 attempts over ~6 minutes —
+  an instance-wide outage, not a page-specific issue. `APX_LOGIN_TEST_USERNAME`/
+  `APX_LOGIN_TEST_PASSWORD` were also unset, so credentialed apps were not
+  reachable either. See `docs/quirks/26.1.json`
+  `checkbox-item-live-verification-blocked` for full evidence. Re-run the
+  moment either the instance is reachable again or credentials become
+  available — no code change needed, this is purely an access gap.
 - **Calendar/Map runtime verification** — blocked on a live URL for
   `sample-calendar`/`sample-maps` or any app with either component
   reachable live. Static ground truth is already more than sufficient to
