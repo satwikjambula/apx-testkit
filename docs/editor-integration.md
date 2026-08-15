@@ -27,9 +27,22 @@ Cursor — .cursor/mcp.json in your project:
 Claude Code:
     claude mcp add apx -- npx -y @apx/mcp
 Then just ask the agent: "inspect my APEX export in ./export and generate
-smoke tests into ./tests-generated". Two tools are exposed:
+smoke tests into ./tests-generated". Six tools are exposed, every one a
+thin wrapper around the same deterministic `@apx/testgen` library function
+its CLI counterpart calls — no LLM calls anywhere in the MCP server itself:
 - inspect_apex_export -> JSON model of pages/items/regions/warnings
 - generate_apex_tests -> deterministic spec files + summary
+- generate_flow_map (apx-flow) -> navigation graph JSON (nodes = pages,
+  edges = branch/region-action/report-column-link/button targets, each
+  with a mechanism, confidence tier, and evidence citation)
+- diff_apex_exports (apx-diff) -> structural regression report between two
+  export directories (`format: "json"` for the full `DiffReport`,
+  `format: "human"` for prose sentences)
+- analyze_coverage (apx-coverage) -> cross-references a recorded touch log
+  against an export's declared items/regions/buttons; `includeHtml: true`
+  also returns a self-contained heatmap/checklist HTML view
+- generate_apex_docs (apx-docs) -> one Markdown file per page plus an
+  index.md, written to disk
 
 The agent dispatches; generation stays deterministic. The agent must never
 author assertions itself — that is the product boundary.

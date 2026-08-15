@@ -191,8 +191,13 @@ The pipeline is four packages wired together, AST-first:
                  coverage.ts (opt-in touch recorder, zero overhead unless
                  APX_COVERAGE_LOG is set), console-guard.ts, session.ts
 
-@apx/mcp       — MCP stdio server wrapping @apx/testgen for agentic editors
-                 (inspect_apex_export, generate_apex_tests tools)
+@apx/mcp       — MCP stdio server wrapping @apx/testgen for agentic editors:
+                 six tools, each a thin deterministic wrapper (no LLM calls
+                 anywhere in this file) around the same library function its
+                 CLI counterpart calls -- inspect_apex_export,
+                 generate_apex_tests, generate_flow_map (apx-flow),
+                 diff_apex_exports (apx-diff), analyze_coverage
+                 (apx-coverage), generate_apex_docs (apx-docs)
 ```
 
 Repo layout: `packages/parser`, `packages/testkit`, `packages/generator`,
