@@ -26,6 +26,8 @@ jobs:
         run: npm run typecheck
       - name: Generator unit tests (pure functions -- coverage.ts's region-touch matching, etc.)
         run: cd packages/generator && npx vitest run
+      - name: MCP unit tests (all six tools over InMemoryTransport -- registration, validation, real fixture I/O)
+        run: cd packages/mcp && npx vitest run
       - name: Determinism gate (hand-written reference-fixtures fixture, generate twice, diff)
         run: |
           node packages/generator/dist/cli.js packages/generator/test/fixtures/reference-fixtures --out /tmp/gen1
