@@ -1,0 +1,65 @@
+page 110 (
+  name: Customer Details
+  alias: CUSTOMER-DETAILS
+  title: Customer Details
+  security {
+    authentication: public
+  }
+  button delete_customer (
+    label: Delete
+    action: submitPage
+  )
+  button create_customer (
+    label: Create
+    action: submitPage
+  )
+  branch (
+    name: Go To CUSTOMERS after delete
+    execution {
+      sequence: 10
+    }
+    behavior {
+      target: {
+        page: CUSTOMERS
+        successMessage: false
+      }
+    }
+    serverSideCondition {
+      whenButtonPressed: @delete_customer
+    }
+  )
+
+  branch (
+    name: goto edit customer on create
+    execution {
+      sequence: 20
+    }
+    behavior {
+      target: {
+        page: 50
+        items: {
+          P50_ID: &P110_ID.
+        }
+        clearCache: 50
+        action: resetPagination
+        successMessage: false
+      }
+    }
+    serverSideCondition {
+      whenButtonPressed: @create_customer
+    }
+  )
+
+  branch (
+    execution {
+      sequence: 30
+    }
+    behavior {
+      target: {
+        page: &LAST_VIEW.
+        request: &P110_REQUEST.
+      }
+      saveStateBeforeBranching: true
+    }
+  )
+)

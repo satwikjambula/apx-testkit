@@ -14,6 +14,17 @@ The full verification pass. Run this before every commit that touches
 - [ ] Regenerate `packages/generator/test/fixtures/reference-fixtures`
       and diff against the committed `examples/employee-page` output —
       must be byte-identical.
+- [ ] `cd packages/generator && npx vitest run test/golden.test.ts` — the
+      golden generator fixtures (`packages/generator/test/golden/`, P0
+      item 5 of the runtime-review pass) must match `golden/expected/`
+      byte-for-byte, covering every generation-time decision (region
+      resolution, navigation safety, modalDialog, duplicate button
+      labels, htmlDomId, Interactive Report/Cards/Faceted
+      Search/Chart/Interactive Grid, dynamic actions, branches) — not
+      just the single `reference-fixtures` case. See
+      `packages/generator/test/golden/README.md` for what each fixture
+      proves and how to update `expected/` after an intentional template
+      change.
 - [ ] Parse every real local `.apx` export through `@apx/parser` — zero
       warnings across all of them.
 - [ ] If a runtime capability changed: re-run the relevant

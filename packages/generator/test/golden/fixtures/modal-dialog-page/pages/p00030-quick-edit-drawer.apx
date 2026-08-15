@@ -1,0 +1,41 @@
+page 30 (
+  name: Quick Edit Drawer
+  alias: QUICK-EDIT-DRAWER
+  title: Quick Edit Drawer
+  appearance {
+    pageMode: modalDialog
+    dialogTemplate: @/drawer
+  }
+  dialog {
+    chained: false
+  }
+  security {
+    authentication: public
+    pageAccessProtection: argumentsMustHaveChecksum
+  }
+  region quick-edit-form (
+    name: Quick Edit Form
+    type: form
+    source {
+      location: localDatabase
+      tableName: NOTES
+    }
+    item P30_NOTE_ID (
+      type: hidden
+      source {
+        column: NOTE_ID
+      }
+    )
+    item P30_NOTE_TEXT (
+      type: textarea
+      label: Note
+      source {
+        column: NOTE_TEXT
+      }
+    )
+    button save_note (
+      label: Save
+      action: submitPage
+    )
+  )
+)

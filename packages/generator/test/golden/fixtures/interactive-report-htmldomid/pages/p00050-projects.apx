@@ -1,0 +1,33 @@
+page 50 (
+  name: Projects
+  alias: PROJECTS
+  title: Projects
+  security {
+    authentication: public
+  }
+  region projects (
+    name: Projects
+    type: interactiveReport
+    advanced {
+      htmlDomId: projects_report
+    }
+    source {
+      location: localDatabase
+      sql:
+        ```sql
+        select project_id, project_name, status from projects
+        ```
+    }
+  )
+  region archived-projects (
+    name: Archived Projects
+    type: interactiveReport
+    source {
+      location: localDatabase
+      sql:
+        ```sql
+        select project_id, project_name from archived_projects
+        ```
+    }
+  )
+)

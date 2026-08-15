@@ -1,0 +1,54 @@
+page 100 (
+  name: Edit
+  alias: EDIT
+  title: Edit
+  security {
+    authentication: public
+  }
+  item P100_JOB (
+    type: selectList
+    label: Job
+  )
+  item P100_COMM (
+    type: numberField
+    label: Commission
+  )
+  dynamicAction commission-for-salesman-only (
+    name: Commission for Salesman Only
+    execution {
+      sequence: 10
+    }
+    when {
+      selectionType: items
+      items: P100_JOB
+    }
+    clientSideCondition {
+      type: item=value
+      item: P100_JOB
+      value: SALESMAN
+    }
+
+    action native-disable (
+      action: disable
+      affectedElements {
+        selectionType: items
+        items: P100_COMM
+      }
+      execution {
+        sequence: 10
+        fireWhenEventResultIs: false
+      }
+    )
+
+    action native-enable (
+      action: enable
+      affectedElements {
+        selectionType: items
+        items: P100_COMM
+      }
+      execution {
+        sequence: 10
+      }
+    )
+  )
+)

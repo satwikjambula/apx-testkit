@@ -187,7 +187,7 @@ export function pageObjectFor(page: ApexPage): string {
  * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { ApexItem, apexPageUrl${usesButtonByLabel ? ', buttonByLabel' : ''}, gotoApexPage } from '@apx/testkit';
+import { ${page.items.length > 0 ? 'ApexItem, ' : ''}apexPageUrl${usesButtonByLabel ? ', buttonByLabel' : ''}, gotoApexPage } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class ${className} {

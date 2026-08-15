@@ -266,7 +266,7 @@ ${[
  * bug to work around here.`}
  */
 import { expect, test } from '@playwright/test';
-import { expectItemsPresent${labeledButtons.length > 0 ? ', expectButtonsPresent' : ''}${resolvableRegions.length > 0 || wiredChartRegions.length > 0 || wiredIgRegions.length > 0 ? ', resolveRegion' : ''}${wiredChartRegions.length > 0 ? ', ApexChartRegion' : ''}${wiredIgRegions.length > 0 ? ', ApexInteractiveGridRegion' : ''}, normalizeTitle${isPublic || notAutoRoutable ? '' : ', login'} } from '@apx/testkit';
+import { ${page.items.length > 0 ? 'expectItemsPresent, ' : ''}${labeledButtons.length > 0 ? 'expectButtonsPresent, ' : ''}${resolvableRegions.length > 0 || wiredChartRegions.length > 0 || wiredIgRegions.length > 0 ? 'resolveRegion, ' : ''}${wiredChartRegions.length > 0 ? 'ApexChartRegion, ' : ''}${wiredIgRegions.length > 0 ? 'ApexInteractiveGridRegion, ' : ''}normalizeTitle${isPublic || notAutoRoutable ? '' : ', login'} } from '@apx/testkit';
 import { ${className} } from './${poBase}.js';${isPublic || notAutoRoutable ? '' : `
 import { APP_BASE } from '../playwright.config.js';`}
 `;

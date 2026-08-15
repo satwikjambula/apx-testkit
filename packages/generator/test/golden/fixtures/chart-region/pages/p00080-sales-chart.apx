@@ -1,0 +1,25 @@
+page 80 (
+  name: Sales Chart
+  alias: SALES-CHART
+  title: Sales Chart
+  security {
+    authentication: public
+  }
+  region sales-by-region (
+    name: Sales By Region
+    type: chart
+    advanced {
+      htmlDomId: salesPie1
+    }
+    chart {
+      type: pie
+    }
+  )
+  region sales-by-quarter (
+    name: Sales By Quarter
+    type: chart
+    chart {
+      type: bar
+    }
+  )
+)

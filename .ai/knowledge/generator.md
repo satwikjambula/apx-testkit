@@ -89,4 +89,21 @@ contract (`test/docs.test.ts` asserts it directly, regenerating twice into
 separate directories and diffing byte-for-byte) — no timestamps, no
 ordering beyond the AST's own stable source order.
 
+**Self-consistency is not correctness** (runtime-review P0 item 5) — the
+`reference-fixtures` check above only proves the generator produces the
+SAME output twice; it says nothing about whether that output is right. A
+reproducibly-wrong template change would pass it every time. `test/golden/`
+adds the missing correctness gate: real input/expected pairs (all
+hand-written, modeling real corpus structure — never copied from an
+Oracle export, per `examples/verified-apps/README.md`'s established
+redistribution-rights handling) covering every generation-time decision
+this package makes — region resolution (ADR-003), navigation safety,
+`modalDialog`, duplicate button labels, `htmlDomId`, each resolvable
+region type, dynamic actions, and branches. `test/golden.test.ts` diffs
+generated output against `test/golden/expected/` byte-for-byte, in
+addition to the existing double-generate self-consistency check. See
+`test/golden/README.md` for what each fixture proves and how to update
+`expected/` after an intentional template change — this is now also part
+of `.ai/checklists/release.md`.
+
 ## Adding generator support for a new component — see `.ai/checklists/new-component.md`

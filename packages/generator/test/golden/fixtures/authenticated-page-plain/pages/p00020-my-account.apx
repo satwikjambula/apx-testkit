@@ -1,0 +1,30 @@
+page 20 (
+  name: My Account
+  alias: MY-ACCOUNT
+  title: My Account
+  region account-form (
+    name: Account Form
+    type: form
+    source {
+      location: localDatabase
+      tableName: ACCOUNTS
+    }
+    item P20_ACCOUNT_ID (
+      type: hidden
+      source {
+        column: ACCOUNT_ID
+      }
+    )
+    item P20_DISPLAY_NAME (
+      type: textField
+      label: Display Name
+      source {
+        column: DISPLAY_NAME
+      }
+    )
+    button save_account (
+      label: Save
+      action: submitPage
+    )
+  )
+)

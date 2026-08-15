@@ -1,0 +1,28 @@
+page 40 (
+  name: Dashboard
+  alias: DASHBOARD
+  title: Dashboard
+  security {
+    authentication: public
+  }
+  region dashboard-cards (
+    name: Dashboard Cards
+    type: staticContent
+    button refresh_dashboard (
+      label: Refresh
+      action: definedByDynamicAction
+    )
+    button view_details_card_1 (
+      label: View Details
+      action: definedByDynamicAction
+    )
+    button view_details_card_2 (
+      label: View Details
+      action: definedByDynamicAction
+    )
+    button view_details_card_3 (
+      label: View Details
+      action: definedByDynamicAction
+    )
+  )
+)

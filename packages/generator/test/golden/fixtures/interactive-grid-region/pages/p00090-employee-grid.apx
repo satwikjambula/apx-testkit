@@ -1,0 +1,27 @@
+page 90 (
+  name: Employee Grid
+  alias: EMPLOYEE-GRID
+  title: Employee Grid
+  security {
+    pageAccessProtection: argumentsMustHaveChecksum
+  }
+  region employee-editing (
+    name: Employee Editing
+    type: interactiveGrid
+    advanced {
+      htmlDomId: emp
+    }
+    source {
+      location: localDatabase
+      tableName: EMP
+    }
+  )
+  region department-editing (
+    name: Department Editing
+    type: interactiveGrid
+    source {
+      location: localDatabase
+      tableName: DEPT
+    }
+  )
+)

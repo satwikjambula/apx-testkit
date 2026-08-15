@@ -1,0 +1,19 @@
+page 60 (
+  name: Movies
+  alias: MOVIES
+  title: Movies
+  security {
+    authentication: public
+  }
+  region movie-cards (
+    name: Movie Cards
+    type: cards
+    source {
+      location: localDatabase
+      sql:
+        ```sql
+        select movie_id, title, poster_url from movies
+        ```
+    }
+  )
+)

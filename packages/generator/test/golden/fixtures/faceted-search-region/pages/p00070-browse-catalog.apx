@@ -1,0 +1,30 @@
+page 70 (
+  name: Browse Catalog
+  alias: BROWSE-CATALOG
+  title: Browse Catalog
+  security {
+    authentication: public
+  }
+  region active-facets (
+    name: Active Facets
+    type: facetedSearch
+    source {
+      location: localDatabase
+      sql:
+        ```sql
+        select item_id, category, price from catalog_items
+        ```
+    }
+  )
+  region catalog-cards (
+    name: Catalog Cards
+    type: cards
+    source {
+      location: localDatabase
+      sql:
+        ```sql
+        select item_id, name, image_url from catalog_items
+        ```
+    }
+  )
+)

@@ -1,0 +1,46 @@
+page 10 (
+  name: Registration
+  alias: REGISTRATION
+  title: Registration
+  security {
+    authentication: public
+  }
+  region registration-form (
+    name: Registration Form
+    type: form
+    source {
+      location: localDatabase
+      tableName: CUSTOMERS
+    }
+    item P10_CUSTOMER_ID (
+      type: hidden
+      source {
+        column: CUSTOMER_ID
+      }
+    )
+    item P10_FIRST_NAME (
+      type: textField
+      label: First Name
+      required: true
+      source {
+        column: FIRST_NAME
+      }
+    )
+    item P10_EMAIL (
+      type: textField
+      label: Email
+      required: true
+      source {
+        column: EMAIL
+      }
+    )
+    button submit_registration (
+      label: Submit
+      action: submitPage
+    )
+    button reset_form (
+      label: Reset
+      action: resetPage
+    )
+  )
+)
