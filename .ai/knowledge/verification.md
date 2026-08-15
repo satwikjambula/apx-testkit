@@ -427,6 +427,30 @@ Same idea, for parser/grammar claims: what was checked, against which
 EBNF production(s), against which real export data, what was found. Has
 a "Still open" section for questions without an answer yet.
 
+## `docs/verification/26.1.json` — the machine-readable verification registry
+
+A structured INDEX over the evidence in `docs/quirks/26.1.json`,
+`docs/grammar-assumptions.md`, and the "confirmed live"/EBNF-cross-checked
+doc comments in `packages/testkit/src/**`/`packages/parser/src/ast.ts` —
+not a new evidence source, and not a replacement for either ledger. Built
+so prose docs can eventually be *generated from* evidence instead of
+hand-copied into N places (the same fact has drifted between files at
+least three times now — the Chart `widget()` claim, twice more found stale
+in `docs/grammar-assumptions.md` and `docs/support-matrix.md` during the
+registry's own extraction pass, and the button `htmlDomId` "zero buttons"
+overclaim in `docs/support-matrix.md`, all corrected in place). One real
+consumer is wired: `scripts/generate-support-matrix.mjs` renders
+`docs/support-matrix.md`'s table from the registry's `supportMatrixRow`
+entries, with `--check` failing on drift. See `docs/verification/README.md`
+for the full schema, evidence-level taxonomy (VERIFIED/DOCUMENTED/
+OBSERVED/UNVERIFIED/UNSUPPORTED), and how to add/correct an entry.
+
+`node scripts/validate-verification-registry.mjs` and
+`node scripts/generate-support-matrix.mjs --check` are now part of the
+regression sweep below — run both before considering any change to the
+registry, `docs/quirks/26.1.json`, `docs/grammar-assumptions.md`, or
+`docs/support-matrix.md` done.
+
 ## `spike/` — hand-written live verification specs
 
 Real Playwright specs run by hand against real running apps (not part of
@@ -445,3 +469,8 @@ either is unset, and **never hardcodes a credential**.
   byte-identical.
 - Parse every real local export through `@apx/parser` — must be zero
   warnings across all of them.
+- `node scripts/validate-verification-registry.mjs` — the verification
+  registry is internally valid (required fields, unique ids, every
+  citation resolves to a real file/quirk).
+- `node scripts/generate-support-matrix.mjs --check` — `docs/support-matrix.md`
+  has not drifted from what the registry would generate.

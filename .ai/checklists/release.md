@@ -37,6 +37,19 @@ The full verification pass. Run this before every commit that touches
       `docs/support-matrix.md`, `README.md` capability matrix,
       `docs/tutorial.md`, `docs/quirks/26.1.json`,
       `docs/grammar-assumptions.md`, `CLAUDE.md`.
+- [ ] `node scripts/validate-verification-registry.mjs` — the verification
+      registry (`docs/verification/26.1.json`) itself is internally valid:
+      every entry has required fields with valid enum values, every `id`
+      is unique, every `citation` resolves to a real file (and, for
+      `docs/quirks/26.1.json#<id>` citations, a real quirk id — an orphaned
+      citation is a regression, not just a style nit).
+- [ ] `node scripts/generate-support-matrix.mjs --check` — confirms
+      `docs/support-matrix.md`'s generated table has not drifted from what
+      `docs/verification/26.1.json` would produce. If a runtime/parser
+      finding changed and its `docs/support-matrix.md` row didn't update
+      with it, this fails — update the registry entry and re-run
+      `node scripts/generate-support-matrix.mjs` (no `--check`), never
+      hand-edit the table rows directly.
 - [ ] Confirm no real Oracle sample-app exports/zips got staged —
       these are kept local only, never committed (same handling as
       credentials).
