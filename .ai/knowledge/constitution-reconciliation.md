@@ -232,13 +232,12 @@ resolved" note.
 | P2.22 Improve Oracle Skills integration | implied outstanding | **Confirmed genuinely unstarted**, positioning-only today. See §D. |
 
 Separately, three real pieces of work not named in the constitution's
-own P0-P2 list at all have shipped or are sitting in open, unmerged PRs
-against `main` as of this pass: checksum-protected-page navigation
-skipping (`assessNavigationSafety`), `modalDialog` unroutable-page
-skipping, and the `test/golden/` correctness gate are merged into this
-branch's history; MCP tool expansion (`apx-flow`/`apx-diff`/
-`apx-coverage`/`apx-docs` as MCP tools, PR #18) and login
-success-detection hardening (PR #17) are complete but still open,
-unmerged PRs, not yet on `main`. None of this needed rediscovery — it's
-recorded here so this reconciliation pass doesn't itself become another
-source of a stale "still pending" claim.
+own P0-P2 list at all: checksum-protected-page navigation skipping
+(`assessNavigationSafety`), `modalDialog` unroutable-page skipping, and
+the `test/golden/` correctness gate. Along with MCP tool expansion
+(`apx-flow`/`apx-diff`/`apx-coverage`/`apx-docs` as MCP tools, PR #18),
+login success-detection hardening (PR #17), this reconciliation itself
+(PR #19), and the doc-drift/CI-dashboard/checkbox-verification PRs
+(#14/#15/#16) — all six merged to `main` same-day as this pass. None of
+this needed rediscovery — it's recorded here so this reconciliation pass
+doesn't itself become another source of a stale "still pending" claim.
