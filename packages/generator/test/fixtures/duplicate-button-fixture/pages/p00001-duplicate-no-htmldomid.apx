@@ -1,0 +1,20 @@
+page 1 (
+  name: Duplicate No HtmlDomId
+  alias: DUPLICATE-NO-HTMLDOMID
+  title: Duplicate No HtmlDomId
+  security {
+    authentication: public
+  }
+  button save_employee (
+    label: Save
+    action: submit
+  )
+  button save_request (
+    label: Save
+    action: submit
+  )
+  button cancel (
+    label: Cancel
+    action: submit
+  )
+)

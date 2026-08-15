@@ -12,7 +12,7 @@
  * so output stays byte-identical for identical input (the determinism
  * contract in lib.ts).
  */
-import type { ApexItem, ApexPage } from '@apx/parser';
+import type { ApexButton, ApexItem, ApexPage } from '@apx/parser';
 
 const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
@@ -63,6 +63,36 @@ export function computeButtonMethodNames(page: ApexPage): Map<string, string> {
   return out;
 }
 
+/**
+ * Group labeled buttons on a page by their LABEL (not identifier) --
+ * runtime-review P0 item 4. `buttonByLabel()`'s locator
+ * (`page.getByRole('button', { name: label, exact: true })`) assumes the
+ * label is unique on the page; a real app can have multiple buttons
+ * sharing a label (`Save`, `Save`, `Save & Close`). Method NAMES are
+ * always unique (derived from `button.identifier`, deduped by
+ * `computeButtonMethodNames`), so two same-labeled buttons with
+ * different identifiers would otherwise silently generate two
+ * DIFFERENT-looking click methods that both resolve to the SAME
+ * ambiguous locator -- a real, previously-unguarded bug class this
+ * function's caller (`pageObjectFor`) refuses to generate a click method
+ * for, deliberately, rather than shipping a guess. Only returns groups
+ * with 2+ members -- a label used by exactly one button is unambiguous
+ * and unaffected.
+ */
+export function computeDuplicateLabelButtons(page: ApexPage): Map<string, ApexButton[]> {
+  const byLabel = new Map<string, ApexButton[]>();
+  for (const button of page.buttons) {
+    if (!button.label) continue;
+    const group = byLabel.get(button.label);
+    if (group) group.push(button);
+    else byLabel.set(button.label, [button]);
+  }
+  for (const [label, group] of byLabel) {
+    if (group.length < 2) byLabel.delete(label);
+  }
+  return byLabel;
+}
+
 /** Deterministic page alias/name -> PascalCase class name, e.g. 'data-entry-simple-form' -> DataEntrySimpleFormPage. */
 export function pageObjectClassName(page: ApexPage): string {
   const source = page.alias ?? page.name ?? `Page${page.id}`;
@@ -103,6 +133,7 @@ export function pageObjectFor(page: ApexPage): string {
   const alias = (page.alias ?? '').toLowerCase();
   const itemNames = computeItemPropNames(page);
   const buttonNames = computeButtonMethodNames(page);
+  const duplicateLabelGroups = computeDuplicateLabelButtons(page);
 
   const itemAccessors = page.items.map(
     (item) => `  /** ${itemDoc(item)} */
@@ -112,12 +143,31 @@ export function pageObjectFor(page: ApexPage): string {
   );
 
   const buttonMethods: string[] = [];
+  let usesButtonByLabel = false;
   for (const button of page.buttons) {
     const method = buttonNames.get(button.identifier);
     if (!method) continue; // no label -> nothing safe to locate by, skipped deliberately
+
+    const duplicateGroup = duplicateLabelGroups.get(button.label!);
+    if (duplicateGroup) {
+      // AMBIGUOUS -- runtime-review P0 item 4: do NOT silently generate a
+      // click method that resolves to the same locator as another,
+      // DIFFERENT button. List every colliding identifier so this is
+      // actionable, not just "trust me."
+      const others = duplicateGroup.map((b) => b.identifier).filter((id) => id !== button.identifier);
+      const htmlDomIdNote = button.htmlDomId
+        ? ` This button DOES declare advanced { htmlDomId: ${button.htmlDomId} }, which COULD disambiguate it once a live-verified id-based locator strategy is confirmed for buttons (buttonByHtmlDomId() exists in @apx/testkit, marked NOT YET LIVE-VERIFIED -- see docs/quirks/26.1.json 'button-id-not-static-id') -- not auto-wired here until then.`
+        : ' No advanced { htmlDomId } is set on this button, so there is currently no way to disambiguate it from a generated test alone.';
+      buttonMethods.push(`  // Cannot generate a deterministic click method for '${esc(button.identifier)}' ("${esc(button.label!)}") --
+  // its label is shared with ${others.map((id) => `'${esc(id)}'`).join(', ')} on this same page, and buttonByLabel()'s
+  // locator (page.getByRole('button', { name: '${esc(button.label!)}', exact: true })) cannot tell them apart.${htmlDomIdNote}`);
+      continue;
+    }
+
+    usesButtonByLabel = true;
     buttonMethods.push(`  /** "${esc(button.label!)}" */
   async ${method}(): Promise<void> {
-    await buttonByLabel(this.page, '${esc(button.label!)}').click();
+    await buttonByLabel(this.page, '${esc(button.label!)}', { pageId: ${page.id}, identifier: '${esc(button.identifier)}' }).click();
   }`);
   }
 
@@ -128,10 +178,16 @@ export function pageObjectFor(page: ApexPage): string {
  * Typed accessor page object built on @apx/testkit primitives — no raw
  * selectors. Item accessors rest on the VERIFIED apex.item contract; button
  * methods use accessible-role/label locators (region/button DOM convention
- * still open — see docs/grammar-assumptions.md).
+ * still open — see docs/grammar-assumptions.md). Click methods pass their
+ * button's semantic identity (pageId + .apx identifier) through to
+ * buttonByLabel() so coverage tracking never collapses two different,
+ * same-labeled buttons into one entry -- see @apx/testkit's coverage.ts.
+ * Buttons whose label collides with another button's on this same page do
+ * NOT get a generated click method at all -- see the comment in their
+ * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { ApexItem, apexPageUrl, buttonByLabel, gotoApexPage } from '@apx/testkit';
+import { ApexItem, apexPageUrl${usesButtonByLabel ? ', buttonByLabel' : ''}, gotoApexPage } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class ${className} {

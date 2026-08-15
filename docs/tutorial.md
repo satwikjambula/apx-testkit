@@ -340,6 +340,37 @@ logically weaker than `clickButton` (existence vs. clickability), so it
 adds a live-verified signal specifically for pages whose buttons are
 declared but never exercised by a click assertion.
 
+**Label uniqueness is NOT guaranteed (runtime-review P0 item 4).** A real
+app can have multiple buttons sharing a label — confirmed on real
+exports (UX Pattern Catalog's "Dashboard Advanced" page has FIVE buttons
+all labeled "View Details"). `buttonByLabel(page, 'Save')`'s locator
+resolves ALL of them; calling `.click()` on it is ambiguous. Pass a
+button's semantic identity as the optional third argument so coverage
+tracking can tell same-labeled buttons apart (`@apx/testgen`'s generated
+click methods always do this):
+
+```ts
+await buttonByLabel(page, 'Save', { pageId: 3, identifier: 'SAVE_EMPLOYEE' }).click();
+```
+
+`@apx/testgen` goes further: it detects duplicate labels PER PAGE at
+generation time and refuses to generate a click method for ANY button in
+a colliding group at all — see 3.8 below and
+`packages/generator/src/page-object.ts`'s `computeDuplicateLabelButtons()`.
+
+`buttonByHtmlDomId(page, htmlDomId)` locates a button by `advanced {
+htmlDomId: ... }` (`ApexButton.htmlDomId`) instead of its label — the
+disambiguation escape hatch when a colliding button has a distinct
+`htmlDomId` set (confirmed real on 4 buttons across 4 apps this pass,
+correcting an earlier "zero ever" claim — see
+docs/quirks/26.1.json `button-id-not-static-id`). **NOT YET
+LIVE-VERIFIED** — the hypothesis that `htmlDomId` becomes the literal DOM
+`id` attribute follows the SAME mechanism already confirmed for regions
+(ADR-003), but has not been independently checked for buttons (see
+`spike/tests/button-htmldomid-live-2026-08-14-demo.spec.ts`, gated, not
+yet run). `@apx/testgen` deliberately does NOT auto-wire this into
+generated click methods until it is.
+
 ### 2.3 Regions (generic)
 
 **Status: VERIFIED, generic surface only.** Region *identifiers* (mapping
@@ -658,8 +689,18 @@ page 410: Data Entry – Simple Form (data-entry-simple-form)
   buttons: 1/1 (100%)
 ```
 
-Buttons are matched by LABEL (there's no verified button-id convention —
-see 2.2), everything else by `.apx` identifier. This is "which declared
+Items/regions are matched by `.apx` identifier, unchanged. Buttons
+(runtime-review P0 item 4) are matched by `(pageId, identifier)` — the
+button's semantic identity, never its label — when a touch carries that
+identity (always true for `@apx/testgen`'s generated click methods, see
+2.2); a touch recorded WITHOUT identity (a hand-written spec calling
+`buttonByLabel()` with only two arguments) falls back to matching by
+label, exactly as before this fix, so older specs aren't penalized. This
+directly fixes a real bug: matching purely by label used to silently
+collapse two DIFFERENT buttons sharing a label (confirmed real on UX
+Pattern Catalog's "Dashboard Advanced" page — five buttons all labeled
+"View Details") into indistinguishable coverage, where touching one
+would make ALL of them read as "touched." This is "which declared
 components did my suite touch," not code-line coverage.
 
 **Untrackable region types are reported separately, not counted as
@@ -1407,6 +1448,20 @@ normal test guaranteed to redirect to `/login` and fail. A public page
 with the same flag is currently treated as safe (an inference from
 indirect evidence, not independently live-confirmed — see 2.7 and
 `docs/quirks/26.1.json`).
+
+### 3.8 Pages with duplicate button labels
+
+See 2.2 for the full primitives. The generator-facing summary: when two
+or more buttons on the SAME page share a label (real, confirmed on UX
+Pattern Catalog's "Dashboard Advanced" page — five buttons all labeled
+"View Details"), `@apx/testgen` does NOT generate a click method for any
+of them — it emits a comment in their place, naming every colliding
+button identifier and whether `advanced { htmlDomId }` is set on that
+specific button (a potential future disambiguation path, not yet
+auto-wired — see 2.2). Every OTHER, non-colliding button on the same
+page is completely unaffected and still gets a normal click method, now
+carrying its `{ pageId, identifier }` semantic identity for coverage
+tracking (`buttonByLabel`'s third argument — see 2.2 and 2.9).
 
 ---
 

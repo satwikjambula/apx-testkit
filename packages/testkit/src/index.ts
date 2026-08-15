@@ -19,7 +19,15 @@ export {
 } from './fixtures/navigation.js';
 export { login, loginAndSaveState, type ApexCredentials, type LoginOptions } from './fixtures/auth.js';
 export { callRegionMethodAndWaitForEvent, waitForRegionEvent } from './fixtures/lifecycle.js';
-export { coverageEnabled, recordCoverageTouch, type CoverageKind, type CoverageTouch } from './fixtures/coverage.js';
+export {
+  coverageEnabled,
+  recordCoverageTouch,
+  recordButtonCoverageTouch,
+  type CoverageKind,
+  type CoverageTouch,
+  type CoverageRuntimeLocator,
+  type ButtonCoverageIdentity,
+} from './fixtures/coverage.js';
 
 export {
   ApexItem,
@@ -47,6 +55,7 @@ export {
 } from './components/resolve-region.js';
 export {
   buttonByLabel,
+  buttonByHtmlDomId,
   clickButton,
   buttonsPresent,
   expectButtonsPresent,

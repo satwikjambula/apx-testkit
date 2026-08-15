@@ -115,12 +115,35 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   has real, confirmed evidence now, not just an open question — the EBNF
   confirms `button.advanced.htmlDomId`/`staticId` exist (the SAME
   mechanism ADR-003 already established for regions, now typed as
-  `ApexButton.htmlDomId`), but a full grep of every button in this
-  project's entire local corpus (46+ real exports) found ZERO that ever
-  set either field; live-confirmed the runtime id in that (universal, so
-  far) case is an internal `B<numeric>` id, undiscoverable from export
-  data. `button.ts`'s locator strategy is unchanged as a direct result —
-  see docs/quirks/26.1.json `button-id-not-static-id`.
+  `ApexButton.htmlDomId`). CORRECTED (runtime-review P0 item 4,
+  2026-08-14): the Eighth round's "ZERO buttons in the entire 46+ app
+  corpus ever set it" claim was an overclaim — its own evidence only
+  actually grepped one app (UX Pattern Catalog). Re-swept the full
+  corpus and found 4 real buttons (4 independent apps, ~1.1% of buttons
+  checked) that DO set it. `buttonByHtmlDomId()` now exists in
+  `@apx/testkit` as a real, ready locator primitive for this — but is
+  explicitly marked **NOT YET LIVE-VERIFIED** (unlike regions' identical
+  mechanism, which IS live-verified per ADR-003) and is deliberately
+  **not** auto-wired into generated click methods, since a wrong
+  id-based click could silently click the wrong element with no
+  assertion to catch it. See docs/quirks/26.1.json
+  `button-id-not-static-id` (corrected in place).
+- **`buttonByLabel()`'s label-uniqueness assumption is now explicitly
+  guarded, not silently trusted.** A real app can have multiple buttons
+  sharing a label — confirmed on real exports (UX Pattern Catalog's
+  "Dashboard Advanced" page has FIVE buttons all labeled "View Details").
+  `@apx/testgen` (`computeDuplicateLabelButtons()` in
+  `packages/generator/src/page-object.ts`) now detects this per page and
+  refuses to generate a click method for ANY button in a colliding
+  group — it emits a clear, actionable comment (naming every colliding
+  identifier, and whether `htmlDomId` could disambiguate it once
+  live-verified) instead of a click method that would silently target
+  the wrong element. Separately, coverage tracking
+  (`@apx/testkit`'s `recordButtonCoverageTouch()`) now carries a
+  button's semantic `.apx` identity (`pageId` + `identifier`) alongside
+  the runtime locator actually used, so two different, same-labeled
+  buttons are never collapsed into one coverage entry — see
+  `packages/generator/src/coverage.ts`'s `summarizeButtons()`.
 
 ## Item coverage
 

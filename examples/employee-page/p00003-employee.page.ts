@@ -3,7 +3,13 @@
  * Typed accessor page object built on @apx/testkit primitives — no raw
  * selectors. Item accessors rest on the VERIFIED apex.item contract; button
  * methods use accessible-role/label locators (region/button DOM convention
- * still open — see docs/grammar-assumptions.md).
+ * still open — see docs/grammar-assumptions.md). Click methods pass their
+ * button's semantic identity (pageId + .apx identifier) through to
+ * buttonByLabel() so coverage tracking never collapses two different,
+ * same-labeled buttons into one entry -- see @apx/testkit's coverage.ts.
+ * Buttons whose label collides with another button's on this same page do
+ * NOT get a generated click method at all -- see the comment in their
+ * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
 import { ApexItem, apexPageUrl, buttonByLabel, gotoApexPage } from '@apx/testkit';
@@ -35,6 +41,6 @@ export class EmployeePage {
 
   /** "Save" */
   async clickSave(): Promise<void> {
-    await buttonByLabel(this.page, 'Save').click();
+    await buttonByLabel(this.page, 'Save', { pageId: 3, identifier: 'save' }).click();
   }
 }

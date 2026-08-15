@@ -5,12 +5,24 @@
  * which declared items/regions/buttons a test run actually exercised.
  *
  * "Coverage" here means something different from code-line coverage: the
- * AST already has stable identifiers (pageItem ids, region ids, button
- * labels), so this reports touched-vs-untouched per page against THAT
- * inventory, not instrumented source lines. Buttons are matched by LABEL,
- * not identifier -- there's no verified button-id convention yet (see
- * docs/grammar-assumptions.md), and buttonByLabel() is label-based by
- * design.
+ * AST already has stable identifiers (pageItem ids, region ids), so this
+ * reports touched-vs-untouched per page against THAT inventory, not
+ * instrumented source lines.
+ *
+ * BUTTONS (runtime-review P0 item 4): matched by `pageId` + the button's
+ * semantic `.apx` `identifier` -- NEVER by label alone. Matching by label
+ * used to silently collapse two DIFFERENT buttons sharing a label (e.g.
+ * `SAVE_EMPLOYEE`/`SAVE_REQUEST`, both labeled "Save") into indistinguishable
+ * coverage -- a real bug: `declared` would contain "Save" twice, and if
+ * EITHER button's click was ever recorded, BOTH would be reported touched,
+ * even the one that was never actually exercised. Touches recorded WITH
+ * identity (`pageId` set -- always true for generated code, see
+ * page-object.ts) are matched by the `(pageId, identifier)` pair. Touches
+ * recorded WITHOUT identity (`pageId: null` -- a degraded case, only
+ * possible from a hand-written spec calling `buttonByLabel()` without its
+ * optional third argument) fall back to matching by LABEL, exactly as
+ * before this fix, so existing hand-written specs are not penalized for
+ * not yet having been updated to pass identity.
  *
  * Regions get one extra distinction: a region whose TYPE has no
  * @apx/testkit component at all (tree, calendar, map -- see
@@ -25,12 +37,14 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parseApp, type ApexRegion } from '@apx/parser';
+import { parseApp, type ApexButton, type ApexRegion } from '@apx/parser';
 import { loadExport } from './lib.js';
 
 interface RawTouch {
   kind: 'item' | 'region' | 'button';
   identifier: string;
+  /** Non-null only for button touches recorded with full semantic identity (see module doc). */
+  pageId: number | null;
 }
 
 /**
@@ -93,7 +107,11 @@ function readTouches(touchLogPath: string): RawTouch[] {
     try {
       const parsed = JSON.parse(trimmed);
       if (parsed && typeof parsed.identifier === 'string' && typeof parsed.kind === 'string') {
-        touches.push({ kind: parsed.kind, identifier: parsed.identifier });
+        touches.push({
+          kind: parsed.kind,
+          identifier: parsed.identifier,
+          pageId: typeof parsed.pageId === 'number' ? parsed.pageId : null,
+        });
       }
     } catch {
       /* malformed line -- ignore, don't crash the whole report over one bad append */
@@ -138,6 +156,21 @@ export function summarizeRegions(declared: readonly ApexRegion[], touched: Reado
   return { total: trackable.length, touched: trackable.length - untouched.length, untouched, untrackable };
 }
 
+/**
+ * See module doc's "BUTTONS" section. `touches` here is the FULL list of
+ * button-kind touches across every page (not pre-scoped) -- this function
+ * scopes the identity match to `pageId` itself, and separately supports
+ * the degraded, identity-free (`pageId: null`) label-matching fallback.
+ */
+export function summarizeButtons(declared: readonly ApexButton[], pageId: number, touches: readonly RawTouch[]): CategoryCoverage {
+  const labeled = declared.filter((b) => b.label !== null);
+  const identifiedTouches = new Set(touches.filter((t) => t.pageId === pageId).map((t) => t.identifier));
+  const degradedLabelTouches = new Set(touches.filter((t) => t.pageId === null).map((t) => t.identifier));
+  const wasTouched = (b: ApexButton): boolean => identifiedTouches.has(b.identifier) || degradedLabelTouches.has(b.label!);
+  const untouched = labeled.filter((b) => !wasTouched(b)).map((b) => b.identifier);
+  return { total: labeled.length, touched: labeled.length - untouched.length, untouched };
+}
+
 function mergeCategory(into: CategoryCoverage, from: CategoryCoverage): void {
   into.total += from.total;
   into.touched += from.touched;
@@ -153,26 +186,28 @@ export function computeCoverage(exportDir: string, touchLogPath: string): Covera
   const result = parseApp(loadExport(resolve(exportDir)));
   const touches = readTouches(touchLogPath);
 
-  const touchedByKind: Record<RawTouch['kind'], Set<string>> = {
+  const touchedByKind: Record<'item' | 'region', Set<string>> = {
     item: new Set(),
     region: new Set(),
-    button: new Set(),
   };
-  for (const t of touches) touchedByKind[t.kind].add(t.identifier);
+  const buttonTouches: RawTouch[] = [];
+  for (const t of touches) {
+    if (t.kind === 'button') buttonTouches.push(t);
+    else touchedByKind[t.kind].add(t.identifier);
+  }
 
   const pages = [...result.ast.pages]
     .filter((p) => p.id !== 0 && p.alias)
     .sort((a, b) => a.id - b.id)
     .map((p): PageCoverage => {
       const itemIds = p.items.map((i) => i.identifier);
-      const buttonLabels = p.buttons.filter((b) => b.label).map((b) => b.label!);
       return {
         id: p.id,
         alias: p.alias,
         name: p.name,
         items: summarize(itemIds, touchedByKind.item),
         regions: summarizeRegions(p.regions, touchedByKind.region),
-        buttons: summarize(buttonLabels, touchedByKind.button),
+        buttons: summarizeButtons(p.buttons, p.id, buttonTouches),
       };
     });
 

@@ -1,0 +1,19 @@
+page 2 (
+  name: Duplicate With HtmlDomId
+  alias: DUPLICATE-WITH-HTMLDOMID
+  title: Duplicate With HtmlDomId
+  security {
+    authentication: public
+  }
+  button save_employee (
+    label: Save
+    action: submit
+    advanced {
+      htmlDomId: saveEmployeeBtn
+    }
+  )
+  button save_request (
+    label: Save
+    action: submit
+  )
+)
