@@ -5,14 +5,14 @@
  * methods use accessible-role/label locators (region/button DOM convention
  * still open — see docs/grammar-assumptions.md). Click methods pass their
  * button's semantic identity (pageId + .apx identifier) through to
- * buttonByLabel() so coverage tracking never collapses two different,
+ * clickButton() so coverage tracking never collapses two different,
  * same-labeled buttons into one entry -- see @apx/testkit's coverage.ts.
  * Buttons whose label collides with another button's on this same page do
  * NOT get a generated click method at all -- see the comment in their
  * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { ApexItem, apexPageUrl, buttonByLabel, gotoApexPage } from '@apx/testkit';
+import { ApexItem, apexPageUrl, clickButton, gotoApexPage } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class RegistrationPage {
@@ -31,26 +31,26 @@ export class RegistrationPage {
 
   /** hidden */
   get customerId(): ApexItem {
-    return new ApexItem(this.page, 'P10_CUSTOMER_ID');
+    return new ApexItem(this.page, 'P10_CUSTOMER_ID', 10);
   }
 
   /** textField, "First Name", required */
   get firstName(): ApexItem {
-    return new ApexItem(this.page, 'P10_FIRST_NAME');
+    return new ApexItem(this.page, 'P10_FIRST_NAME', 10);
   }
 
   /** textField, "Email", required */
   get email(): ApexItem {
-    return new ApexItem(this.page, 'P10_EMAIL');
+    return new ApexItem(this.page, 'P10_EMAIL', 10);
   }
 
   /** "Submit" */
   async clickSubmitRegistration(): Promise<void> {
-    await buttonByLabel(this.page, 'Submit', { pageId: 10, identifier: 'submit_registration' }).click();
+    await clickButton(this.page, 'Submit', { pageId: 10, identifier: 'submit_registration' });
   }
 
   /** "Reset" */
   async clickResetForm(): Promise<void> {
-    await buttonByLabel(this.page, 'Reset', { pageId: 10, identifier: 'reset_form' }).click();
+    await clickButton(this.page, 'Reset', { pageId: 10, identifier: 'reset_form' });
   }
 }

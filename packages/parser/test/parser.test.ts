@@ -56,6 +56,23 @@ describe('provisional APEXlang parser (fixture derived from Oracle 26.1 docs)', 
   });
 });
 
+describe('lossless handling of unrecognized top-level input', () => {
+  it('preserves the original line in a synthetic raw node as well as warning', () => {
+    const result = parseApp({ 'unknown.apx': '  syntax the parser does not recognize  ' });
+    expect(result.warnings).toHaveLength(1);
+    expect(result.tree).toEqual([
+      {
+        type: '#unparsed',
+        identifier: null,
+        props: { line: '  syntax the parser does not recognize  ' },
+        children: [],
+        loc: { file: 'unknown.apx', line: 1 },
+      },
+    ]);
+    expect(result.ast.unmodeled).toContain('#unparsed');
+  });
+});
+
 describe('quoted multi-word component identifiers (Interactive Grid row-selector column)', () => {
   // Reproduces a real bug found via Oracle's "Sample Interactive Grids" gallery
   // app: `column "Row Header" (` -- a quoted, space-containing identifier --

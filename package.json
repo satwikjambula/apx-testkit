@@ -11,6 +11,7 @@
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint packages",
     "verify:registry": "node scripts/validate-verification-registry.mjs",
+    "verify:packages": "node scripts/validate-package-contracts.mjs",
     "docs:support-matrix": "node scripts/generate-support-matrix.mjs",
     "docs:support-matrix:check": "node scripts/generate-support-matrix.mjs --check"
   },

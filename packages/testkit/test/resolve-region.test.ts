@@ -1,3 +1,6 @@
+import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { regionCandidatesFromAst, resolveRegion, type RegionCandidate } from '../src/components/resolve-region.js';
 
@@ -35,6 +38,7 @@ function fakePage(resolvableIds: readonly string[]) {
 describe('resolveRegion', () => {
   afterEach(() => {
     delete (globalThis as any).window;
+    delete process.env.APX_COVERAGE_LOG;
   });
 
   it('resolves the first candidate that succeeds and reports its strategy (htmlDomId)', async () => {
@@ -59,6 +63,39 @@ describe('resolveRegion', () => {
     const result = await resolveRegion(page as any, candidates);
     expect(result).toEqual({ runtimeId: 'projects_report', strategy: 'export-identifier' });
     expect(page.evaluated).toEqual(['stale-html-dom-id', 'projects_report']);
+  });
+
+  it('records only the successful candidate, with page identity', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'apx-resolve-coverage-'));
+    const log = join(dir, 'touches.jsonl');
+    process.env.APX_COVERAGE_LOG = log;
+    try {
+      await resolveRegion(
+        fakePage(['actual']) as any,
+        [
+          { value: 'stale', strategy: 'htmlDomId' },
+          { value: 'actual', strategy: 'export-identifier' },
+        ],
+        42,
+      );
+      const touches = readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
+      expect(touches).toHaveLength(1);
+      expect(touches[0]).toMatchObject({ kind: 'region', identifier: 'actual', pageId: 42 });
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('does not record coverage when no candidate resolves', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'apx-resolve-coverage-fail-'));
+    const log = join(dir, 'touches.jsonl');
+    process.env.APX_COVERAGE_LOG = log;
+    try {
+      await expect(resolveRegion(fakePage([]) as any, [{ value: 'missing', strategy: 'export-identifier' }], 42)).rejects.toThrow();
+      expect(() => readFileSync(log, 'utf8')).toThrow();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 
   it('tries an explicit override candidate as a last resort', async () => {

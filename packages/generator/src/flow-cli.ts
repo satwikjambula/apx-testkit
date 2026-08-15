@@ -10,7 +10,7 @@ const out = outIdx >= 0 ? args[outIdx + 1] : './flow-map.json';
 
 if (!dir || dir.startsWith('--')) {
   console.error('Usage: apx-flow <export-dir> [--out <flow-map.json>]');
-  console.error('  <export-dir> must contain application.apx and a pages/ subdirectory.');
+  console.error('  <export-dir> must contain a pages/ subdirectory; application.apx is read when present.');
   console.error('  Builds a deterministic navigation graph (nodes = pages, edges = branch/');
   console.error('  region-action/report-column-link/button navigation targets) directly from');
   console.error('  the already-typed AST -- pure read, no live app or browser needed.');

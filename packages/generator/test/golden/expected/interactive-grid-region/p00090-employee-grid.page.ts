@@ -5,7 +5,7 @@
  * methods use accessible-role/label locators (region/button DOM convention
  * still open — see docs/grammar-assumptions.md). Click methods pass their
  * button's semantic identity (pageId + .apx identifier) through to
- * buttonByLabel() so coverage tracking never collapses two different,
+ * clickButton() so coverage tracking never collapses two different,
  * same-labeled buttons into one entry -- see @apx/testkit's coverage.ts.
  * Buttons whose label collides with another button's on this same page do
  * NOT get a generated click method at all -- see the comment in their

@@ -138,7 +138,7 @@ export function pageObjectFor(page: ApexPage): string {
   const itemAccessors = page.items.map(
     (item) => `  /** ${itemDoc(item)} */
   get ${itemNames.get(item.identifier)}(): ApexItem {
-    return new ApexItem(this.page, '${esc(item.identifier)}');
+    return new ApexItem(this.page, '${esc(item.identifier)}', ${page.id});
   }`,
   );
 
@@ -167,7 +167,7 @@ export function pageObjectFor(page: ApexPage): string {
     usesButtonByLabel = true;
     buttonMethods.push(`  /** "${esc(button.label!)}" */
   async ${method}(): Promise<void> {
-    await buttonByLabel(this.page, '${esc(button.label!)}', { pageId: ${page.id}, identifier: '${esc(button.identifier)}' }).click();
+    await clickButton(this.page, '${esc(button.label!)}', { pageId: ${page.id}, identifier: '${esc(button.identifier)}' });
   }`);
   }
 
@@ -180,14 +180,14 @@ export function pageObjectFor(page: ApexPage): string {
  * methods use accessible-role/label locators (region/button DOM convention
  * still open — see docs/grammar-assumptions.md). Click methods pass their
  * button's semantic identity (pageId + .apx identifier) through to
- * buttonByLabel() so coverage tracking never collapses two different,
+ * clickButton() so coverage tracking never collapses two different,
  * same-labeled buttons into one entry -- see @apx/testkit's coverage.ts.
  * Buttons whose label collides with another button's on this same page do
  * NOT get a generated click method at all -- see the comment in their
  * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { ${page.items.length > 0 ? 'ApexItem, ' : ''}apexPageUrl${usesButtonByLabel ? ', buttonByLabel' : ''}, gotoApexPage } from '@apx/testkit';
+import { ${page.items.length > 0 ? 'ApexItem, ' : ''}apexPageUrl${usesButtonByLabel ? ', clickButton' : ''}, gotoApexPage } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class ${className} {

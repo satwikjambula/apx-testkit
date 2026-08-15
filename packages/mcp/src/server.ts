@@ -47,7 +47,7 @@ function checkExportDir(dir: string): string | null {
   if (!existsSync(dir)) return `Export directory not found: ${dir}`;
   if (!statSync(dir).isDirectory()) return `Not a directory: ${dir}`;
   if (!existsSync(join(dir, 'pages'))) {
-    return `No pages/ subdirectory in ${dir} — is this an unzipped APEXlang export root (must contain application.apx and pages/)?`;
+    return `No pages/ subdirectory in ${dir} — is this an unzipped APEXlang export root?`;
   }
   return null;
 }
@@ -85,9 +85,9 @@ export function createServer(): McpServer {
     {
       title: 'Inspect APEXlang export',
       description:
-        'Parse an Oracle APEX 26.1+ APEXlang export directory (.apx files) and return a JSON model: pages with aliases/public flag, regions, pageItems, buttons, parser warnings, and component types not yet covered. Use this first to see what exists before generating tests.',
+        'Parse an Oracle APEX 26.1 APEXlang export directory (.apx files) and return a JSON model: pages with aliases/public flag, regions, pageItems, buttons, parser warnings, and component types not yet covered. Use this first to see what exists before generating tests.',
       inputSchema: {
-        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains application.apx and pages/)'),
+        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains pages/; application.apx is read when present)'),
       },
     },
     async ({ exportDir }) => ({
@@ -126,7 +126,7 @@ export function createServer(): McpServer {
       description:
         'Build a deterministic navigation graph (apx-flow) directly from an APEXlang export\'s typed AST -- nodes are pages, edges come from exactly four sources: page branches, Cards/List region actions, report/IR/IG column links, and buttons. Each edge carries a fine-grained mechanism, confidence tier, literal evidence citation, and (when present) items/clearCache/condition passed through verbatim. Also reports pages with no incoming edge from these 4 sources (NOT a claim those pages are unreachable -- breadcrumbs, navigation lists, and Dynamic Action redirects are out of scope). No live app or browser needed; same export always produces a byte-identical FlowMap. Use this to understand how pages in an export link to each other before writing scenario-level tests.',
       inputSchema: {
-        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains application.apx and pages/)'),
+        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains pages/; application.apx is read when present)'),
       },
     },
     async ({ exportDir }) => {
@@ -170,7 +170,7 @@ export function createServer(): McpServer {
       description:
         'Cross-references a recorded touch log (written by @apx/testkit\'s opt-in coverage recorder when APX_COVERAGE_LOG is set during a Playwright run) against an APEXlang export\'s declared items/regions/buttons (apx-coverage). Reports touched vs. untouched per page and overall, as a percentage of the export\'s OWN declared inventory -- not code-line coverage. Regions whose type has no @apx/testkit component at all (tree, calendar, map) are reported separately as "untrackable" rather than counted as untouched. Buttons are matched by (pageId, identifier), never by label alone, so two different buttons sharing a label are never conflated. Set includeHtml to also get a self-contained heatmap/checklist HTML view of the same report.',
       inputSchema: {
-        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains application.apx and pages/)'),
+        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains pages/; application.apx is read when present)'),
         touchLogPath: z.string().describe('Absolute path to the touch log file (the path pointed to by APX_COVERAGE_LOG when the suite ran). A missing file is treated as zero touches, not an error.'),
         includeHtml: z.boolean().optional().describe('When true, also return a second content block with the self-contained HTML heatmap/checklist view of the same report.'),
       },
@@ -203,7 +203,7 @@ export function createServer(): McpServer {
       description:
         'Generate deterministic Markdown documentation (apx-docs) directly from an APEXlang export\'s typed AST -- one file per page (items, buttons, regions incl. nested columns/actions/calendar/chart settings, dynamic actions, branches, validations, processes, computations) plus an index.md summary. Pure read of already-typed data, no live app or browser needed; same export always produces byte-identical Markdown. Component types seen in the export but not yet modeled by the typed AST are listed explicitly in index.md rather than silently omitted. Use this to produce human-readable reference docs for an export, or to review what the parser actually captured for a page.',
       inputSchema: {
-        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains application.apx and pages/)'),
+        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains pages/; application.apx is read when present)'),
         outDir: z.string().describe('Directory to write the generated .md files into (created if it does not exist)'),
       },
     },

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import type { ApexButton, ApexRegion } from '@apx/parser';
-import { summarizeButtons, summarizeRegions } from '../src/coverage.js';
+import { computeCoverage, summarizeButtons, summarizeRegions } from '../src/coverage.js';
 
 /**
  * Regression test for a real bug: `recordCoverageTouch('region', id)` logs
@@ -158,10 +161,18 @@ describe('summarizeButtons', () => {
 
   it('falls back to label-matching for identity-free (pageId: null) touches -- backward compatible with older hand-written specs', () => {
     const buttons = [button({ identifier: 'save_employee', label: 'Save' })];
-    const touches = [{ kind: 'button' as const, identifier: 'Save', pageId: null }]; // degraded: buttonByLabel() called without identity
+    const touches = [{ kind: 'button' as const, identifier: 'Save', pageId: null }]; // degraded legacy touch without identity
     const result = summarizeButtons(buttons, 3, touches);
     expect(result.touched).toBe(1);
     expect(result.untouched).toEqual([]);
+  });
+
+  it('does not apply an ambiguous identity-free label touch when a global label count is provided', () => {
+    const buttons = [button({ identifier: 'save_employee', label: 'Save' })];
+    const touches = [{ kind: 'button' as const, identifier: 'Save', pageId: null }];
+    const result = summarizeButtons(buttons, 3, touches, new Map([['Save', 2]]));
+    expect(result.touched).toBe(0);
+    expect(result.untouched).toEqual(['save_employee']);
   });
 
   it('excludes unlabeled buttons from total/touched (nothing safe to locate them by)', () => {
@@ -174,5 +185,87 @@ describe('summarizeButtons', () => {
     const buttons = [button({ identifier: 'SAVE_EMPLOYEE', label: 'Save' })];
     const result = summarizeButtons(buttons, 1, []);
     expect(result.untouched).toEqual(['SAVE_EMPLOYEE']);
+  });
+});
+
+describe('computeCoverage touch identity validation', () => {
+  function withTwoPageExport(run: (exportDir: string, logPath: string) => void): void {
+    const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-scoping-'));
+    const pages = join(dir, 'pages');
+    const log = join(dir, 'touches.jsonl');
+    mkdirSync(pages);
+    writeFileSync(join(pages, 'p00001-one.apx'), 'page 1 (\n name: One\n alias: ONE\n region shared (\n  type: cards\n )\n)\n');
+    writeFileSync(join(pages, 'p00002-two.apx'), 'page 2 (\n name: Two\n alias: TWO\n region shared (\n  type: cards\n )\n)\n');
+    try {
+      run(dir, log);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it('does not let a page-scoped region touch cover the same identifier on another page', () => {
+    withTwoPageExport((exportDir, logPath) => {
+      writeFileSync(logPath, `${JSON.stringify({ kind: 'region', identifier: 'shared', pageId: 1 })}\n`);
+      const report = computeCoverage(exportDir, logPath);
+      expect(report.pages[0].regions.touched).toBe(1);
+      expect(report.pages[1].regions.touched).toBe(0);
+    });
+  });
+
+  it('does not apply an ambiguous legacy identity-free touch to either page', () => {
+    withTwoPageExport((exportDir, logPath) => {
+      writeFileSync(logPath, `${JSON.stringify({ kind: 'region', identifier: 'shared', pageId: null })}\n`);
+      const report = computeCoverage(exportDir, logPath);
+      expect(report.pages.map((page) => page.regions.touched)).toEqual([0, 0]);
+    });
+  });
+
+  it('does not apply an ambiguous legacy button-label touch to either page', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-button-scoping-'));
+    const pages = join(dir, 'pages');
+    const log = join(dir, 'touches.jsonl');
+    mkdirSync(pages);
+    writeFileSync(
+      join(pages, 'p00001-one.apx'),
+      'page 1 (\n name: One\n alias: ONE\n region actions (\n  button save-one ( label: Save )\n )\n)\n',
+    );
+    writeFileSync(
+      join(pages, 'p00002-two.apx'),
+      'page 2 (\n name: Two\n alias: TWO\n region actions (\n  button save-two ( label: Save )\n )\n)\n',
+    );
+    try {
+      writeFileSync(log, `${JSON.stringify({ kind: 'button', identifier: 'Save', pageId: null })}\n`);
+      const report = computeCoverage(dir, log);
+      expect(report.pages.map((page) => page.buttons.touched)).toEqual([0, 0]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('counts identical region identifier and htmlDomId as one component for legacy matching', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-region-alias-'));
+    const pages = join(dir, 'pages');
+    const log = join(dir, 'touches.jsonl');
+    mkdirSync(pages);
+    writeFileSync(
+      join(pages, 'p00001-one.apx'),
+      'page 1 (\n name: One\n alias: ONE\n region shared (\n  type: cards\n  advanced { htmlDomId: shared }\n )\n)\n',
+    );
+    try {
+      writeFileSync(log, `${JSON.stringify({ kind: 'region', identifier: 'shared', pageId: null })}\n`);
+      const report = computeCoverage(dir, log);
+      expect(report.pages[0].regions.touched).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('ignores a syntactically valid touch with an unknown kind instead of crashing', () => {
+    withTwoPageExport((exportDir, logPath) => {
+      writeFileSync(logPath, `${JSON.stringify({ kind: 'unknown', identifier: 'shared', pageId: 1 })}\n`);
+      const report = computeCoverage(exportDir, logPath);
+      expect(report.touchCount).toBe(0);
+      expect(report.pages.map((page) => page.regions.touched)).toEqual([0, 0]);
+    });
   });
 });

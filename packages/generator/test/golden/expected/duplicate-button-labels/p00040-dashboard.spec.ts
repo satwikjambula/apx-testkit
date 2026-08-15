@@ -27,9 +27,9 @@ test.describe('page 40: Dashboard', () => {
     expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Dashboard'));
   });
 
-  test('every labeled .apx button exists (4 buttons)', async ({ page }) => {
+  test('every uniquely labeled .apx button exists (1 button)', async ({ page }) => {
     const po = new DashboardPage(page);
     await po.goto();
-    await expectButtonsPresent(page, ['Refresh', 'View Details', 'View Details', 'View Details']);
+    await expectButtonsPresent(page, ['Refresh'], [{ pageId: 40, identifier: 'refresh_dashboard' }]);
   });
 });

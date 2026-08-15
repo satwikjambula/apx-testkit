@@ -53,7 +53,7 @@ test.describe('page 20: My Account [requires auth]', () => {
   test('every .apx pageItem exists in DOM/apex.item registry (2 items, 1 hidden)', async ({ page }) => {
     const po = new MyAccountPage(page);
     await po.goto();
-    await expectItemsPresent(page, ['P20_ACCOUNT_ID', 'P20_DISPLAY_NAME']);
+    await expectItemsPresent(page, ['P20_ACCOUNT_ID', 'P20_DISPLAY_NAME'], 20);
   });
 
   test('apex.item round-trip on P20_DISPLAY_NAME', async ({ page }) => {
@@ -63,9 +63,9 @@ test.describe('page 20: My Account [requires auth]', () => {
     expect(await po.displayName.getValue()).toBe('apx-testgen');
   });
 
-  test('every labeled .apx button exists (1 button)', async ({ page }) => {
+  test('every uniquely labeled .apx button exists (1 button)', async ({ page }) => {
     const po = new MyAccountPage(page);
     await po.goto();
-    await expectButtonsPresent(page, ['Save']);
+    await expectButtonsPresent(page, ['Save'], [{ pageId: 20, identifier: 'save_account' }]);
   });
 });

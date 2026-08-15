@@ -77,15 +77,18 @@ export function regionCandidatesFromAst(region: { readonly identifier: string; r
  * Resolve a region's actual runtime id by calling `apex.region(candidate)`
  * live, trying each candidate in order, and returning the first one that
  * resolves to a real widget region -- never the first one that merely
- * LOOKS right. Records a coverage touch for every candidate actually
- * tried (including ones that fail to resolve), so a coverage report can
- * show which layer a page's regions actually needed.
+ * LOOKS right. Records a page-scoped coverage touch only for the candidate
+ * that actually resolves; failed probes never inflate coverage.
  *
  * Hard failure (not a silent fallback, not a guess) if NO candidate
  * resolves -- the error names every candidate tried and its strategy, so
  * the next person debugging it knows exactly what was attempted.
  */
-export async function resolveRegion(page: Page, candidates: readonly RegionCandidate[]): Promise<ResolvedRegion> {
+export async function resolveRegion(
+  page: Page,
+  candidates: readonly RegionCandidate[],
+  pageId?: number,
+): Promise<ResolvedRegion> {
   if (candidates.length === 0) {
     throw new Error(
       'resolveRegion(): no candidates supplied -- at minimum the .apx export identifier is required. ' +
@@ -93,12 +96,12 @@ export async function resolveRegion(page: Page, candidates: readonly RegionCandi
     );
   }
   for (const candidate of candidates) {
-    recordCoverageTouch('region', candidate.value);
     const resolved = await page.evaluate((id: string) => {
       const region = (window as any).apex?.region?.(id);
       return !!region;
     }, candidate.value);
     if (resolved) {
+      recordCoverageTouch('region', candidate.value, pageId);
       return { runtimeId: candidate.value, strategy: candidate.strategy };
     }
   }

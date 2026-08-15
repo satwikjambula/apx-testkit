@@ -38,9 +38,8 @@ import type { Page } from '@playwright/test';
 import { ApexRegion } from './region.js';
 import { recordCoverageTouch } from '../fixtures/coverage.js';
 
-async function callInteractiveGridWidget<T>(page: Page, id: string, method: string, args: unknown[] = []): Promise<T> {
-  recordCoverageTouch('region', id);
-  return page.evaluate(
+async function callInteractiveGridWidget<T>(page: Page, id: string, method: string, args: unknown[] = [], pageId?: number): Promise<T> {
+  const result = await page.evaluate(
     ([id, method, args]: [string, string, unknown[]]) => {
       const region = (window as any).apex?.region?.(id);
       if (!region) {
@@ -60,11 +59,13 @@ async function callInteractiveGridWidget<T>(page: Page, id: string, method: stri
     },
     [id, method, args] as [string, string, unknown[]],
   );
+  recordCoverageTouch('region', id, pageId);
+  return result;
 }
 
 export class ApexInteractiveGridRegion extends ApexRegion {
   protected invokeWidget<T>(method: string, ...args: unknown[]): Promise<T> {
-    return callInteractiveGridWidget<T>(this.page, this.id, method, args);
+    return callInteractiveGridWidget<T>(this.page, this.id, method, args, this.pageId);
   }
 
   /** Confirmed live: an apex.actions instance scoped to this grid (add/remove/invoke/toggle/get/set/...). */

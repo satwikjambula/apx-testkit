@@ -238,6 +238,13 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
       roots.push(root);
     } else {
       warnings.push({ message: `Unrecognized top-level line: "${line.slice(0, 70)}"`, loc: loc() });
+      roots.push({
+        type: '#unparsed',
+        identifier: null,
+        props: { line: lines[i] },
+        children: [],
+        loc: loc(),
+      });
       i++;
     }
   }

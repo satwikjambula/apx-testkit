@@ -15,9 +15,9 @@
  *   this project's scale).
  * - Disabled by default (no env var set): recording has a real cost (a
  *   sync file write per touch) that most test runs shouldn't pay for.
- * - item/region touches: `identifier` IS already a stable semantic
- *   identifier (the `.apx` pageItem id / the region's resolved runtime
- *   id), not presentation text -- unchanged by the schema below.
+ * - item/region touches carry `pageId` when the caller knows it. Region
+ *   identifiers are only page-scoped, so generated code always supplies the
+ *   page id; older identity-free logs are accepted only when unambiguous.
  * - button touches: UPDATED (runtime-review P0 item 4) to carry semantic
  *   identity SEPARATELY from the runtime locator value. Recording only a
  *   button's LABEL used to silently collapse two DIFFERENT buttons that
@@ -58,12 +58,9 @@ export interface CoverageTouch {
    */
   identifier: string;
   /**
-   * Page id this touch occurred on, when known. Buttons are only
-   * guaranteed unique BY IDENTIFIER within a single page (two different
-   * pages can each independently declare their own `SAVE`-identified
-   * button) -- `pageId` disambiguates that. `null` for item/region
-   * touches (unchanged from before this schema existed) and for button
-   * touches where the caller didn't supply identity.
+   * Page id this touch occurred on, when known. Component identifiers are
+   * page-scoped; `null` is retained only for backward-compatible logs whose
+   * identity can be proven unambiguous while computing coverage.
    */
   pageId: number | null;
   /**
@@ -93,8 +90,8 @@ function appendTouch(entry: Omit<CoverageTouch, 'ts'>): void {
  * `.apx`-derived value for both kinds (never presentation text), so
  * there is no separate runtime-locator/pageId concern here.
  */
-export function recordCoverageTouch(kind: 'item' | 'region', identifier: string): void {
-  appendTouch({ kind, identifier, pageId: null, runtimeLocator: null });
+export function recordCoverageTouch(kind: 'item' | 'region', identifier: string, pageId?: number): void {
+  appendTouch({ kind, identifier, pageId: pageId ?? null, runtimeLocator: null });
 }
 
 export interface ButtonCoverageIdentity {

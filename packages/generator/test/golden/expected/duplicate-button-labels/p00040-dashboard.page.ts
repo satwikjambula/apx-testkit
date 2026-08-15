@@ -5,14 +5,14 @@
  * methods use accessible-role/label locators (region/button DOM convention
  * still open — see docs/grammar-assumptions.md). Click methods pass their
  * button's semantic identity (pageId + .apx identifier) through to
- * buttonByLabel() so coverage tracking never collapses two different,
+ * clickButton() so coverage tracking never collapses two different,
  * same-labeled buttons into one entry -- see @apx/testkit's coverage.ts.
  * Buttons whose label collides with another button's on this same page do
  * NOT get a generated click method at all -- see the comment in their
  * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { apexPageUrl, buttonByLabel, gotoApexPage } from '@apx/testkit';
+import { apexPageUrl, clickButton, gotoApexPage } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class DashboardPage {
@@ -31,7 +31,7 @@ export class DashboardPage {
 
   /** "Refresh" */
   async clickRefreshDashboard(): Promise<void> {
-    await buttonByLabel(this.page, 'Refresh', { pageId: 40, identifier: 'refresh_dashboard' }).click();
+    await clickButton(this.page, 'Refresh', { pageId: 40, identifier: 'refresh_dashboard' });
   }
 
   // Cannot generate a deterministic click method for 'view_details_card_1' ("View Details") --

@@ -1,5 +1,5 @@
 /**
- * @apx/testkit -- Playwright fixtures + component helpers for APEX 26.1+
+ * @apx/testkit -- Playwright fixtures + component helpers for APEX 26.1
  * apps. Generated code (from @apx/testgen) and hand-written specs both
  * import from here; neither should contain raw selectors or duplicate this
  * logic locally (the "treadmill rule"). When APEX's DOM changes, fix it

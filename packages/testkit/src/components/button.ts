@@ -17,31 +17,31 @@
  * Close`) or icon/template buttons whose accessible name isn't the `.apx`
  * label at all. `buttonByLabel()`'s locator itself is unchanged (still
  * label-based -- there is still no verified alternative for the general
- * case), but callers that DO know a button's semantic identity should
- * supply it via the optional `identity` parameter so coverage tracking
- * doesn't silently collapse two different, same-labeled buttons into one
- * entry (`@apx/testgen`'s generated click methods always supply it; see
- * page-object.ts, which also refuses to generate a click method at all
- * for buttons it can't disambiguate -- see its own module doc).
+ * case). Successful helpers such as `clickButton()` accept semantic
+ * identity so coverage tracking does not collapse two different,
+ * same-labeled buttons into one entry (`@apx/testgen`'s generated click
+ * methods always supply it; see page-object.ts, which also refuses to
+ * generate a click method for buttons it cannot disambiguate).
  */
 import { expect, type Locator, type Page } from '@playwright/test';
 import { recordButtonCoverageTouch, type ButtonCoverageIdentity } from '../fixtures/coverage.js';
 
 /**
- * Locate a button by its .apx `label` via the accessibility tree. Records
- * a coverage touch carrying full semantic identity when `identity` is
- * supplied (pageId + the button's `.apx` `identifier` -- never the
- * label as identity, per DESIGN_GUARDRAILS.md); degrades to
- * label-as-identifier when omitted, for backward compatibility with
- * callers that don't have richer identity on hand.
+ * Locate a button by its .apx `label` via the accessibility tree. Merely
+ * creating a locator is not a successful interaction, so this does not record
+ * coverage; clickButton()/buttonsPresent() record only after success.
  */
 export function buttonByLabel(page: Page, label: string, identity?: ButtonCoverageIdentity): Locator {
-  recordButtonCoverageTouch({ strategy: 'accessible-name', value: label }, identity);
+  // Kept for source compatibility with callers that previously passed
+  // identity here. Locator construction is not evidence of coverage;
+  // use clickButton() to record a successful interaction.
+  void identity;
   return page.getByRole('button', { name: label, exact: true });
 }
 
 export async function clickButton(page: Page, label: string, identity?: ButtonCoverageIdentity): Promise<void> {
-  await buttonByLabel(page, label, identity).click();
+  await buttonByLabel(page, label).click();
+  recordButtonCoverageTouch({ strategy: 'accessible-name', value: label }, identity);
 }
 
 /**
@@ -74,7 +74,8 @@ export async function clickButton(page: Page, label: string, identity?: ButtonCo
  * you have live access to confirm it, not as a default.
  */
 export function buttonByHtmlDomId(page: Page, htmlDomId: string, identity?: ButtonCoverageIdentity): Locator {
-  recordButtonCoverageTouch({ strategy: 'html-dom-id', value: htmlDomId }, identity);
+  // Kept for the same compatibility reason as buttonByLabel().
+  void identity;
   return page.locator(`#${htmlDomId}`);
 }
 
@@ -94,18 +95,27 @@ export interface ButtonPresence {
  * subsumed by that -- this exists for pages whose buttons are declared
  * but never clicked by a generated smoke test, to still get a signal.
  */
-export async function buttonsPresent(page: Page, labels: readonly string[]): Promise<ButtonPresence[]> {
+export async function buttonsPresent(
+  page: Page,
+  labels: readonly string[],
+  identities: readonly (ButtonCoverageIdentity | undefined)[] = [],
+): Promise<ButtonPresence[]> {
   const out: ButtonPresence[] = [];
-  for (const label of labels) {
+  for (const [index, label] of labels.entries()) {
     const ok = (await buttonByLabel(page, label).count()) > 0;
+    if (ok) recordButtonCoverageTouch({ strategy: 'accessible-name', value: label }, identities[index]);
     out.push({ label, ok });
   }
   return out;
 }
 
 /** Assert every declared button label resolves; fails with the list of missing labels. */
-export async function expectButtonsPresent(page: Page, labels: readonly string[]): Promise<void> {
-  const presence = await buttonsPresent(page, labels);
+export async function expectButtonsPresent(
+  page: Page,
+  labels: readonly string[],
+  identities: readonly (ButtonCoverageIdentity | undefined)[] = [],
+): Promise<void> {
+  const presence = await buttonsPresent(page, labels, identities);
   const missing = presence.filter((p) => !p.ok).map((p) => p.label);
   expect(missing, 'buttons declared in .apx but absent at runtime').toEqual([]);
 }

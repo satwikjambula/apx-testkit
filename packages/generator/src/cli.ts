@@ -11,7 +11,7 @@ const watchMode = args.includes('--watch');
 
 if (!dir) {
   console.error('Usage: apx-testgen <export-dir> --out <tests-dir> [--watch]');
-  console.error('  <export-dir> must contain application.apx and a pages/ subdirectory.');
+  console.error('  <export-dir> must contain a pages/ subdirectory; application.apx is read when present.');
   console.error('  Generated code imports @apx/testkit and reads APP_BASE from the');
   console.error('  consuming project\'s own ../playwright.config.ts (see spike/ for the convention).');
   console.error('  --watch regenerates automatically whenever a .apx file under <export-dir> changes');

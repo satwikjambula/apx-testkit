@@ -26,9 +26,9 @@ test.describe('page 110: Customer Details', () => {
     expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Customer Details'));
   });
 
-  test('every labeled .apx button exists (2 buttons)', async ({ page }) => {
+  test('every uniquely labeled .apx button exists (2 buttons)', async ({ page }) => {
     const po = new CustomerDetailsPage(page);
     await po.goto();
-    await expectButtonsPresent(page, ['Delete', 'Create']);
+    await expectButtonsPresent(page, ['Delete', 'Create'], [{ pageId: 110, identifier: 'delete_customer' }, { pageId: 110, identifier: 'create_customer' }]);
   });
 });

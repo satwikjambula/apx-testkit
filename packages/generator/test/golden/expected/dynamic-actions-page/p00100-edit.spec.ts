@@ -29,6 +29,6 @@ test.describe('page 100: Edit', () => {
   test('every .apx pageItem exists in DOM/apex.item registry (2 items, 0 hidden)', async ({ page }) => {
     const po = new EditPage(page);
     await po.goto();
-    await expectItemsPresent(page, ['P100_JOB', 'P100_COMM']);
+    await expectItemsPresent(page, ['P100_JOB', 'P100_COMM'], 100);
   });
 });
