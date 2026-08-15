@@ -9,7 +9,10 @@
     "build": "npm run build -w packages/parser && npm run build -w packages/testkit && npm run build -w packages/generator && npm run build -w packages/mcp",
     "typecheck": "npm run typecheck -w packages/parser && npm run typecheck -w packages/testkit && npm run typecheck -w packages/generator && npm run typecheck -w packages/mcp",
     "test": "npm run test --workspaces --if-present",
-    "lint": "eslint packages"
+    "lint": "eslint packages",
+    "verify:registry": "node scripts/validate-verification-registry.mjs",
+    "docs:support-matrix": "node scripts/generate-support-matrix.mjs",
+    "docs:support-matrix:check": "node scripts/generate-support-matrix.mjs --check"
   },
   "devDependencies": {
     "eslint": "^9.39.5",
