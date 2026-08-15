@@ -259,7 +259,7 @@ not existing).
 | Computations (item-value-setting rules) | ✅ `ApexPage.computations` (itemName/sequence/type, condition) | N/A — same reasoning as Processes | ❌ not wired into generator yet |
 | Report columns (classicReport/IR/IG column definitions) | ✅ `ApexRegion.columns` (identifier/type/heading/sequence, link target — `ApexColumnLinkTarget` now covers BOTH the in-app page-redirect shape and the external-URL-redirect shape (`url`), a real bug fix: this field's own doc comment previously and wrongly claimed no URL variant existed for column links at all — corrected in place, see `docs/grammar-assumptions.md`'s "Navigation Graph prerequisite pass" entry) | ✅ `report-column.ts` — `reportColumnHeader()`/`expectReportColumnHeadersPresent()` confirmed live on classicReport AND interactiveReport; `classicReportColumnById()` confirmed live: DOM id === `.apx` identifier verbatim (classicReport only — interactiveReport's column id is a confirmed-internal, undiscoverable numeric id) | ❌ a generator auto-assertion was built and then REVERTED — a real Interactive Report counter-example (a declared, non-hidden column heading with no matching runtime `columnheader`, folded into another column's cell instead) would have shipped a guaranteed-failing test; see docs/quirks/26.1.json `interactive-report-column-heading-not-always-own-header` |
 | Region actions (row-level action/link in Cards/List regions) | ✅ `ApexRegion.actions` (`ApexRegionAction` — identifier/label/kind/target/url; distinct from the Dynamic-Action `action`) | 🚧 `region-action.ts` — presence-only, confirmed live for Cards' `action-d` shape (NOT unique per region — same label repeats once per record); List's `action-e` shape confirmed structurally different (menu-based), not wrapped. Click-through effects confirmed a DEAD END on the only live app available (every tested action is a non-functional placeholder) | ❌ not wired into generator yet |
-| Login / authentication | N/A | 🚧 field ids confirmed; a real race-condition bug found+fixed, fix not independently re-verified | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
+| Login / authentication | N/A | 🚧 field ids confirmed (both username AND password checked explicitly before fill, with an actionable "custom auth scheme?" error if either is missing); a real race-condition bug found+fixed, fix not independently re-verified; success detection is now CONFIGURABLE (`options.success`: a URL pattern, a post-login Locator, or a custom predicate) — the plain "URL changed away from login" check remains only the documented-weaker DEFAULT for backward compatibility, not the recommended path | ✅ login-required pages get a real generated test that logs in via `login()` in a `beforeEach`, gated at runtime on `APX_LOGIN_TEST_USERNAME`/`APX_LOGIN_TEST_PASSWORD` (skips cleanly if unset) — assumes the app's default auth scheme; custom-scheme apps fail loudly and specifically from `login()` instead |
 | Coverage mapping (`apx-coverage`) | — | ✅ | — |
 | Regression detection (`apx-diff`) | — | ✅ (pure AST diff, no live app needed; `--format human` for prose output alongside the default structured tree) | — |
 | Documentation generation (`apx-docs`) | — | ✅ (pure AST read, no live app needed) | — |
@@ -292,6 +292,24 @@ behind specific rows:
   whoever has credentials to run it (`APX_LOGIN_TEST_USERNAME`/
   `APX_LOGIN_TEST_PASSWORD` env vars — neither is hardcoded in the file, so
   no account info is committed at all).
+  **P1 hardening pass (maintainer review):** "the URL changed to
+  *something*" is itself a weak signal — a redirect to an MFA step or an
+  error-redisplay page would pass it just as easily as a real authenticated
+  landing page. `login()` now accepts `options.success` — a URL pattern the
+  final page must actually match, a `Locator` that must become visible
+  (e.g. a Logout link only the authenticated shell renders), or a custom
+  `async (page) => boolean` predicate — with the original URL-changed check
+  kept only as the documented-weaker DEFAULT when `options.success` is
+  omitted, for backward compatibility. The password field is now also
+  checked to exist BEFORE it's filled, with the same actionable
+  "custom-auth-scheme?" error message pattern already used for the
+  username field. Regression-tested against a synthetic fake-Page/Locator
+  harness (`packages/testkit/test/auth.test.ts`) covering every branch of
+  the new `success` option; live re-verification of this pass specifically
+  is still open — see docs/quirks/26.1.json `login-race-condition.
+  secondPass` for exactly what was and wasn't checked live this round
+  (reachability was re-confirmed fresh; blocked on test credentials, not
+  on the app being down).
 - **Drawer/modal pages fail to load** via a plain friendly-URL GET
   (confirmed live on p00420) — a known, documented gap, not yet root-caused.
 - **`spike/tests-generated/`'s 18 committed files are stale** relative to
