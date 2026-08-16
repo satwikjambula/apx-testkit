@@ -33,7 +33,7 @@ AST concern (see `docs/ecosystem-roadmap.md` for the honest gap list).
 
 - The **`.apx` export identifier** — the developer-facing name after
   `region <identifier> (`.
-- The **runtime static id** — what `apex.region(id)` and the widget's DOM
+- The **runtime region id** — what `apex.region(id)` and the widget's DOM
   container actually use.
 
 These match for Interactive Report/Cards/Faceted Search/form/static in
@@ -70,7 +70,7 @@ a real security control.
 ## JET (Oracle JavaScript Extension Toolkit) widgets
 
 Chart regions render via Oracle JET's `oj-chart` custom element, attached
-to a container with id convention `<runtime static id>_jet`. JET widgets
+to a container with id convention `<runtime region id>_jet`. JET widgets
 can initialize **asynchronously**, after `domcontentloaded` fires — code
 that calls a widget-factory method immediately after navigation can race
 this (see `chart-widget-initialization-race` in

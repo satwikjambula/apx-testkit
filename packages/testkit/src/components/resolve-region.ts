@@ -40,7 +40,7 @@
  * actionable error rather than falling back to a guess.
  */
 import type { Page } from '@playwright/test';
-import { recordCoverageTouch } from '../fixtures/coverage.js';
+import { recordRegionCoverageTouch, type RegionCoverageIdentity } from '../fixtures/coverage.js';
 
 /** Which ADR-003 layer a candidate represents. */
 export type RegionResolutionStrategy = 'htmlDomId' | 'export-identifier' | 'override';
@@ -87,7 +87,7 @@ export function regionCandidatesFromAst(region: { readonly identifier: string; r
 export async function resolveRegion(
   page: Page,
   candidates: readonly RegionCandidate[],
-  pageId?: number,
+  identity?: RegionCoverageIdentity | number,
 ): Promise<ResolvedRegion> {
   if (candidates.length === 0) {
     throw new Error(
@@ -101,7 +101,11 @@ export async function resolveRegion(
       return !!region;
     }, candidate.value);
     if (resolved) {
-      recordCoverageTouch('region', candidate.value, pageId);
+      const semanticIdentity =
+        typeof identity === 'number'
+          ? { pageId: identity, identifier: candidates.find((item) => item.strategy === 'export-identifier')?.value ?? candidate.value }
+          : identity;
+      recordRegionCoverageTouch(candidate.value, semanticIdentity);
       return { runtimeId: candidate.value, strategy: candidate.strategy };
     }
   }

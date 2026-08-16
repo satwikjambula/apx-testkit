@@ -1,4 +1,5 @@
 page 3 (
+  page: 3
   name: Modal Auth No Checksum
   alias: MODAL-AUTH-NO-CHECKSUM
   title: Modal Auth No Checksum
@@ -8,6 +9,9 @@ page 3 (
   }
   dialog {
     chained: false
+  }
+  security {
+    pageAccessProtection: unrestricted
   }
   button save (
     label: Save

@@ -41,10 +41,9 @@ import type {
   ApexServerSideCondition,
   ApexValidation,
 } from '@apx/parser';
-import { parseApp } from '@apx/parser';
+import { loadApexlangExport, parseApp } from '@apx/parser';
 import { mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { loadExport } from './lib.js';
 import { docsFileName, pageObjectFileName, specFileName } from './page-object.js';
 
 const NA = '—';
@@ -240,7 +239,7 @@ function regionSection(region: ApexRegion): string {
   parts.push(heading(3, `\`${region.identifier}\`${region.name ? ` — ${region.name}` : ''}`));
   parts.push(
     table(
-      ['Type', 'Static id override (`advanced.htmlDomId`)'],
+      ['Type', 'HTML DOM ID (`advanced.htmlDomId`)'],
       [[region.type, region.htmlDomId]],
     ),
   );
@@ -305,8 +304,8 @@ function unownedButtons(page: ApexPage): ApexButton[] {
  */
 export function pageDocs(page: ApexPage): string {
   const alias = page.alias ?? '';
-  const isPublic = page.raw['security.authentication'] === 'public';
-  const auth = typeof page.raw['security.authentication'] === 'string' ? (page.raw['security.authentication'] as string) : null;
+  const isPublic = page.isPublic;
+  const auth = page.authentication;
   const itemsOnly = unownedItems(page);
   const buttonsOnly = unownedButtons(page);
 
@@ -420,13 +419,13 @@ function removeStaleGeneratedDocs(outDir: string, expected: ReadonlySet<string>)
 /**
  * Writes one Markdown file per page (`docsFileName()`) plus `index.md`
  * into `outDir`. Mirrors `generate()` in `lib.ts` — same `parseApp`/
- * `loadExport` pipeline, same page filter (`id !== 0 && alias` — page 0
+ * `loadApexlangExport` pipeline, same page filter (`id !== 0 && alias` — page 0
  * is the parser's placeholder for unassigned/global constructs, not a
  * real page), same sort order, so page selection can never drift between
  * `apx-testgen` and `apx-docs` output for the same export.
  */
 export function generateDocs(exportDir: string, outDir: string): DocsGenerateResult {
-  const result = parseApp(loadExport(resolve(exportDir)));
+  const result = parseApp(loadApexlangExport(resolve(exportDir)));
   const resolvedOut = resolve(outDir);
   mkdirSync(resolvedOut, { recursive: true });
 

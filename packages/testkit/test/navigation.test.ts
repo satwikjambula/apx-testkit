@@ -19,18 +19,32 @@ describe('assessNavigationSafety', () => {
   });
 
   it('treats a non-public page WITHOUT the checksum flag as safe', () => {
-    const result = assessNavigationSafety({ pageAccessProtection: null, isPublic: false });
+    const result = assessNavigationSafety({ pageAccessProtection: 'unrestricted', isPublic: false });
     expect(result.mode).toBe('direct-url');
   });
 
   it('treats an ordinary public page as safe', () => {
-    const result = assessNavigationSafety({ pageAccessProtection: null, isPublic: true });
+    const result = assessNavigationSafety({ pageAccessProtection: 'unrestricted', isPublic: true });
     expect(result.mode).toBe('direct-url');
   });
 
-  it('does not match a differently-named protection value -- only the exact confirmed string triggers unsafe', () => {
+  it('classifies every documented pageAccessProtection value explicitly', () => {
+    expect(assessNavigationSafety({ pageAccessProtection: 'unrestricted', isPublic: false }).mode).toBe('direct-url');
+    expect(assessNavigationSafety({ pageAccessProtection: 'noArgumentsSupported', isPublic: false }).mode).toBe('direct-url');
+    expect(assessNavigationSafety({ pageAccessProtection: 'noUrlAccess', isPublic: true }).mode).toBe('ui-navigation');
+    expect(assessNavigationSafety({ pageAccessProtection: 'noUrlAccess', isPublic: false }).mode).toBe('ui-navigation');
+  });
+
+  it('fails closed for an unknown future protection value', () => {
     const result = assessNavigationSafety({ pageAccessProtection: 'someOtherFutureValue', isPublic: false });
-    expect(result.mode).toBe('direct-url');
+    expect(result.mode).toBe('ui-navigation');
+    expect(result.reason).toMatch(/Unknown pageAccessProtection/);
+  });
+
+  it('fails closed when required pageAccessProtection metadata is missing', () => {
+    const result = assessNavigationSafety({ pageAccessProtection: null, isPublic: true });
+    expect(result.mode).toBe('ui-navigation');
+    expect(result.restriction).toBe('unknown');
   });
 });
 
@@ -40,6 +54,16 @@ describe('gotoApexPageAuto', () => {
     const fakePage = {} as any; // never touched -- the function must fail before using it
     await expect(gotoApexPageAuto(fakePage, 'https://host/app/basic-editing', safety)).rejects.toThrow(
       /NOT safe.*navigateViaUiPath/s,
+    );
+  });
+
+  it('does not recommend link navigation for noUrlAccess pages', async () => {
+    const safety = assessNavigationSafety({ pageAccessProtection: 'noUrlAccess', isPublic: false });
+    await expect(gotoApexPageAuto({} as any, 'https://host/app/hidden', safety)).rejects.toThrow(
+      /submit or branch action.*does not request the target through a URL/s,
+    );
+    await expect(gotoApexPageAuto({} as any, 'https://host/app/hidden', safety)).rejects.not.toThrow(
+      /navigateViaUiPath/,
     );
   });
 });

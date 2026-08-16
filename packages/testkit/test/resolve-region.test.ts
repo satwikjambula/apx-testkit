@@ -76,11 +76,16 @@ describe('resolveRegion', () => {
           { value: 'stale', strategy: 'htmlDomId' },
           { value: 'actual', strategy: 'export-identifier' },
         ],
-        42,
+        { pageId: 42, identifier: 'basic-editing' },
       );
       const touches = readFileSync(log, 'utf8').trim().split('\n').map((line) => JSON.parse(line));
       expect(touches).toHaveLength(1);
-      expect(touches[0]).toMatchObject({ kind: 'region', identifier: 'actual', pageId: 42 });
+      expect(touches[0]).toMatchObject({
+        kind: 'region',
+        identifier: 'basic-editing',
+        pageId: 42,
+        runtimeLocator: { strategy: 'apex-region-id', value: 'actual' },
+      });
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

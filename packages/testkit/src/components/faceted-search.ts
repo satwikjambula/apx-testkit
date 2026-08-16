@@ -24,17 +24,19 @@
  * fetchCountsAndWait())/clear/apply are the higher-confidence entry points.
  */
 import type { Page } from '@playwright/test';
-import { callRegionMethodAndWaitForEvent } from '../fixtures/lifecycle.js';
-import { callRegionMethod } from './region.js';
+import type { RegionCoverageIdentity } from '../fixtures/coverage.js';
+import { fetchFacetCountsAndWait } from '../fixtures/lifecycle.js';
+import { internalCallRegionMethod } from './region.js';
 
 export class ApexFacetsRegion {
   constructor(
     private readonly page: Page,
     public readonly id: string,
+    private readonly coverageIdentity?: RegionCoverageIdentity,
   ) {}
 
   private invoke<T>(method: string, ...args: unknown[]): Promise<T> {
-    return callRegionMethod<T>(this.page, this.id, method, args);
+    return internalCallRegionMethod<T>(this.page, this.id, method, args, this.coverageIdentity);
   }
 
   refresh(): Promise<void> {
@@ -70,10 +72,7 @@ export class ApexFacetsRegion {
    * immediately after this resolves, no polling required.
    */
   fetchCountsAndWait(timeoutMs = 10_000): Promise<void> {
-    return callRegionMethodAndWaitForEvent(this.page, this.id, 'fetchCounts', {
-      eventName: 'apexafterrefresh',
-      timeoutMs,
-    });
+    return fetchFacetCountsAndWait(this.page, this.id, timeoutMs, this.coverageIdentity);
   }
 
   /** Parameter shape inferred (facetId), not directly exercised live -- see module doc. */

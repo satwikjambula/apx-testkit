@@ -1,8 +1,10 @@
 page 110 (
+  page: 110
   name: Customer Details
   alias: CUSTOMER-DETAILS
   title: Customer Details
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   button delete_customer (

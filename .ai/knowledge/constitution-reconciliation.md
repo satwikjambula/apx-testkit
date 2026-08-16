@@ -32,7 +32,7 @@ top-to-bottom by someone just trying to make a change (see `CLAUDE.md`,
 | 8, 9 | staticId/DOM-id/runtime-id terminology; region ID is not guessed | ADR-003 in full; `.ai/knowledge/oracle-apex.md` "Region identity" section; `ApexRegion.htmlDomId` doc comment |
 | 11, 12 | Button identity + coverage must use semantic identity, never label text | `DESIGN_GUARDRAILS.md`'s existing "Store evidence or references... as display text" bullet (already states the exact `pageId: 20, buttonIdentifier: APPROVE` example the constitution gives); shipped concretely in `ButtonCoverageIdentity` (`packages/testkit/src/fixtures/coverage.ts`) and commit `0753b7b` ("explicit button ambiguity handling + semantic coverage identity") |
 | 13 | Flow Map edge IDs are not durable identifiers | `DESIGN_GUARDRAILS.md`'s existing "Persistently reference a Flow Map edge by its generated `id`" bullet — near word-for-word match already in place |
-| 14 | Generic runtime-method escape hatch is dangerous | **Partially wrong as stated — see finding in §E below.** The principle is right; this project has NOT fully followed it. `callRegionMethod` is real and public. |
+| 14 | Generic runtime-method escape hatch is dangerous | **Resolved — see §E below.** The raw dispatcher is package-internal; public APIs expose named, evidence-backed operations only. |
 | 15 | `ApexRegion` stays generic; component-specific methods on subclasses only | `.ai/knowledge/runtime.md` "Components" section — `ApexCardsRegion`/`ApexFacetsRegion`/`ApexInteractiveGridRegion`/`ApexChartRegion` all extend `ApexRegion`, none of IG/Chart's widget-factory methods leak onto the base class |
 | 16 | Evidence-level taxonomy (VERIFIED/DOCUMENTED/OBSERVED/UNVERIFIED/UNSUPPORTED) | `docs/verification/26.1.json`'s `status` field, exact same five-way split, already documented in `docs/verification/README.md` "The evidence-level taxonomy" |
 | 27 | Locator strategy should be evidence-ordered | `button.ts`'s accessible-role/label-first approach (documented as deliberate, not a guess, in `.ai/knowledge/runtime.md`); ADR-003's layered region-resolution order. Not previously stated as one general rule — see §C. |
@@ -50,8 +50,8 @@ top-to-bottom by someone just trying to make a change (see `CLAUDE.md`,
 
 | §§ | What's built | What's missing |
 |---|---|---|
-| 3, 4 | `docs/*` prose is careful to say "APEX 26.1 — verified" rather than "26.1+" almost everywhere (see `.ai/knowledge/verification.md`'s per-app `mmdVersion 26.1.0+3102` checks, done by hand for every corpus addition) | No runtime manifest parsing at all. `ApexAppAst.astVersion` (`packages/parser/src/ast.ts:41`) is a hardcoded literal for *this project's own* AST shape, not derived from the export's `.apex/apexlang.json`. There is no `ApexlangManifest { version, mmdVersion, ... }` type, and no code path that reads the manifest, gates on it, or warns on an unrecognized version. Version-awareness is a manual, human discipline today, not an enforced one. See `.ai/knowledge/parser.md`'s new "Manifest and version awareness" section (added this pass) for the concrete gap. |
-| 21–26 | Two specific dangerous values ARE read and acted on: `security.pageAccessProtection` (`argumentsMustHaveChecksum` case only, `packages/generator/src/lib.ts:87-92`, `packages/testkit/src/fixtures/navigation.ts`) and `appearance.pageMode` (`modalDialog` case only, `packages/generator/src/lib.ts:98-123`). Both are real, live-verified, and drive real generation/navigation decisions (`assessNavigationSafety`, `isModalDialogUnroutable`). `login()`'s success detection already follows §26 almost exactly — `page.waitForURL`, not a URL-changed-once sample (see `.ai/knowledge/runtime.md`, `auth.ts`'s own doc comment). | No typed AST field exists for any of these — both are read ad hoc as raw strings (`page.raw['security.pageAccessProtection']`), not a proper enum (`unrestricted \| argumentsMustHaveChecksum \| noArgumentsSupported \| noUrlAccess` per §23, or `normal \| modalDialog \| nonModalDialog \| unknown` per §24). Only the one dangerous value in each case is handled; the other enum members are unhandled (not explicitly `unknown`-marked either — they just fall through to the "safe" default). There is **no application-level metadata type at all** — no `ApexApplication { id, alias, name, friendlyUrls, authentication, ... }` anywhere in `ast.ts` (confirmed: `grep` for `interface ApexApp` in `ast.ts` finds only the container `ApexAppAst`, which is the *parsed-export* container, not Oracle "application" metadata). Friendly URLs are **unconditionally assumed** — `apexPageUrl()` (`packages/testkit/src/fixtures/session.ts`) always builds `<lowercased-alias>` with no `friendlyUrls: true|false|unknown` check anywhere; this is the exact anti-pattern §22 warns against, not yet fixed. `login()` defaults to `P101_USERNAME`/`P101_PASSWORD` (`packages/testkit/src/fixtures/auth.ts` `DEFAULTS`) — technically the exact thing §25 says not to do, though it fails loudly with a specific message pointing at the override options and cites its own single-app verification scope, rather than silently assuming success (see `.ai/knowledge/runtime.md`). |
+| 3, 4 | Manifest/version awareness is now enforced by `loadApexlangExport()`: `.apex/apexlang.json` is parsed into `ApexlangManifest`, unsupported versions fail by default, and warn-mode diagnostics survive into `parseApp()`. | Later APEX releases remain unsupported until separately verified; this is an explicit gate, not an inferred compatibility claim. |
+| 21–26 | `ApexApplication.runtime`, `ApexPage.pageMode`, `pageAccessProtection`, `authentication`, and `isPublic` are typed first-class metadata. All four protection values are classified explicitly, missing/unknown protection fails closed, `noUrlAccess` does not recommend link navigation, Friendly URLs disabled cause generation/URL construction to fail, and modal dialogs reject direct navigation. | Custom authentication-form discovery remains configurable rather than inferred; `login()` retains its documented default-field convention and fails loudly when it does not apply. |
 | 30 | Some shared-component-adjacent data already flows through `raw`/`unmodeled` (never dropped, per ADR-001) | No typed `sharedComponents` structure exists (auth schemes, LOVs, lists, plugins as first-class fields). LOV handling is narrow and deliberate — `ApexItem.lovName` only, full LOV *definition* resolution explicitly out of scope (`.ai/knowledge/verification.md`, "Seventh round" note) |
 | 6 | Fenced/multiline values, references, unquoted scalars, quoted-string keys (a real bug found and fixed against `strategic-planner`) are all real, tested capabilities — see `.ai/knowledge/parser.md`/`.ai/knowledge/verification.md`'s `oracle/apex` corpus notes | Not independently re-verified in this pass beyond citing existing evidence; no new gap found, listed here only because §6 makes several specific claims not individually re-checked line-by-line this session. |
 
@@ -137,61 +137,23 @@ pass — flagging them here is explicitly not the same as adopting them.
   not a new system alongside it. Flagged so nobody reads §44 literally
   and starts a `oracle/apis/` directory next to the JSON file that
   already does this job.
-- **§60 — `npm run verify` as one canonical command.** The *steps* this
-  should run already exist, spelled out by hand in
-  `.ai/knowledge/verification.md`'s "Regression sweep" section (build all
-  workspaces, full vitest suite, spike typecheck, reference-fixture
-  determinism diff, zero-warnings sweep across the real corpus, registry
-  validation, support-matrix drift check). Turning that into one script
-  is a reasonable idea but needs real design, not a mechanical wrapper:
-  does it need `APX_EXPORT_DIR` set to run the full sweep, or does it
-  degrade gracefully without a real export available (most CI
-  environments won't have one — see `.ai/knowledge/verification.md`'s
-  "never committed" corpus policy)? What's the exit-code contract for a
-  partial environment? This needs a Runtime & Test Automation Engineer
-  + Release Engineer pass, not an inline implementation as a side effect
-  of a documentation restructuring task.
+- **§60 — `npm run verify` as one canonical command — IMPLEMENTED.** It
+  runs build, typecheck, all workspace tests, lint, registry validation,
+  support-matrix drift detection, and packed-package contract checks.
+  Live-instance/corpus checks remain separately gated because those inputs
+  are intentionally not committed or universally available in CI.
 
 ## E. Corrected factual claims found during this pass
 
-**§14's `callRegionMethod` claim is accurate, not hypothetical — this is
-a real, current, live gap, not a strawman.** The constitution's example
-(`callRegionMethod(region, method, args)`) matches this project's real
-`callRegionMethod<T>(page: Page, id: string, method: string, args: unknown[])`
-(`packages/testkit/src/components/region.ts:121-136`) almost exactly. It
-is:
-- **Real** — implemented, not a hypothetical the constitution invented.
-- **Used internally**, appropriately, as the shared dispatch primitive
-  behind `ApexRegion.invoke()`, `ApexCardsRegion`, and
-  `ApexFacetsRegion` (all three route through it rather than duplicating
-  `page.evaluate()` calls) — this internal use is fine and matches
-  ADR-002's own pattern.
-- **Also exported as a fully public API** — `packages/testkit/src/index.ts:46`
-  re-exports it directly alongside `ApexRegion`. Any consumer can
-  `import { callRegionMethod } from '@apx/testkit'` and call
-  `apex.region(id).anyUndocumentedMethodName()` with zero verification
-  gate, exactly the "undocumentedMethod()/internalMethod()/
-  unverifiedMethod()" risk §14 describes.
-
-This is **distinct** from `callRegionMethodAndWaitForEvent`
-(`packages/testkit/src/fixtures/lifecycle.ts`), which the constitution
-does not describe and which is not the same function — that one pairs a
-method call with waiting for a *specific, named, confirmed-real* jQuery
-event (`apexafterrefresh`/`apexbeforerefresh`) and is scoped, verified
-tooling, not a generic escape hatch. Do not conflate the two when acting
-on this finding.
-
-**This is flagged, not fixed, in this pass** (documentation/governance
-task, not a code change) — but it's real enough to route to the Software
-Architect and Runtime & Test Automation Engineer explicitly: either (a)
-remove `callRegionMethod` from `index.ts`'s public exports and keep it
-`internal` to `packages/testkit/src/components/*.ts` only, which is a
-breaking change for any external consumer currently using it directly,
-or (b) keep it public with an explicit doc-comment warning and a
-`docs/quirks/26.1.json`-style acknowledgment that it's a deliberate,
-named exception to ADR-002 (an escape hatch for cases the wrapper
-library hasn't caught up to yet) rather than an oversight. Either is a
-legitimate answer; leaving it unexamined is not.
+**§14's arbitrary region-method escape hatch is now closed.** The raw
+dispatcher remains package-internal and is no longer exported from
+`@apx/testkit`. Public classes expose named, evidence-backed methods only:
+`ApexRegion` contains the cross-region `refresh()` contract,
+`ApexDataRegion` contains the shared record/session surface, and
+`ApexInteractiveReportRegion` adds IR-only `getViewName()`. Lifecycle
+dispatch is likewise limited to named `refreshRegionAndWait()` and
+`fetchFacetCountsAndWait()` operations; consumers cannot supply an
+arbitrary method string.
 
 **`CLAUDE.md`'s own "Outstanding debts" list had drifted stale relative
 to this repo's own recent commits** — item 1 (region/button DOM
@@ -208,16 +170,16 @@ resolved" note.
 
 | Item | Constitution's status | Actual status |
 |---|---|---|
-| P0.1 Correct quoted scalar parsing | implied outstanding | **Done, long-standing.** Real bug history (`parseArray()` first-element drop, 1550+ occurrences) already found and fixed; see ADR-004. |
+| P0.1 Correct quoted scalar parsing | implied outstanding | **Done.** JSON-style escaped strings, token-aware quoted arrays, escaped quoted identifiers/keys, and comments have regression coverage; see ADR-004 and parser tests. |
 | P0.2 Separate component identifier from page number | implied outstanding | **Done.** `ApexPage.id`/`alias` distinct since this project's earliest AST design (§A above). |
-| P0.3 Stop exposing arbitrary `callRegionMethod` | implied outstanding | **Confirmed still outstanding — real, not hypothetical.** See §E. |
+| P0.3 Stop exposing arbitrary `callRegionMethod` | implied outstanding | **Done.** Package-internal dispatcher only; named public APIs. See §E. |
 | P0.4 Correct staticId vs. DOM ID terminology | implied outstanding | **Done.** ADR-003, `ApexRegion.htmlDomId`. |
-| P0.5 Consume/verify APEXlang manifest/version | implied outstanding | **Still outstanding, confirmed.** See §B. |
+| P0.5 Consume/verify APEXlang manifest/version | implied outstanding | **Done.** Full parser-owned loader, typed manifest, 26.1 gate, propagated warnings. |
 | P0.6 Remove misleading "APEX 26.1+" claims | implied outstanding | **Behavior was already correct; wording wasn't.** Per-app version confirmation (`mmdVersion 26.1.0+3102` checked by hand before any corpus addition, `.ai/knowledge/verification.md`) already follows the strict "verified, not assumed" discipline — this was a copy-consistency gap, not a behavioral one. A full repo grep found "26.1+" wording in six governance/reference files, not just the two most visible ones: `CLAUDE.md`, `AGENTS.md`, `DESIGN_GUARDRAILS.md`, `.ai/ADR/002-no-undocumented-oracle-apis.md`, `.ai/ADR/004-verification-precedes-implementation.md`, `.ai/knowledge/verification.md`, `.ai/knowledge/runtime.md`. **Fixed in this pass** in all of those. Deliberately **not** swept in `README.md`, `docs/validation-post.md`, `docs/tutorial.md` — those are user-facing/marketing copy, Documentation & DX Engineer's domain, and changing scope-commitment language there is a documentation decision (does the project want to formally commit to 26.1-only, or leave room to say "not yet verified on later releases" without ruling them out?) rather than a mechanical terminology fix. Flagged for that agent, not silently changed here. |
-| P1.7 Model Friendly URLs | implied outstanding | **Still outstanding, confirmed.** See §B — unconditionally assumed, not modeled. |
-| P1.8 Model page access protection | implied outstanding | **Partial, confirmed.** One dangerous enum value handled; no typed field. See §B. |
-| P1.9 Model page mode | implied outstanding | **Partial, confirmed.** Same shape as above. |
-| P1.10 Improve authentication modeling | implied outstanding | **Still outstanding**, but the one implemented piece (login success detection) is actually *ahead* of the constitution's own ask — see §B. |
+| P1.7 Model Friendly URLs | implied outstanding | **Done.** Typed application runtime metadata; false/missing values fail explicitly. |
+| P1.8 Model page access protection | implied outstanding | **Done.** Typed four-value field; missing/unknown values fail closed. |
+| P1.9 Model page mode | implied outstanding | **Done.** Typed field; modal direct navigation rejected. |
+| P1.10 Improve authentication modeling | implied outstanding | **Partially done.** Page authentication is typed and consumed; custom login-form discovery remains configurable and evidence-gated. |
 | P1.11 Fix button label-based coverage identity | implied outstanding | **Done** (commit `0753b7b`). See §A. |
 | P1.12 Separate generic region APIs from component-specific | implied outstanding | **Done, and was already the design from the start** — `.ai/knowledge/runtime.md`. |
 | P1.13 Introduce Oracle SQLcl validation | implied outstanding | **Not started — correctly flagged as needing its own proposal**, see §D. |

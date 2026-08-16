@@ -83,6 +83,7 @@ describe('quoted multi-word component identifiers (Interactive Grid row-selector
   // closing `)` was consumed as the region's own closer, orphaning
   // everything declared after it (here: the `next` button).
   const apxWithQuotedColumnIdentifier = `page 6 (
+  page: 6
   name: Row Header
   alias: ROW-HEADER
   region grid (
@@ -135,6 +136,7 @@ describe('typed Dynamic Action support', () => {
   // Actions" gallery app (page 3, "commission-for-salesman-only"): a
   // conditional DA with two true-actions and two false-actions.
   const apxWithDynamicAction = `page 3 (
+  page: 3
   name: Edit
   alias: EDIT
 
@@ -205,6 +207,7 @@ describe('typed Dynamic Action support', () => {
     // Confirmed live pattern (interactive-grids, sample-calendar):
     // event: custom / customEvent: <the real event name>.
     const apxWithCustomEvent = `page 51 (
+  page: 51
   name: Client Validation
   alias: CLIENT-VALIDATION
 
@@ -251,6 +254,7 @@ describe('typed Dynamic Action support', () => {
     // Confirmed real: 56/509 real actions across every export this
     // project has parsed have their own name.
     const apxWithActionName = `page 3 (
+  page: 3
   name: Edit
   alias: EDIT4
 
@@ -291,6 +295,7 @@ describe('typed Calendar region settings', () => {
   // gallery app (page 32, "sessions" region, WEEKLY-CALENDAR-DRAG-DROP
   // variant, dragAndDrop: true).
   const apxWithCalendar = `page 32 (
+  page: 32
   name: Week Calendar
   alias: WEEK-CALENDAR
 
@@ -350,6 +355,7 @@ describe('typed Calendar region settings', () => {
 describe('typed Chart region settings', () => {
   it('projects an explicit chart type', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -369,6 +375,7 @@ describe('typed Chart region settings', () => {
     // Confirmed live: Oracle's own "Sample Charts" gallery app has 16 bar
     // chart regions, none of which have a chart {} group at all.
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -386,6 +393,7 @@ describe('typed Chart region settings', () => {
 
   it('does not populate chartSettings for a non-chart region', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -400,13 +408,14 @@ describe('typed Chart region settings', () => {
 
 describe('region.htmlDomId (advanced { htmlDomId: ... })', () => {
   // Confirmed live against the real "Sample Charts" app: this is the
-  // deterministic root cause of the previously-open "runtime static id
+  // deterministic root cause of the previously-open "runtime region id
   // differs from .apx identifier" question (docs/quirks/26.1.json
   // 'region-id-not-static-id') -- when set, it predicts the widget
   // container id (`<htmlDomId>_jet` for Chart, `<htmlDomId>_ig` for
   // Interactive Grid).
   it('projects an explicit htmlDomId override', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region pie-chart (
@@ -432,6 +441,7 @@ describe('region.htmlDomId (advanced { htmlDomId: ... })', () => {
     // for these is an APEX-internal auto-generated numeric id with no
     // corresponding field anywhere in the static .apx export.
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region colors-set-via-js-code (
@@ -449,6 +459,7 @@ describe('region.htmlDomId (advanced { htmlDomId: ... })', () => {
 
   it('is not gated on region type -- applies equally to Interactive Grid', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region basic-editing (
@@ -477,6 +488,7 @@ describe('button.htmlDomId (advanced { htmlDomId: ... })', () => {
   // region.htmlDomId, not a live-verified positive case.
   it('projects an explicit htmlDomId override when present', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region employee (
@@ -498,6 +510,7 @@ describe('button.htmlDomId (advanced { htmlDomId: ... })', () => {
 
   it('is null when no advanced { } group is present -- the confirmed-common real-world case', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region employee (
@@ -535,6 +548,7 @@ describe('typed button redirect target (behavior.target / behavior.targetUrl)', 
     // fixture itself was never inaccurate, only the "not yet witnessed"
     // framing above is now historical, not current.
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region employee (
@@ -564,6 +578,7 @@ describe('typed button redirect target (behavior.target / behavior.targetUrl)', 
 
   it('projects a flat url (behavior.targetUrl) for behavior.action = redirectUrl, with target null -- reproduces ux-pattern-catalog, pages/p00110-dashboard-simple.apx:1120-1141, button view-details', () => {
     const apx = `page 110 (
+  page: 110
   name: Dashboard Simple
   alias: DASHBOARD-SIMPLE
   region chart-1 (
@@ -588,6 +603,7 @@ describe('typed button redirect target (behavior.target / behavior.targetUrl)', 
 
   it('is null for both target and url when behavior has neither (e.g. a plain submitPage button)', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region employee (
@@ -624,6 +640,7 @@ describe('multi-line array parsing (bug: first element dropped)', () => {
   // templateOption, was silently missing from `raw` bags project-wide
   // until this fix.
   const apxWithMultilineArray = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -646,6 +663,7 @@ describe('multi-line array parsing (bug: first element dropped)', () => {
 
   it('still parses correctly when the first element IS inline with the bracket', () => {
     const apxInline = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -665,6 +683,7 @@ describe('multi-line array parsing (bug: first element dropped)', () => {
 
   it('still parses correctly when the whole array is on one line', () => {
     const apxOneLine = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -689,6 +708,7 @@ describe('typed branch support (branch (...))', () => {
   // items + clearCache/action, and one entirely unconditional with an
   // item-substitution-token page target (`&LAST_VIEW.`).
   const apxWithBranches = `page 2 (
+  page: 2
   name: Customer Details
   alias: CUSTOMER-DETAILS
 
@@ -790,6 +810,7 @@ describe('typed branch support (branch (...))', () => {
 
   it('projects an external URL redirect target (apextogo sign-out branch shape)', () => {
     const apx = `page 20000 (
+  page: 20000
   name: Account
   alias: ACCOUNT
 
@@ -825,6 +846,7 @@ describe('typed branch support (branch (...))', () => {
     // projectPageTarget() (ApexButtonTarget/ApexColumnLinkTarget/
     // ApexRegionActionTarget), even though real branches carry one.
     const apx = `page 351 (
+  page: 351
   name: Lookup Manager
   alias: LOOKUP-MANAGER1
 
@@ -883,6 +905,7 @@ describe('typed validation support (validation <id> (...))', () => {
   // validation gated on whenButtonPressed, and a functionBody validation
   // whose error has no errorMessage of its own (associatedItem only).
   const apxWithValidations = `page 10 (
+  page: 10
   name: Request Submission
   alias: REQUEST-SUBMISSION
 
@@ -966,12 +989,7 @@ describe('typed validation support (validation <id> (...))', () => {
   it('projects a compound condition (whenButtonPressed AND item!=value together)', () => {
     const result = parseApp({ 'p00010-request-submission.apx': apxWithValidations });
     const [, second] = result.ast.pages[0].validations;
-    // Real value is quoted in the export (trailing space forces quoting);
-    // property-value quote-stripping is a separately-tracked open item
-    // (docs/grammar-assumptions.md "Still open" -- unrelated to this
-    // change), so the literal quotes are preserved as-is, matching
-    // current parser behavior for quoted PROPERTY VALUES.
-    expect(second.name).toBe('"Schedule interval required "');
+    expect(second.name).toBe('Schedule interval required ');
     expect(second.condition).toEqual({
       whenButtonPressed: 'submit-request',
       type: 'item!=value',
@@ -983,6 +1001,7 @@ describe('typed validation support (validation <id> (...))', () => {
 
   it('reports null error and condition when neither block is present', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
 
@@ -1003,11 +1022,108 @@ describe('typed validation support (validation <id> (...))', () => {
   });
 });
 
+describe('Oracle-documented page identity and lexical values', () => {
+  it('projects application runtime metadata as first-class AST fields', () => {
+    const result = parseApp({
+      'application.apx': `app example (
+  name: Example
+  alias: EXAMPLE
+  version: "1.0"
+  type: standard
+  runtime {
+    friendlyUrls: false
+    compatibilityMode: "26.1"
+  }
+)`,
+    });
+    expect(result.ast.application).toMatchObject({
+      identifier: 'example',
+      alias: 'EXAMPLE',
+      runtime: { friendlyUrls: false, compatibilityMode: '26.1' },
+    });
+  });
+
+  it('rejects an app whose required friendlyUrls property is missing or not boolean', () => {
+    expect(() => parseApp({
+      'application.apx': 'app example (\n  runtime {\n    compatibilityMode: "26.1"\n  }\n)',
+    })).toThrow(/required boolean 'runtime\.friendlyUrls'/);
+    expect(() => parseApp({
+      'application.apx': 'app example (\n  runtime {\n    friendlyUrls: "false"\n    compatibilityMode: "26.1"\n  }\n)',
+    })).toThrow(/required boolean 'runtime\.friendlyUrls'/);
+  });
+
+  it('uses the required page property rather than the component identifier', () => {
+    const result = parseApp({
+      'page.apx': `page "example" (
+  page: 42
+  name: exampleName
+  alias: value
+  title: "Page title"
+)`,
+    });
+    expect(result.ast.pages[0]).toMatchObject({ identifier: 'example', id: 42, title: 'Page title' });
+  });
+
+  it('decodes escaped quotes in component identifiers and quoted property keys', () => {
+    const result = parseApp({
+      'page.apx': `page "exa\\\"mple" (
+  page: 42
+  name: Example
+  alias: EXAMPLE
+  "P#EDIT\\\"PAGE#_ID": value
+)`,
+    });
+    expect(result.ast.pages[0].identifier).toBe('exa"mple');
+    expect(result.ast.pages[0].raw['P#EDIT"PAGE#_ID']).toBe('value');
+  });
+
+  it('rejects a missing or invalid page property', () => {
+    expect(() => parseApp({ 'missing.apx': 'page example (\n  name: Example\n)' })).toThrow(/missing a valid integer 'page:' property/);
+    expect(() => parseApp({ 'invalid.apx': 'page example (\n  page: nope\n  name: Example\n)' })).toThrow(/missing a valid integer 'page:' property/);
+  });
+
+  it('decodes quoted scalars and keeps whitespace inside quoted array values', () => {
+    const result = parseApp({
+      'quoted.apx': `page example (
+  page: 42
+  name: "Page \\"quoted\\" name"
+  alias: VALUE
+  appearance {
+    cssClasses: [ "Some Value" "Another Value" plain ]
+  }
+)`,
+    });
+    expect(result.ast.pages[0].name).toBe('Page "quoted" name');
+    expect(result.ast.pages[0].raw['appearance.cssClasses']).toEqual(['Some Value', 'Another Value', 'plain']);
+  });
+
+  it('accepts and losslessly preserves line and block comments without warnings', () => {
+    const result = parseApp({
+      'comments.apx': `// export note
+/* multi
+   line */
+page example (
+  page: 42
+  name: Example
+  // page note
+  alias: VALUE
+)`,
+    });
+    expect(result.warnings).toEqual([]);
+    expect(result.tree.filter((node) => node.type === '#comment').map((node) => node.props.text)).toEqual([
+      '// export note',
+      '/* multi\n   line */',
+    ]);
+    expect(result.tree.find((node) => node.type === 'page')?.children.some((node) => node.type === '#comment')).toBe(true);
+  });
+});
+
 describe('item.lovName (lov { type: sharedComponent, lov: @name })', () => {
   // Reproduces real structure found in the user's own "concurrent-manager"
   // app (pages/p00010-request-submission.apx:280+).
   it('projects the named LOV reference for a gated item type (selectList)', () => {
     const apx = `page 10 (
+  page: 10
   name: Request Submission
   alias: REQUEST-SUBMISSION
 
@@ -1027,6 +1143,7 @@ describe('item.lovName (lov { type: sharedComponent, lov: @name })', () => {
 
   it('is null for an inline (non-shared) LOV, even on a gated item type', () => {
     const apx = `page 10 (
+  page: 10
   name: Test
   alias: TEST
 
@@ -1051,6 +1168,7 @@ describe('item.lovName (lov { type: sharedComponent, lov: @name })', () => {
     // identical shape also occurs on checkboxGroup/selectOne/displayOnly/
     // shuttle/textFieldWithAutocomplete items. Stays in raw only.
     const apx = `page 10 (
+  page: 10
   name: Test
   alias: TEST
 
@@ -1077,6 +1195,7 @@ describe('typed process support (process <id> (...))', () => {
   // but deliberately left in `raw`, not typed) gated on an authorization
   // scheme rather than a serverSideCondition.
   const apxWithProcesses = `page 2 (
+  page: 2
   name: Customer Details
   alias: CUSTOMER-DETAILS
 
@@ -1150,6 +1269,7 @@ describe('typed process support (process <id> (...))', () => {
 
   it('projects a whenButtonPressed-gated process condition', () => {
     const apx = `page 10 (
+  page: 10
   name: Request Submission
   alias: REQUEST-SUBMISSION
 
@@ -1185,6 +1305,7 @@ describe('typed computation support (computation <id> (...))', () => {
   // an implicit sqlQuerySingleValue default (see ApexComputation's doc
   // comment).
   const apxWithComputations = `page 1 (
+  page: 1
   name: Dashboard
   alias: DASHBOARD
 
@@ -1219,6 +1340,7 @@ describe('typed computation support (computation <id> (...))', () => {
 
   it('projects type as null when the computation {} group has no type line (confirmed real omission, implicit sqlQuerySingleValue default)', () => {
     const apx = `page 50 (
+  page: 50
   name: Customer
   alias: CUSTOMER
 
@@ -1253,6 +1375,7 @@ describe('typed report column support (column <id> (...), nested inside a region
   // is a nested object (page/items/clearCache/action), the same real-
   // data-vs-opaque-EBNF-<value> shape already confirmed for branch.target.
   const apxWithColumns = `page 2 (
+  page: 2
   name: Accounts
   alias: ACCOUNTS
 
@@ -1340,6 +1463,7 @@ describe('typed report column support (column <id> (...), nested inside a region
     // `target` -- matches the real export exactly, not a narrowed
     // reproduction.
     const apx = `page 320 (
+  page: 320
   name: Item Detail Full
   alias: ITEM-DETAIL-FULL
 
@@ -1383,6 +1507,7 @@ describe('typed region action support (action <id> (...), nested inside Cards/Li
   // using the flat `targetUrl` property instead of a nested target.
   it('is distinct from the Dynamic-Action action -- a dynamicAction-nested action is NOT collected here', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
 
@@ -1403,6 +1528,7 @@ describe('typed region action support (action <id> (...), nested inside Cards/Li
 
   it('parses with no warnings, removes action from unmodeled, and projects type/target', () => {
     const apx = `page 2 (
+  page: 2
   name: Blob Column
   alias: BLOB-COLUMN
 
@@ -1440,6 +1566,7 @@ describe('typed region action support (action <id> (...), nested inside Cards/Li
 
   it('projects a null kind when neither type nor position is set (confirmed real, label-only action)', () => {
     const apx = `page 2 (
+  page: 2
   name: Blob Column
   alias: BLOB-COLUMN
 
@@ -1472,6 +1599,7 @@ describe('typed region action support (action <id> (...), nested inside Cards/Li
 
   it('projects a flat url (behavior.targetUrl) for a redirectUrl action, with target null', () => {
     const apx = `page 4 (
+  page: 4
   name: Home
   alias: HOME
 
@@ -1512,6 +1640,7 @@ describe('region.source.sql (bug: read the wrong raw key)', () => {
   // handle both shapes.
   it('reads a fenced multiline sqlQuery', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -1534,6 +1663,7 @@ describe('region.source.sql (bug: read the wrong raw key)', () => {
 
   it('reads a bare single-line sqlQuery', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (
@@ -1575,6 +1705,7 @@ describe('quoted, substitution-embedding PROPERTY keys (link.target.items)', () 
   // this line fell through to "Unrecognized line" and the value was lost to
   // `#unparsed` instead of `link.target.items.*`.
   const apxWithQuotedSubstitutionKey = `page 3 (
+  page: 3
   name: Project Details
   alias: PROJECT-DETAILS
   region documents (
@@ -1615,6 +1746,7 @@ describe('quoted, substitution-embedding PROPERTY keys (link.target.items)', () 
 
   it('still parses a normal, bare-identifier key in the same items block unaffected', () => {
     const apx = `page 1 (
+  page: 1
   name: Test
   alias: TEST
   region r (

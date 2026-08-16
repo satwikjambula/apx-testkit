@@ -374,15 +374,13 @@ generated click methods until it is.
 
 ### 2.3 Regions (generic)
 
-**Status: VERIFIED, generic surface only.** Region *identifiers* (mapping
-a `.apx` region's static id to a DOM/region id) are still an open ledger
-item — do not assume they're the same string. But once you have a
-region's runtime id (read it off the live DOM, or from a discovery pass —
-see `probeRegions` below), `ApexRegion`'s methods are confirmed live on two
-independently-typed regions (an Interactive Report and a Cards region):
+**Status: VERIFIED, type-scoped surface.** Do not conflate the permanent
+APEXlang identifier, `htmlDomId`, and the live runtime region id. Once the
+runtime region id has been resolved, use the narrow wrapper matching the
+component type:
 
 ```ts
-import { ApexRegion, probeRegions, refreshRegion } from '@apx/testkit';
+import { ApexInteractiveReportRegion, probeRegions, refreshRegion } from '@apx/testkit';
 
 // Diagnostics: does apex.region() recognize this id? (non-widget regions
 // like staticContent/form are expected to report false -- not a failure)
@@ -391,7 +389,7 @@ const probes = await probeRegions(page, ['R14614638417487636']);
 // Fire-and-forget refresh, or the class form for repeated calls:
 await refreshRegion(page, 'R14614638417487636');
 
-const region = new ApexRegion(page, 'R14614638417487636');
+const region = new ApexInteractiveReportRegion(page, 'R14614638417487636');
 await region.refresh();
 await region.getSessionState();
 await region.getCurrentRecordId();
@@ -404,9 +402,10 @@ await region.focus();
 await region.getViewName(); // confirmed on Interactive Report only -- throws on Cards
 ```
 
-Calling a method the region's widget type doesn't implement throws a clear
-error (`"...is not a function on this widget type"`) instead of silently
-returning `undefined` — that's deliberate, not a bug to work around.
+The base `ApexRegion` intentionally exposes only `refresh()`. Record/session
+methods live on `ApexDataRegion`; `getViewName()` is narrower still on
+`ApexInteractiveReportRegion`, so TypeScript does not suggest methods known
+to be absent from other region types.
 
 **Region id resolution (ADR-003)**: a region's runtime id is NOT always
 its `.apx` export identifier. Check `ApexRegion.htmlDomId` from the
@@ -492,9 +491,9 @@ await cards.selectAll();
 the widget's method list but throw a genuine runtime error (`Cannot read
 properties of undefined (reading 'each')`) from inside APEX's own client
 code, both immediately after navigation and after an awaited `refresh()`.
-They're left in the typed API so the failure stays visible rather than
-silently missing, but treat them as needing their own investigation, not a
-working contract.
+They are recorded in the evidence ledger but deliberately excluded from
+the typed public API. Use the verified pagination and selection methods
+shown above instead.
 
 ### 2.5 Faceted Search
 
@@ -529,7 +528,7 @@ await facets.hideFacet('some-facet-id');
 
 ### 2.6 Interactive Report
 
-**Status: generic `ApexRegion` for the JS API; VERIFIED UI-locator-driven
+**Status: `ApexInteractiveReportRegion` for the JS API; VERIFIED UI-locator-driven
 search/sort via `interactive-report.ts`.** This is a real finding, not an
 oversight: Interactive Report's search/sort/pagination internals ARE
 implemented as `_`-prefixed methods on the underlying widget instance
@@ -539,12 +538,12 @@ re-litigated. The only PUBLIC instance methods beyond the generic region
 API are `refresh`, `openDialogChat`, `openInlineChat`, `closeChat` (APEX
 26.1 ships an AI chat integration on IR). There is no safe, documented way
 to drive IR search/sort/pagination via a JS method call — use the generic
-`ApexRegion` for what it does support:
+`ApexInteractiveReportRegion` for the verified direct region methods:
 
 ```ts
-import { ApexRegion } from '@apx/testkit';
+import { ApexInteractiveReportRegion } from '@apx/testkit';
 
-const report = new ApexRegion(page, 'R11643575732369775');
+const report = new ApexInteractiveReportRegion(page, 'R11643575732369775');
 await report.refresh();
 await report.getViewName();      // 'REPORT', 'CHART', etc.
 await report.getSessionState();
@@ -558,7 +557,7 @@ driving the actual visible UI via Playwright accessible-role locators
 ```ts
 import { getColumnSortState, searchInteractiveReport, sortReportColumn } from '@apx/testkit';
 
-const regionId = 'R11643575732369775'; // real runtime static id, see 2.3's caveat
+const regionId = 'R11643575732369775'; // real runtime region id, see 2.3's caveat
 
 // Unquoted multi-word terms match ANY word (OR) -- confirmed live,
 // "Item 2" unquoted matched every row because "Item" alone is common to
@@ -617,8 +616,9 @@ import { assessNavigationSafety, navigateViaUiPath, gotoApexPageAuto } from '@ap
 // Decide safe/unsafe from static .apx security metadata alone -- never a
 // live probe. Directly confirmed unsafe for a non-public page with the
 // checksum flag set; an INFERRED-safe case for a public page with the
-// same flag set (see the function's own doc comment for the evidence
-// and why it's flagged as an inference, not an equally strong claim).
+// same flag set. `noUrlAccess` is always UI-navigation-only;
+// `noArgumentsSupported` permits this helper's argument-free URL;
+// unknown future values fail closed.
 const safety = assessNavigationSafety({ pageAccessProtection: 'argumentsMustHaveChecksum', isPublic: false });
 // -> { mode: 'ui-navigation', reason: '...' }
 
@@ -650,13 +650,10 @@ generated `test.describe` block with an unconditional
 or a fixed timeout:
 
 ```ts
-import { callRegionMethodAndWaitForEvent, waitForRegionEvent } from '@apx/testkit';
+import { fetchFacetCountsAndWait, waitForRegionEvent } from '@apx/testkit';
 
-// Call a region method AND wait for the resulting event before resolving:
-await callRegionMethodAndWaitForEvent(page, 'R14614638417487636', 'fetchCounts', {
-  eventName: 'apexafterrefresh', // the default
-  timeoutMs: 10_000,             // the default
-});
+// Named, verified operation plus its resulting completion event:
+await fetchFacetCountsAndWait(page, 'R14614638417487636', 10_000);
 
 // Or: something ELSE triggers the refresh (e.g. a button click), and you
 // just need to wait for it -- call this BEFORE the triggering action:
@@ -853,7 +850,7 @@ component automatically. Read the caveat below before using it.
 ```ts
 import { ApexInteractiveGridRegion } from '@apx/testkit';
 
-// You must supply the REAL runtime static id -- do not assume it matches
+// You must supply the REAL runtime region id -- do not assume it matches
 // the .apx export's region identifier (see the caveat below).
 const ig = new ApexInteractiveGridRegion(page, 'emp');
 
@@ -867,10 +864,10 @@ const selected = await ig.getSelectedRecords();    // currently selected rows
 await ig.refresh();
 ```
 
-**Critical caveat: the region's runtime static id can differ from its
+**Critical caveat: the region's runtime region id can differ from its
 `.apx` export identifier.** Confirmed live: a region declared as `region
 basic-editing (type: interactiveGrid ...)` in the export resolved at
-runtime to static id `emp` (DOM widget container `#emp_ig`) --
+runtime to region id `emp` (nested widget container `#emp_ig`) --
 `apex.region('basic-editing')` returned `null`; `apex.region('emp')`
 worked. This is why `@apx/testgen` cannot auto-wire this component up from
 metadata alone when `htmlDomId` is absent — CORRECTED in place: an earlier
@@ -881,9 +878,9 @@ export identifier `projects`, resolves at runtime as `projects_report`
 via its own `htmlDomId`) — see `docs/quirks/26.1.json`
 `region-id-not-static-id` and ADR-003. The export identifier is a
 majority-case FALLBACK for those three types (~93% of the local corpus),
-not a guarantee. To find the real static id when `htmlDomId` is absent,
+not a guarantee. To find the runtime region id when `htmlDomId` is absent,
 inspect the live DOM for a widget container whose id follows
-`<static id>_ig`.
+`<runtimeRegionId>_ig`.
 
 **Confirmed working** (via `apex.region(id).widget().interactiveGrid(method)`,
 the jQuery UI widget-factory pattern): `getActions`, `getViews`,
@@ -936,9 +933,9 @@ by Oracle's own "Sample Dynamic Actions" gallery app (329 real
 warnings):
 
 ```ts
-import { parseApp } from '@apx/parser';
+import { loadApexlangExport, parseApp } from '@apx/parser';
 
-const result = parseApp(loadExport('/path/to/export'));
+const result = parseApp(loadApexlangExport('/path/to/export'));
 const page = result.ast.pages.find((p) => p.alias === 'EDIT');
 for (const da of page.dynamicActions) {
   console.log(da.identifier, da.when, da.clientSideCondition);
@@ -994,7 +991,7 @@ wrong finding (see the caveat below) — read it before assuming
 ```ts
 import { ApexChartRegion } from '@apx/testkit';
 
-// You must supply the REAL runtime static id -- see the caveat below.
+// You must supply the REAL runtime region id -- see the caveat below.
 // JET chart widgets initialize asynchronously; wait for the precondition
 // first (see "Initialization race" below) before constructing this class.
 const chart = new ApexChartRegion(page, 'pie1');
@@ -1021,11 +1018,12 @@ widget-factory `option`, used both as a getter and a confirmed-working
 setter (round-trip verified: get → set → get reflects the new value
 immediately).
 
-**Critical caveat: the region's runtime static id can differ from its
+**Critical caveat: the region's runtime region id can differ from its
 `.apx` export identifier** — same pattern as Interactive Grid (2.11). This
 now has a diagnosed root cause: `ApexRegion.htmlDomId`
 (`advanced { htmlDomId: ... }` in the export), when set, deterministically
-predicts the runtime id as `<htmlDomId>_jet`. Confirmed exactly on
+predicts the runtime region id accepted by `apex.region()`; the
+`<htmlDomId>_jet` element is the nested JET widget container. Confirmed on
 `pie-chart` → `pie1`, `donut-chart-sorting` → `donut1`,
 `bar-chart-stack-label-stack-category` → `stackCategoryChart`. When
 `htmlDomId` is absent — confirmed on 66/97 real chart regions in Sample
@@ -1417,8 +1415,9 @@ already do exactly this — see the example in section 1.
 
 ### 3.2 Reports
 
-Interactive Report pages: use the generic `ApexRegion` (2.3/2.6) for
-refresh and view-name checks, plus `interactive-report.ts` (2.6) for
+Interactive Report pages: use `ApexRegion.refresh()` and
+`ApexInteractiveReportRegion.getViewName()` (2.3/2.6), plus
+`interactive-report.ts` (2.6) for
 search/sort via UI locators, and `report-column.ts` (2.14) for column
 header presence/id assertions — all confirmed live. classicReport pages:
 `report-column.ts` (2.14) covers column presence and (classicReport only)
@@ -1641,7 +1640,7 @@ headline gaps:
   `htmlDomId` is set; when it's absent the runtime id is genuinely
   unconstructible from static data at all (confirmed: the export
   identifier does NOT work as a fallback for this type) — construct it by
-  hand with the real static id, discovered from the live DOM, in that
+  hand with the runtime region id, discovered from the live DOM, in that
   case.
 - **Trees as a content/data-display pattern** — the only Tree widget seen
   is the universal left-nav, reused for one app's login picker; not a
@@ -1651,7 +1650,7 @@ headline gaps:
   `resolveRegion()`) when `htmlDomId` is set — predictable via
   `ApexRegion.htmlDomId`; otherwise undiscoverable from the export alone
   (confirmed on 66/97 real chart regions in Oracle's "Sample Charts" app).
-  Construct it by hand with the real static id when `htmlDomId` is absent.
+  Construct it by hand with the runtime region id when `htmlDomId` is absent.
 - **Region *assertions* for most region types** (as opposed to the
   `ApexRegion` API, which exists) — CORRECTED: the generator DOES emit
   region resolve-checks for `interactiveReport`/`cards`/`facetedSearch`,

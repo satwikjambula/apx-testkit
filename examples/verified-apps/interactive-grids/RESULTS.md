@@ -50,7 +50,7 @@ Generated twice from the same export — byte-identical output, both times.
 
 A real Playwright spec (`spike/tests/*.spec.ts`) was run against this app's
 live instance with `APX_COVERAGE_LOG` set, then cross-referenced via
-`apx-coverage`. The touch log correctly recorded the runtime static id the
+`apx-coverage`. The touch log correctly recorded the runtime region id the
 spec actually used (see `ApexRegion.htmlDomId` / ADR-003 for why that
 differs from the `.apx` export identifier for this app's region type).
 

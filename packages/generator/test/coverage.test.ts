@@ -194,8 +194,8 @@ describe('computeCoverage touch identity validation', () => {
     const pages = join(dir, 'pages');
     const log = join(dir, 'touches.jsonl');
     mkdirSync(pages);
-    writeFileSync(join(pages, 'p00001-one.apx'), 'page 1 (\n name: One\n alias: ONE\n region shared (\n  type: cards\n )\n)\n');
-    writeFileSync(join(pages, 'p00002-two.apx'), 'page 2 (\n name: Two\n alias: TWO\n region shared (\n  type: cards\n )\n)\n');
+    writeFileSync(join(pages, 'p00001-one.apx'), 'page 1 (\n page: 1\n name: One\n alias: ONE\n region shared (\n  type: cards\n )\n)\n');
+    writeFileSync(join(pages, 'p00002-two.apx'), 'page 2 (\n page: 2\n name: Two\n alias: TWO\n region shared (\n  type: cards\n )\n)\n');
     try {
       run(dir, log);
     } finally {
@@ -227,11 +227,11 @@ describe('computeCoverage touch identity validation', () => {
     mkdirSync(pages);
     writeFileSync(
       join(pages, 'p00001-one.apx'),
-      'page 1 (\n name: One\n alias: ONE\n region actions (\n  button save-one ( label: Save )\n )\n)\n',
+      'page 1 (\n page: 1\n name: One\n alias: ONE\n region actions (\n  button save-one ( label: Save )\n )\n)\n',
     );
     writeFileSync(
       join(pages, 'p00002-two.apx'),
-      'page 2 (\n name: Two\n alias: TWO\n region actions (\n  button save-two ( label: Save )\n )\n)\n',
+      'page 2 (\n page: 2\n name: Two\n alias: TWO\n region actions (\n  button save-two ( label: Save )\n )\n)\n',
     );
     try {
       writeFileSync(log, `${JSON.stringify({ kind: 'button', identifier: 'Save', pageId: null })}\n`);
@@ -249,12 +249,39 @@ describe('computeCoverage touch identity validation', () => {
     mkdirSync(pages);
     writeFileSync(
       join(pages, 'p00001-one.apx'),
-      'page 1 (\n name: One\n alias: ONE\n region shared (\n  type: cards\n  advanced { htmlDomId: shared }\n )\n)\n',
+      'page 1 (\n page: 1\n name: One\n alias: ONE\n region shared (\n  type: cards\n  advanced { htmlDomId: shared }\n )\n)\n',
     );
     try {
       writeFileSync(log, `${JSON.stringify({ kind: 'region', identifier: 'shared', pageId: null })}\n`);
       const report = computeCoverage(dir, log);
       expect(report.pages[0].regions.touched).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('credits a semantic region identity when the successful runtime id was a manual override', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-region-override-'));
+    const pages = join(dir, 'pages');
+    const log = join(dir, 'touches.jsonl');
+    mkdirSync(pages);
+    writeFileSync(
+      join(pages, 'p00030-grid.apx'),
+      'page grid (\n page: 30\n name: Grid\n alias: GRID\n region basic-editing (\n  type: interactiveGrid\n )\n)\n',
+    );
+    try {
+      writeFileSync(
+        log,
+        `${JSON.stringify({
+          kind: 'region',
+          identifier: 'basic-editing',
+          pageId: 30,
+          runtimeLocator: { strategy: 'apex-region-id', value: 'emp' },
+        })}\n`,
+      );
+      const report = computeCoverage(dir, log);
+      expect(report.pages[0].regions.touched).toBe(1);
+      expect(report.pages[0].regions.untouched).toEqual([]);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

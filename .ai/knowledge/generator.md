@@ -78,7 +78,8 @@ generation; it never authors assertions — determinism is the product").
   any of them. Same determinism contract as every other generated
   artifact: same three inputs (old export dir, new export dir, touch log)
   -> byte-identical HTML.
-- `src/lib.ts` — shared `loadExport()`/`generate()`/`inspect()`, also
+- `src/lib.ts` — shared `generate()`/`inspect()` over @apx/parser's
+  `loadApexlangExport()`, also
   imported directly by `packages/mcp`.
 - `src/cli.ts` / `diff-cli.ts` / `coverage-cli.ts` / `docs-cli.ts` /
   `report-cli.ts` — the five CLI entrypoints (`apx-generate`/equivalent,

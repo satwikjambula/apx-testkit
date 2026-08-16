@@ -130,9 +130,8 @@ import type {
   ApexReportColumn,
   ApexServerSideCondition,
 } from '@apx/parser';
-import { parseApp } from '@apx/parser';
+import { loadApexlangExport, parseApp } from '@apx/parser';
 import { resolve } from 'node:path';
-import { loadExport } from './lib.js';
 
 export type FlowNodeId = `page:${number}`;
 
@@ -639,8 +638,8 @@ export function buildFlowMap(ast: ApexAppAst): FlowMap {
 
 /** IO wrapper -- parses a real export directory and builds the Flow Map.
  * Mirrors `computeDiff`/`computeCoverage`/`generateDocs`'s own
- * `loadExport()`+`parseApp()` pipeline exactly. */
+ * `loadApexlangExport()`+`parseApp()` pipeline exactly. */
 export function computeFlowMap(exportDir: string): FlowMap {
-  const result = parseApp(loadExport(resolve(exportDir)));
+  const result = parseApp(loadApexlangExport(resolve(exportDir)));
   return buildFlowMap(result.ast);
 }

@@ -9,7 +9,7 @@ Runtime/generator change review
 ✓/✗ Dispatch path confirmed live (direct region[method]() vs. widget-factory)
 ✓/✗ Tested on >1 instance of the component type before generalizing
 ✓/✗ Standard widget-factory `option` getter/setter checked before a bespoke API
-✓/✗ Runtime static id resolution checked (ApexRegion.htmlDomId first, ADR-003)
+✓/✗ Runtime region id resolution checked (ApexRegion.htmlDomId first, ADR-003)
 ✓/✗ Initialization-race checked (does the widget attach asynchronously?)
 ✓/✗ docs/quirks/26.1.json entry added/updated with literal evidence
 ✓/✗ Live spike spec added and actually run against the real app

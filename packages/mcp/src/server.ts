@@ -39,8 +39,8 @@ import { generateDocs } from '@apx/testgen/docs';
  * Shared precondition, mirroring exactly what every CLI in this project
  * already checks before doing any real work (`flow-cli.ts`/`diff-cli.ts`/
  * `coverage-cli.ts`/`docs-cli.ts`) -- an explicit, readable error instead of
- * a raw `ENOENT` stack trace surfacing from deep inside `@apx/parser`'s
- * `loadExport()`. Returns a human-readable problem description, or `null`
+ * a raw filesystem stack trace surfacing from deep inside `@apx/parser`'s
+ * `loadApexlangExport()`. Returns a human-readable problem description, or `null`
  * when the directory looks like a real unzipped APEXlang export root.
  */
 function checkExportDir(dir: string): string | null {
@@ -87,7 +87,7 @@ export function createServer(): McpServer {
       description:
         'Parse an Oracle APEX 26.1 APEXlang export directory (.apx files) and return a JSON model: pages with aliases/public flag, regions, pageItems, buttons, parser warnings, and component types not yet covered. Use this first to see what exists before generating tests.',
       inputSchema: {
-        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root (contains pages/; application.apx is read when present)'),
+        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root; all .apx sources plus .apex/apexlang.json and deployment metadata are loaded'),
       },
     },
     async ({ exportDir }) => ({

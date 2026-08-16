@@ -17,15 +17,16 @@ documentation alone.
 
 ## Components (`src/components/`)
 
-- `region.ts` — `ApexRegion`, the generic wrapper. Verified methods:
-  `refresh`, `getSessionState`, `getCurrentRecordId`/`setCurrentRecordId`,
-  `getRecordValues`/`setRecordValues`, `getSelectedValues`/
-  `setSelectedValues`, `focus`, `getViewName` (Interactive Report only).
+- `region.ts` — `ApexRegion` exposes only cross-region `refresh()`;
+  `ApexDataRegion` adds the record/session methods verified on IR/Cards;
+  `ApexInteractiveReportRegion` adds IR-only `getViewName()`. The raw
+  string-based dispatcher is package-internal and never exported.
   All dispatch through `apex.region(id)[method]()` directly —
   `apex.region(id).call(action)` was tested and rejected for this widget
   family ("Call not supported").
 - `cards.ts` — `ApexCardsRegion`. `getRecords()`/`getModel()` are
-  confirmed **broken** at runtime (throw a `TypeError`) — use
+  confirmed **broken** at runtime (throw a `TypeError`) and therefore are
+  not exposed — use
   `getPageInfo()`/`getSelectedRecords()`/`setSelectedRecords()` instead.
 - `faceted-search.ts` — `ApexFacetsRegion`.
 - `interactive-grid.ts` — `ApexInteractiveGridRegion`. Dispatches through
@@ -78,7 +79,7 @@ documentation alone.
 - `auth.ts` — `login`/`loginAndSaveState`. Had a real race condition
   (checked `page.url()` once immediately after `domcontentloaded` instead
   of waiting for an actual URL change) — fixed with `page.waitForURL`.
-- `lifecycle.ts` — `callRegionMethodAndWaitForEvent`/
+- `lifecycle.ts` — `refreshRegionAndWait`/`fetchFacetCountsAndWait`/
   `waitForRegionEvent`, tied to APEX's real `apexbeforerefresh`/
   `apexafterrefresh` jQuery custom events (confirmed live, not native DOM
   events — `apex.jQuery`, never a bare global `$`).
@@ -89,12 +90,13 @@ documentation alone.
   by `@apx/testgen`'s `coverage.ts` report generator (a different file,
   same name, different package — don't confuse the two).
 
-## Runtime static id caveat — read `ApexRegion.htmlDomId` first
+## Runtime region id caveat — read `ApexRegion.htmlDomId` first
 
 See ADR-003. Before constructing `ApexInteractiveGridRegion` or
 `ApexChartRegion` by hand, check whether the parsed `ApexRegion.htmlDomId`
-is set — if so, `<htmlDomId>_ig`/`<htmlDomId>_jet` IS the runtime id, no
-live DOM inspection needed. If `htmlDomId` is null, the runtime id must be
+is set — if so, `htmlDomId` predicts the runtime region id accepted by
+`apex.region()`. The `_ig`/`_jet` suffix identifies a nested widget
+container, not the region itself. If `htmlDomId` is null, the runtime region id may need to be
 discovered live; there is no way to predict it from the export.
 
 ## Adding a runtime capability — see `.ai/checklists/runtime-api.md`

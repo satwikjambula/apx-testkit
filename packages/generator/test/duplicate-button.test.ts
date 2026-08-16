@@ -33,10 +33,15 @@ function button(overrides: Partial<ApexPage['buttons'][number]>): ApexPage['butt
 
 function page(overrides: Partial<ApexPage>): ApexPage {
   return {
+    identifier: 'test-page',
     id: 1,
     alias: 'TEST',
     name: 'Test',
     title: null,
+    pageMode: null,
+    pageAccessProtection: null,
+    authentication: null,
+    isPublic: false,
     items: [],
     regions: [],
     buttons: [],
@@ -137,6 +142,23 @@ describe('pageObjectFor -- duplicate button label handling (real-corpus fixture)
     const output = pageObjectFor(p);
     expect(output).toContain("clickButton(this.page, 'Save', { pageId: 3, identifier: 'save' })");
     expect(output).toContain("clickButton(this.page, 'Cancel', { pageId: 3, identifier: 'cancel' })");
+  });
+
+  it('passes application friendlyUrls metadata into URL construction', () => {
+    const output = pageObjectFor(
+      page({ isPublic: true, pageMode: 'normal', pageAccessProtection: 'unrestricted' }),
+      {
+        identifier: 'app',
+        name: 'App',
+        alias: 'APP',
+        version: '1',
+        type: 'standard',
+        runtime: { friendlyUrls: false, compatibilityMode: '26.1' },
+        loc: { file: 'application.apx', line: 1 },
+        raw: {},
+      },
+    );
+    expect(output).toContain('apexPageUrl(APP_BASE, TestPage.alias, false)');
   });
 
   it('matches the real fixture files on disk (sanity: fixtures actually parse to what these unit tests assume)', () => {

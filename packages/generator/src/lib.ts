@@ -36,7 +36,7 @@
  */
 import { readFileSync, readdirSync, mkdirSync, writeFileSync, unlinkSync } from 'node:fs';
 import { join, resolve } from 'node:path';
-import { parseApp, type ApexPage } from '@apx/parser';
+import { loadApexlangExport, parseApp, type ApexPage, type LoadedApexlangExport } from '@apx/parser';
 import {
   computeItemPropNames,
   computeDuplicateLabelButtons,
@@ -47,21 +47,9 @@ import {
   specFileName,
 } from './page-object.js';
 
-export function loadExport(dir: string): Record<string, string> {
-  const files: Record<string, string> = {};
-  const addOptional = (rel: string): void => {
-    try {
-      files[rel] = readFileSync(join(dir, rel), 'utf8');
-    } catch (error) {
-      if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
-    }
-  };
-  addOptional('application.apx');
-  addOptional('page-groups.apx');
-  for (const f of readdirSync(join(dir, 'pages')).sort()) {
-    if (f.endsWith('.apx')) files[`pages/${f}`] = readFileSync(join(dir, 'pages', f), 'utf8');
-  }
-  return files;
+/** @deprecated Import loadApexlangExport from @apx/parser directly. */
+export function loadExport(dir: string): LoadedApexlangExport {
+  return loadApexlangExport(dir);
 }
 
 const TEST_OUTPUT_RE = /^p\d+-.*\.(?:page|spec)\.ts$/;
@@ -77,7 +65,10 @@ function removeStaleGeneratedTests(outDir: string, expected: ReadonlySet<string>
   }
 }
 
-const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+/** Encode arbitrary decoded APEXlang text safely inside a single-quoted TS literal. */
+const esc = (s: string) =>
+  JSON.stringify(s).slice(1, -1).replace(/'/g, "\\'").replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029');
+const commentText = (s: string) => esc(s).replace(/\*\//g, '*\\/');
 
 /**
  * Mirrors @apx/testkit's `assessNavigationSafety()`
@@ -103,14 +94,28 @@ const esc = (s: string) => s.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
  * /login redirect, on a direct GET).
  */
 export function isNavigationUnsafe(pageAccessProtection: string | null, isPublic: boolean): boolean {
-  return pageAccessProtection === 'argumentsMustHaveChecksum' && !isPublic;
+  if (pageAccessProtection === 'noUrlAccess') return true;
+  if (pageAccessProtection === 'argumentsMustHaveChecksum') return !isPublic;
+  if (pageAccessProtection === 'unrestricted' || pageAccessProtection === 'noArgumentsSupported') {
+    return false;
+  }
+  return true;
 }
 
-export const NAVIGATION_UNSAFE_SKIP_REASON =
-  'apx-testkit: navigation unsafe (security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page) -- ' +
-  "a bare page.goto() is confirmed to redirect an authenticated session to /login. See @apx/testkit's " +
-  'navigateViaUiPath() for the confirmed-working alternative, and docs/quirks/26.1.json ' +
-  'page-access-protection-blocks-bare-navigation.';
+export function navigationUnsafeSkipReason(pageAccessProtection: string | null, isPublic: boolean): string {
+  if (pageAccessProtection === 'noUrlAccess') {
+    return 'apx-testkit: navigation unsafe (security.pageAccessProtection: noUrlAccess) -- Oracle forbids requesting this page through a URL; use an in-app branch/navigation mechanism.';
+  }
+  if (pageAccessProtection === 'argumentsMustHaveChecksum' && !isPublic) {
+    return (
+      'apx-testkit: navigation unsafe (security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page) -- ' +
+      "a bare page.goto() is confirmed to redirect an authenticated session to /login. See @apx/testkit's " +
+      'navigateViaUiPath() for the confirmed-working alternative, and docs/quirks/26.1.json ' +
+      'page-access-protection-blocks-bare-navigation.'
+    );
+  }
+  return `apx-testkit: navigation unsafe (unrecognized security.pageAccessProtection: ${String(pageAccessProtection)}) -- refusing to assume direct URL access is safe.`;
+}
 
 /**
  * `pageMode: modalDialog` pages (EBNF `page-appearance-property`,
@@ -191,18 +196,17 @@ function wiredRegionCandidatesLiteral(region: { htmlDomId: string | null }): str
 }
 
 function specFor(page: ApexPage): string {
-  const isPublic = page.raw['security.authentication'] === 'public';
-  const pageAccessProtection =
-    typeof page.raw['security.pageAccessProtection'] === 'string' ? (page.raw['security.pageAccessProtection'] as string) : null;
+  const isPublic = page.isPublic;
+  const pageAccessProtection = page.pageAccessProtection;
   const navigationUnsafe = isNavigationUnsafe(pageAccessProtection, isPublic);
-  const pageMode = typeof page.raw['appearance.pageMode'] === 'string' ? (page.raw['appearance.pageMode'] as string) : null;
+  const pageMode = page.pageMode;
   const modalDialogUnroutable = isModalDialogUnroutable(pageMode);
   const notAutoRoutableReasons: string[] = [];
   if (modalDialogUnroutable) notAutoRoutableReasons.push(MODAL_DIALOG_SKIP_REASON);
-  if (navigationUnsafe) notAutoRoutableReasons.push(NAVIGATION_UNSAFE_SKIP_REASON);
+  if (navigationUnsafe) notAutoRoutableReasons.push(navigationUnsafeSkipReason(pageAccessProtection, isPublic));
   const notAutoRoutable = notAutoRoutableReasons.length > 0;
   const alias = page.alias ?? '';
-  const path = alias.toLowerCase();
+  const path = pageObjectBaseName(page).replace(/^p\d+-/, '').replace(/\.page$/, '');
   const hidden = page.items.filter((i) => i.type === 'hidden');
   const visible = page.items.filter((i) => i.type !== 'hidden');
   const allItemIds = page.items.map((i) => `'${esc(i.identifier)}'`).join(', ');
@@ -214,7 +218,9 @@ function specFor(page: ApexPage): string {
     .map((b) => `{ pageId: ${page.id}, identifier: '${esc(b.identifier)}' }`)
     .join(', ');
   const resolvableRegions = page.regions.filter((r) => r.type && RESOLVABLE_REGION_TYPES.has(r.type));
-  const resolvableRegionCandidateSets = resolvableRegions.map((r) => resolvableRegionCandidatesLiteral(r)).join(',\n      ');
+  const resolvableRegionCandidateSets = resolvableRegions
+    .map((r) => `{ identifier: '${esc(r.identifier)}', candidates: ${resolvableRegionCandidatesLiteral(r)} }`)
+    .join(',\n      ');
 
   // Chart/Interactive Grid: only auto-wireable when htmlDomId predicts the
   // runtime id (ADR-003 layer 1) -- without it, the runtime id is an
@@ -246,7 +252,7 @@ function specFor(page: ApexPage): string {
  * @apx/testkit — see that package before touching any of the helpers used below.
  * Navigation and item access go through the generated page object
  * (./${poBase}.js), not raw testkit calls, so both stay in sync.
- * Regions present in metadata: ${page.regions.map((r) => r.identifier).join(', ') || '(none)'}
+ * Regions present in metadata: ${page.regions.map((r) => commentText(r.identifier)).join(', ') || '(none)'}
 ${[
    resolvableRegions.length > 0
      ? ` * Region resolve-check emitted for ${resolvableRegions.length} interactiveReport/cards/facetedSearch region(s) below -- resolved LIVE via resolveRegion() (ADR-003: htmlDomId tried first when set, then the export identifier), never a static id baked in at generation time.`
@@ -255,22 +261,22 @@ ${[
      ? ` * Chart type-check emitted for ${wiredChartRegions.length} region(s) with a known runtime id (htmlDomId set), resolved live via resolveRegion() before use.`
      : null,
    unwiredChartRegions.length > 0
-     ? ` * ${unwiredChartRegions.length} chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredChartRegions.map((r) => r.identifier).join(', ')}.`
+     ? ` * ${unwiredChartRegions.length} chart region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredChartRegions.map((r) => commentText(r.identifier)).join(', ')}.`
      : null,
    wiredIgRegions.length > 0
      ? ` * Interactive Grid view-check emitted for ${wiredIgRegions.length} region(s) with a known runtime id (htmlDomId set), resolved live via resolveRegion() before use.`
      : null,
    unwiredIgRegions.length > 0
-     ? ` * ${unwiredIgRegions.length} Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredIgRegions.map((r) => r.identifier).join(', ')}.`
+     ? ` * ${unwiredIgRegions.length} Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): ${unwiredIgRegions.map((r) => commentText(r.identifier)).join(', ')}.`
      : null,
    skippedRegions.length > 0
-     ? ` * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): ${skippedRegions.map((r) => `${r.identifier} (${r.type ?? 'untyped'})`).join(', ')}.`
+     ? ` * Other region types NOT covered by an auto-generated assertion (no verified DOM convention -- see docs/grammar-assumptions.md "Still open"): ${skippedRegions.map((r) => `${commentText(r.identifier)} (${commentText(r.type ?? 'untyped')})`).join(', ')}.`
      : null,
    modalDialogUnroutable
      ? ` * NOT AUTO-ROUTABLE (modalDialog): this page declares appearance.pageMode: modalDialog -- confirmed live that a plain GET returns HTTP 400 instead of loading (docs/quirks/26.1.json 'drawer-modal-pages-400'). Every test below is unconditionally skipped rather than generated to guaranteed-fail.`
      : null,
    navigationUnsafe
-     ? ` * NOT AUTO-ROUTABLE (navigation unsafe): this page declares security.pageAccessProtection: argumentsMustHaveChecksum and is NOT authentication:public -- a bare page.goto() is confirmed to redirect an authenticated session to /login (docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'). Every test below is unconditionally skipped rather than generated to guaranteed-fail; see @apx/testkit's navigateViaUiPath() for the confirmed-working alternative (not auto-derivable here without Flow Map wiring).`
+     ? ` * NOT AUTO-ROUTABLE (navigation unsafe): ${navigationUnsafeSkipReason(pageAccessProtection, isPublic)}`
      : null,
  ]
    .filter((line): line is string => line !== null)
@@ -374,8 +380,8 @@ import { APP_BASE } from '../playwright.config.js';`}
     const regionCandidateSets = [
       ${resolvableRegionCandidateSets}
     ];
-    for (const candidates of regionCandidateSets) {
-      await resolveRegion(page, candidates, ${page.id});
+    for (const { identifier, candidates } of regionCandidateSets) {
+      await resolveRegion(page, candidates, { pageId: ${page.id}, identifier });
     }
   });`);
   }
@@ -392,7 +398,7 @@ import { APP_BASE } from '../playwright.config.js';`}
     // broadly would assume more than verified (ADR-004). See
     // docs/quirks/26.1.json `chart-declared-type-not-runtime-type`.
     const chartsWithDeclaredType = wiredChartRegions
-      .map((r) => `{ candidates: ${wiredRegionCandidatesLiteral(r)}, declaredType: '${esc(r.chartSettings!.type)}' }`)
+      .map((r) => `{ identifier: '${esc(r.identifier)}', candidates: ${wiredRegionCandidatesLiteral(r)}, declaredType: '${esc(r.chartSettings!.type)}' }`)
       .join(',\n      ');
     bodyParts.push(`  test('every Chart region with a known runtime id resolves a real chart type (${wiredChartRegions.length} region${wiredChartRegions.length === 1 ? '' : 's'})', async ({ page }) => {
     const po = new ${className}(page);
@@ -404,12 +410,12 @@ import { APP_BASE } from '../playwright.config.js';`}
     const charts = [
       ${chartsWithDeclaredType}
     ];
-    for (const { candidates } of charts) {
+    for (const { identifier, candidates } of charts) {
       // ADR-003: htmlDomId is the ONLY evidence-backed candidate for
       // Chart -- the export identifier is confirmed NOT to work as a
       // fallback for this component type. resolveRegion() still confirms
       // it live rather than trusting the static field.
-      const { runtimeId } = await resolveRegion(page, candidates, ${page.id});
+      const { runtimeId } = await resolveRegion(page, candidates, { pageId: ${page.id}, identifier });
       // JET chart widgets attach ojChart asynchronously -- wait for the
       // actual precondition (see ApexChartRegion's module doc) rather
       // than a fixed delay.
@@ -417,7 +423,7 @@ import { APP_BASE } from '../playwright.config.js';`}
         const region = (window as any).apex?.region?.(regionId);
         return typeof region?.widget?.()?.ojChart === 'function';
       }, runtimeId);
-      const chart = new ApexChartRegion(page, runtimeId, ${page.id});
+      const chart = new ApexChartRegion(page, runtimeId, { pageId: ${page.id}, identifier });
       const liveType = await chart.getOption('type');
       expect(typeof liveType).toBe('string');
       expect(liveType).not.toBe('');
@@ -426,7 +432,9 @@ import { APP_BASE } from '../playwright.config.js';`}
   }
 
   if (wiredIgRegions.length > 0) {
-    const igRegionCandidateSets = wiredIgRegions.map((r) => wiredRegionCandidatesLiteral(r)).join(',\n      ');
+    const igRegionCandidateSets = wiredIgRegions
+      .map((r) => `{ identifier: '${esc(r.identifier)}', candidates: ${wiredRegionCandidatesLiteral(r)} }`)
+      .join(',\n      ');
     bodyParts.push(`  test('every Interactive Grid region with a known runtime id resolves a current view (${wiredIgRegions.length} region${wiredIgRegions.length === 1 ? '' : 's'})', async ({ page }) => {
     const po = new ${className}(page);
     await po.goto();
@@ -437,9 +445,9 @@ import { APP_BASE } from '../playwright.config.js';`}
     const regionCandidateSets = [
       ${igRegionCandidateSets}
     ];
-    for (const candidates of regionCandidateSets) {
-      const { runtimeId } = await resolveRegion(page, candidates, ${page.id});
-      const ig = new ApexInteractiveGridRegion(page, runtimeId, ${page.id});
+    for (const { identifier, candidates } of regionCandidateSets) {
+      const { runtimeId } = await resolveRegion(page, candidates, { pageId: ${page.id}, identifier });
+      const ig = new ApexInteractiveGridRegion(page, runtimeId, { pageId: ${page.id}, identifier });
       expect(typeof await ig.getCurrentViewId()).toBe('string');
     }
   });`);
@@ -458,7 +466,13 @@ export interface GenerateResult {
 }
 
 export function generate(exportDir: string, outDir: string): GenerateResult {
-  const result = parseApp(loadExport(resolve(exportDir)));
+  const result = parseApp(loadApexlangExport(resolve(exportDir)));
+  if (result.ast.application?.runtime.friendlyUrls === false) {
+    throw new Error(
+      'apx-testgen: application.apx declares runtime.friendlyUrls: false. Legacy f?p URL generation is not yet ' +
+        'implemented because it requires additional verified application/session metadata; no tests were generated.',
+    );
+  }
   const resolvedOut = resolve(outDir);
   mkdirSync(resolvedOut, { recursive: true });
   const pages = [...result.ast.pages].sort((a, b) => a.id - b.id).filter((p) => p.id !== 0 && p.alias);
@@ -467,7 +481,7 @@ export function generate(exportDir: string, outDir: string): GenerateResult {
   const files: string[] = [];
   for (const p of pages) {
     const poName = pageObjectFileName(p);
-    writeFileSync(join(resolvedOut, poName), pageObjectFor(p));
+    writeFileSync(join(resolvedOut, poName), pageObjectFor(p, result.ast.application));
     files.push(poName);
 
     const specName = specFileName(p);
@@ -476,7 +490,7 @@ export function generate(exportDir: string, outDir: string): GenerateResult {
   }
   return {
     generated: pages.length,
-    skippedAuth: pages.filter((p) => p.raw['security.authentication'] !== 'public').length,
+    skippedAuth: pages.filter((p) => !p.isPublic).length,
     outDir: resolvedOut,
     warnings: result.warnings.map((w) => `${w.loc.file}:${w.loc.line} ${w.message}`),
     unmodeled: result.ast.unmodeled,
@@ -485,11 +499,11 @@ export function generate(exportDir: string, outDir: string): GenerateResult {
 }
 
 export function inspect(exportDir: string) {
-  const result = parseApp(loadExport(resolve(exportDir)));
+  const result = parseApp(loadApexlangExport(resolve(exportDir)));
   return {
     pages: result.ast.pages.map((p) => ({
       id: p.id, alias: p.alias, name: p.name,
-      public: p.raw['security.authentication'] === 'public',
+      public: p.isPublic,
       regions: p.regions.map((r) => ({ id: r.identifier, type: r.type })),
       items: p.items.map((i) => ({ id: i.identifier, type: i.type, label: i.label })),
       buttons: p.buttons.map((b) => ({ id: b.identifier, label: b.label })),

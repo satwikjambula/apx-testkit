@@ -15,9 +15,9 @@
  *   this project's scale).
  * - Disabled by default (no env var set): recording has a real cost (a
  *   sync file write per touch) that most test runs shouldn't pay for.
- * - item/region touches carry `pageId` when the caller knows it. Region
- *   identifiers are only page-scoped, so generated code always supplies the
- *   page id; older identity-free logs are accepted only when unambiguous.
+ * - item/region touches carry semantic identity when the caller knows it.
+ *   A region's runtime id can differ from its APEXlang identifier, so the
+ *   two are stored separately just like button identity and locator data.
  * - button touches: UPDATED (runtime-review P0 item 4) to carry semantic
  *   identity SEPARATELY from the runtime locator value. Recording only a
  *   button's LABEL used to silently collapse two DIFFERENT buttons that
@@ -47,9 +47,9 @@ export interface CoverageRuntimeLocator {
 export interface CoverageTouch {
   kind: CoverageKind;
   /**
-   * Stable `.apx` identifier. For item/region touches: the same value
-   * already used to dispatch (the pageItem id / the region's resolved
-   * runtime id) -- unchanged. For BUTTON touches: the button's semantic
+   * Stable `.apx` identifier. For item touches this is also the runtime
+   * item id. For region/button touches it is semantic identity, separate
+   * from the runtime locator. For BUTTON touches: the button's semantic
    * `.apx` `identifier` field when known (e.g. `SAVE_EMPLOYEE`), NEVER
    * its display label -- falls back to the label itself only when no
    * richer identity was supplied to `recordButtonCoverageTouch()` (a
@@ -64,10 +64,8 @@ export interface CoverageTouch {
    */
   pageId: number | null;
   /**
-   * How this was actually located at runtime. `null` for item/region
-   * touches (unchanged -- their `identifier` already doubles as the
-   * dispatch value, so a separate locator field would be redundant);
-   * always populated for button touches.
+   * How this was actually located at runtime. `null` for legacy touches;
+   * populated for new region and button touches.
    */
   runtimeLocator: CoverageRuntimeLocator | null;
   ts: number;
@@ -92,6 +90,24 @@ function appendTouch(entry: Omit<CoverageTouch, 'ts'>): void {
  */
 export function recordCoverageTouch(kind: 'item' | 'region', identifier: string, pageId?: number): void {
   appendTouch({ kind, identifier, pageId: pageId ?? null, runtimeLocator: null });
+}
+
+export interface RegionCoverageIdentity {
+  pageId: number;
+  /** Stable APEXlang region identifier, never the resolved runtime id. */
+  identifier: string;
+}
+
+export function recordRegionCoverageTouch(
+  runtimeRegionId: string,
+  identity?: RegionCoverageIdentity,
+): void {
+  appendTouch({
+    kind: 'region',
+    pageId: identity?.pageId ?? null,
+    identifier: identity?.identifier ?? runtimeRegionId,
+    runtimeLocator: { strategy: 'apex-region-id', value: runtimeRegionId },
+  });
 }
 
 export interface ButtonCoverageIdentity {

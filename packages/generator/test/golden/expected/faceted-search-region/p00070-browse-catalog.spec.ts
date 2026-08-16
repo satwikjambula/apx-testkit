@@ -34,11 +34,11 @@ test.describe('page 70: Browse Catalog', () => {
     // hard-fails with a specific message if neither candidate resolves,
     // rather than silently trusting a static guess.
     const regionCandidateSets = [
-      [{ value: 'active-facets', strategy: 'export-identifier' as const }],
-      [{ value: 'catalog-cards', strategy: 'export-identifier' as const }]
+      { identifier: 'active-facets', candidates: [{ value: 'active-facets', strategy: 'export-identifier' as const }] },
+      { identifier: 'catalog-cards', candidates: [{ value: 'catalog-cards', strategy: 'export-identifier' as const }] }
     ];
-    for (const candidates of regionCandidateSets) {
-      await resolveRegion(page, candidates, 70);
+    for (const { identifier, candidates } of regionCandidateSets) {
+      await resolveRegion(page, candidates, { pageId: 70, identifier });
     }
   });
 });

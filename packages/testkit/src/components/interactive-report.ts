@@ -68,7 +68,7 @@ import { reportColumnHeader } from './report-column.js';
 
 /**
  * The Row Search box for a given Interactive Report region. `regionId`
- * must be the region's REAL runtime static id (ADR-003 layered
+ * must be the region's REAL runtime region id (ADR-003 layered
  * resolution: `region.htmlDomId ?? region.identifier`) -- the accessible
  * name `Row Search` is APEX's own fixed `aria-label`, identical across
  * every Interactive Report region, so if a page ever has more than one IR

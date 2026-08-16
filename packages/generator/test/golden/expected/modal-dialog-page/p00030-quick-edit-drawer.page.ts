@@ -12,7 +12,7 @@
  * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { ApexItem, apexPageUrl, clickButton, gotoApexPage } from '@apx/testkit';
+import { ApexItem, apexPageUrl, clickButton } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class QuickEditDrawerPage {
@@ -21,12 +21,12 @@ export class QuickEditDrawerPage {
   constructor(private readonly page: Page) {}
 
   url(): string {
-    return apexPageUrl(APP_BASE, QuickEditDrawerPage.alias);
+    return apexPageUrl(APP_BASE, QuickEditDrawerPage.alias, true);
   }
 
-  /** Navigate here and arm the console guard; returns any console/page errors seen. */
+  /** Navigate only when the page's declared security/mode permits a direct URL. */
   async goto(): Promise<string[]> {
-    return gotoApexPage(this.page, this.url());
+    throw new Error('This page declares appearance.pageMode: modalDialog and must be opened from a parent page; direct navigation is not supported.');
   }
 
   /** hidden */

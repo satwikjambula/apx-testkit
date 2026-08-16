@@ -11,16 +11,17 @@ else in this project (see CLAUDE.md Invariant 2).
 
 - **Richer component APIs: Interactive Report, Cards, Faceted Search — DONE.**
   Shipped in `packages/testkit/src/components/{region,cards,faceted-search}.ts`:
-  a generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId,
-  getRecordValues, getSelectedValues, focus -- confirmed on two independent
-  widget types), `ApexCardsRegion` (pagination, selection), `ApexFacetsRegion`
+  a capability-scoped `ApexRegion` (refresh only), `ApexDataRegion`
+  (getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues,
+  focus -- confirmed on two independent widget types), `ApexCardsRegion`
+  (pagination, selection), `ApexFacetsRegion`
   (facet counts, apply/clear). Two real findings from live verification,
   not assumption: Interactive Report's search/sort/pagination internals are
   ALL private (`_`-prefixed) on the widget instance -- only `refresh` is
   public, so IR doesn't get its own rich component file, just the generic
-  `ApexRegion` methods. And `ApexCardsRegion.getRecords()`/`.getModel()` are
+  `ApexDataRegion` methods. And Cards `getRecords()`/`getModel()` are
   confirmed BROKEN in this app (throw a real error from APEX's own client
-  code) -- shipped anyway, documented as known-broken, per
+  code) -- deliberately not exposed, per
   docs/grammar-assumptions.md and docs/limitations.md.
 - **Interactive Grid — DONE, live-verified.** Third real APEX app (Oracle's
   own "Sample Interactive Grids" gallery) gave this project its first LIVE
@@ -34,13 +35,13 @@ else in this project (see CLAUDE.md Invariant 2).
   REJECTED: `model`, `view`, `getRegion`. Verified via
   `spike/tests/interactive-grid-demo.spec.ts`, 3/3 repeated live runs.
   Two significant findings alongside the component itself:
-  1. **Region identifier != runtime static id, confirmed concretely for
+  1. **Region identifier != runtime region id, confirmed concretely for
      the first time.** The `.apx` export declares `region basic-editing
      (type: interactiveGrid ...)`; at runtime `apex.region('basic-editing')`
      returns `null`, `apex.region('emp')` resolves correctly. This means
      `@apx/testgen` CANNOT auto-construct this component from `.apx`
-     metadata -- the real static id must be discovered from the live DOM
-     by hand (the widget container follows `<static id>_ig`). This is a
+     metadata -- the runtime region id must be discovered from the live DOM
+     by hand (the widget container follows `<runtimeRegionId>_ig`). This is a
      genuine, permanent limitation on automatic generation for this region
      type specifically, not a bug to fix.
   2. **`pageAccessProtection: argumentsMustHaveChecksum` blocks bare
@@ -78,7 +79,7 @@ else in this project (see CLAUDE.md Invariant 2).
   docs/quirks/26.1.json for the full corrected investigation.
 - **Automatic waits tied to APEX's client lifecycle — DONE for the
   region-operation case.** Shipped `packages/testkit/src/fixtures/lifecycle.ts`:
-  `callRegionMethodAndWaitForEvent()` and `waitForRegionEvent()`, built on
+  `refreshRegionAndWait()`/`fetchFacetCountsAndWait()` and `waitForRegionEvent()`, built on
   APEX's real `apexbeforerefresh`/`apexafterrefresh` events (confirmed live
   via monkey-patching `$.fn.trigger` to observe what actually fires, not
   guessed from docs). Fixed the concrete motivating case:
@@ -321,7 +322,7 @@ entry above. `sample-calendar` remains the highest-leverage open target.
   worked around with `page.waitForFunction`).
 
   Separately, this same investigation diagnosed the root cause of the
-  long-open "runtime static id differs from `.apx` identifier" question
+  long-open "runtime region id differs from `.apx` identifier" question
   (docs/quirks/26.1.json `region-id-not-static-id`, previously
   `rootCauseDiagnosed: false`): the export's `advanced { htmlDomId: ... }`
   property, when present, deterministically predicts the runtime id
@@ -489,7 +490,7 @@ hold uniformly across this whole proposal.
   (what it is / 30-second example / why it's different / architecture /
   limitations / roadmap) in an earlier pass this session.
 - **Automatic wait strategy, region case (13).** `waitForRegionEvent()`/
-  `callRegionMethodAndWaitForEvent()` already ship this generically (see
+  named lifecycle helpers already ship this for verified operations (see
   Tier 1 above). `waitForPageReady()` is effectively already inside
   `gotoApexPage()` (waits for `apex.item` to exist) — worth exposing as
   its own named export, but it's extraction, not new capability.
@@ -931,12 +932,9 @@ existing Tier structure above:
   add e.g. `ApexItem.lovName` (gated to `selectList`/`radioGroup`/
   `popupLov` item types), wire into `apx-diff`. (2) Resolving the LOV
   *definition itself* (the actual list of values in
-  `shared-components/lovs.apx`) is a different, bigger thing: that file
-  sits outside `loadExport()`'s current scope entirely (confirmed:
-  `shared-components/**` — plugin definitions, themes, static files — is
-  never parsed today, only a resulting item-level reference to a plugin
-  or LOV is, per the concurrent-manager plugin finding above). Parsing
-  it would mean extending the generator's file-scope, a real
+  `shared-components/lovs.apx`) is a different, bigger thing: the parser
+  loader now preserves that file, but no typed semantic AST projection
+  or downstream consumer exists for it. Modeling it would be a real
   architecture change, not a field addition — and there is no concrete
   consumer asking for the actual *values* yet, only the reference. Left
   in Tier 2 ("needs care") rather than built now. Runtime PopupLOV
@@ -1238,8 +1236,8 @@ of these are grammar-confirmed yet.
   definition change, or `/apex` wants richer facet-definition metadata to
   drive `ApexFacetsRegion` assertions beyond counts.
 - **`pageGroup`** (29/46 — common, and technically cheap: `page-groups.apx`
-  is already inside `loadExport()`'s scope today, unlike the LOV
-  definition file). But it's purely organizational (which folder a page
+  and the LOV definition file are both preserved by the parser loader).
+  But it's purely organizational (which folder a page
   sits under in the App Builder tree) — zero runtime relevance, and no
   concrete diff/coverage consumer has been named for "this page's group
   changed" the way one exists for `branch`'s unreachable-branch detection
@@ -1442,8 +1440,8 @@ buildable now, and what's still genuinely blocked.
 The proposal's closing point — dial back from exposing a rich API for
 every component immediately, keep verifying before generalizing — is
 exactly this project's existing, load-bearing discipline (see
-`unsupported.ts`'s entire design, the Cards `getRecords()`/`getModel()`
-known-broken methods left visible rather than hidden, and every
+`unsupported.ts`'s entire design, the confirmed-broken Cards
+`getRecords()`/`getModel()` methods kept outside the public API, and every
 "confirmed working" vs. "confirmed rejected" pairing in
 docs/quirks/26.1.json). Nothing to change here; worth noting only because
 it's confirmation the project's existing restraint is being recognized
@@ -1588,7 +1586,7 @@ shifted since being written down.
    actual current state rather than the phrase: the **region** side of
    this has substantially moved since the phrase was last written —
    `ApexRegion.htmlDomId` (ADR-003) now deterministically resolves the
-   runtime static id whenever the export sets it, live-confirmed on
+   runtime region id whenever the export sets it, live-confirmed on
    Interactive Grid/Chart/Interactive Report and statically confirmed
    present across 27+ region types in real export data (see
    `docs/quirks/26.1.json` `region-id-not-static-id`). The remaining open
@@ -1728,8 +1726,8 @@ UPDATE discipline.
 
 - `facet` definition typing, `pageGroup`, `savedReport` — unchanged, no
   consumer named yet.
-- LOV value resolution (`shared-components/lovs.apx`) — unchanged, out of
-  `loadExport()`'s scope, no consumer.
+- LOV value resolution (`shared-components/lovs.apx`) — loaded losslessly,
+  but still lacks a typed semantic projection and consumer.
 - Tree-as-content (parser typing and runtime) — reasoning corrected (see
   #8 above), verdict unchanged: real, confirmed, still too rare (4/46) to
   clear this project's own consistency bar, and zero live ground truth for

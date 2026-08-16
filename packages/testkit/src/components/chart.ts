@@ -33,13 +33,14 @@
  * all) was already confirmed live against a chart region and is inherited
  * as-is.
  *
- * Runtime static id caveat (unchanged): the id passed to this class's
- * constructor must be the REAL runtime static id, which can differ from
+ * Runtime region id caveat (unchanged): the id passed to this class's
+ * constructor must be the REAL runtime region id, which can differ from
  * the `.apx` export's region identifier -- see `ApexRegion.htmlDomId`
  * (packages/parser/src/ast.ts) for the now-diagnosed root cause
- * (`advanced { htmlDomId: ... }`, when set, predicts `<htmlDomId>_jet`;
- * when absent, the runtime id is an APEX-internal auto-generated numeric
- * id with no corresponding field in the static export at all).
+ * (`advanced { htmlDomId: ... }`, when set, predicts the runtime region id;
+ * `<htmlDomId>_jet` is the nested widget container. When absent, the runtime
+ * id is an APEX-internal auto-generated numeric id with no corresponding
+ * field in the static export at all).
  *
  * Initialization race, confirmed live: JET chart widgets attach `ojChart`
  * ASYNCHRONOUSLY, after `page.waitForLoadState('domcontentloaded')`
@@ -60,15 +61,21 @@
  */
 import type { Page } from '@playwright/test';
 import { ApexRegion } from './region.js';
-import { recordCoverageTouch } from '../fixtures/coverage.js';
+import { recordRegionCoverageTouch, type RegionCoverageIdentity } from '../fixtures/coverage.js';
 
-async function callChartWidget<T>(page: Page, id: string, method: string, args: unknown[] = [], pageId?: number): Promise<T> {
+async function callChartWidget<T>(
+  page: Page,
+  id: string,
+  method: string,
+  args: unknown[] = [],
+  identity?: RegionCoverageIdentity,
+): Promise<T> {
   const result = await page.evaluate(
     ([id, method, args]: [string, string, unknown[]]) => {
       const region = (window as any).apex?.region?.(id);
       if (!region) {
         throw new Error(
-          `apex.region('${id}') did not resolve -- not a recognized widget region. Chart's runtime static id ` +
+          `apex.region('${id}') did not resolve -- not a recognized widget region. Chart's runtime region id ` +
             `can differ from its .apx export identifier -- see ApexRegion.htmlDomId and docs/quirks/26.1.json ` +
             `'region-id-not-static-id' before assuming '${id}' is wrong.`,
         );
@@ -76,20 +83,20 @@ async function callChartWidget<T>(page: Page, id: string, method: string, args: 
       const widget = region.widget?.();
       if (typeof widget?.ojChart !== 'function') {
         throw new Error(
-          `apex.region('${id}').widget() did not expose an ojChart() widget-factory method -- is '${id}' really a Chart region's runtime static id?`,
+          `apex.region('${id}').widget() did not expose an ojChart() widget-factory method -- is '${id}' really a Chart region's runtime region id?`,
         );
       }
       return widget.ojChart(method, ...args);
     },
     [id, method, args] as [string, string, unknown[]],
   );
-  recordCoverageTouch('region', id, pageId);
+  recordRegionCoverageTouch(id, identity);
   return result;
 }
 
 export class ApexChartRegion extends ApexRegion {
   protected invokeWidget<T>(method: string, ...args: unknown[]): Promise<T> {
-    return callChartWidget<T>(this.page, this.id, method, args, this.pageId);
+    return callChartWidget<T>(this.page, this.id, method, args, this.coverageIdentity);
   }
 
   /** Confirmed live: the full chart config object (type/series/groups/xAxis/legend/styleDefaults/...). */

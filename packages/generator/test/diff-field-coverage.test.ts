@@ -61,6 +61,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import type {
+  ApexApplication,
   ApexBranch,
   ApexButton,
   ApexComputation,
@@ -75,6 +76,7 @@ import type {
   ApexValidation,
 } from '@apx/parser';
 import {
+  diffApplicationFields,
   diffBranchFields,
   diffButtonFields,
   diffColumnFields,
@@ -91,6 +93,17 @@ import {
 } from '../src/diff.js';
 
 const LOC = { file: 'p1.apx', line: 1 };
+
+const applicationFixture: ApexApplication = {
+  identifier: 'app',
+  name: 'App',
+  alias: 'APP',
+  version: '1.0',
+  type: 'standard',
+  runtime: { friendlyUrls: true, compatibilityMode: '26.1' },
+  loc: { file: 'application.apx', line: 1 },
+  raw: { 'runtime.friendlyUrls': true },
+};
 
 /**
  * Produces a value guaranteed to differ from `value` (and to be JSON-
@@ -327,10 +340,15 @@ const regionFixture: ApexRegion = {
 };
 
 const pageFixture: ApexPage = {
+  identifier: 'my-page',
   id: 1,
   alias: 'MY_PAGE',
   name: 'My Page',
   title: 'My Page Title',
+  pageMode: 'normal',
+  pageAccessProtection: 'unrestricted',
+  authentication: 'required',
+  isPublic: false,
   regions: [regionFixture],
   items: [itemFixture],
   buttons: [buttonFixture],
@@ -348,6 +366,15 @@ const pageFixture: ApexPage = {
 // ---------------------------------------------------------------------------
 
 describeFieldCoverage('ApexItem', itemFixture, diffItemFields, ['identifier', 'loc']);
+describeFieldCoverage('ApexApplication', applicationFixture, diffApplicationFields, ['loc', 'runtime']);
+describeNestedFieldCoverage(
+  'ApexApplication',
+  'runtime',
+  applicationFixture,
+  (app) => app.runtime,
+  (app, runtime) => ({ ...app, runtime }),
+  diffApplicationFields,
+);
 describeFieldCoverage('ApexButton', buttonFixture, diffButtonFields, ['identifier', 'loc']);
 describeFieldCoverage('ApexDAAction', daActionFixture, diffDAActionFields, ['identifier', 'loc']);
 describeFieldCoverage('ApexValidation', validationFixture, diffValidationFields, ['identifier', 'loc']);
@@ -423,7 +450,10 @@ describe("ApexPage's child-construct arrays are wired into diffPageContents", ()
   }
 
   it("every one of ApexPage's own keys is covered by either the scalar-field subject above or this child-array list", () => {
-    const accountedFor = new Set<string>(['id', 'loc', 'alias', 'name', 'title', 'raw', ...childArrayKeys.map((c) => c.key as string)]);
+    const accountedFor = new Set<string>([
+      'identifier', 'id', 'loc', 'alias', 'name', 'title', 'pageMode', 'pageAccessProtection', 'authentication', 'isPublic', 'raw',
+      ...childArrayKeys.map((c) => c.key as string),
+    ]);
     const unaccounted = Object.keys(pageFixture).filter((k) => !accountedFor.has(k));
     expect(
       unaccounted,

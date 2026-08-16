@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import { existsSync, writeFileSync } from 'node:fs';
-import { computeDiff, formatDiffHuman, type ComponentDiff } from './diff.js';
+import { computeDiff, formatDiffHuman, formatDiffStructured } from './diff.js';
 
 const args = process.argv.slice(2);
 const oldExportDir = args[0];
@@ -35,51 +35,7 @@ const report = computeDiff(oldExportDir, newExportDir);
 if (format === 'human') {
   console.log(formatDiffHuman(report));
 } else {
-  const symbol: Record<ComponentDiff['kind'], string> = { added: '+', removed: '-', changed: '~' };
-
-  const printComponentDiffs = (label: string, diffs: ComponentDiff[]): void => {
-    for (const d of diffs) {
-      console.log(`  ${symbol[d.kind]} ${label} ${d.identifier}`);
-      for (const change of d.changes) console.log(`      ${change}`);
-    }
-  };
-
-  console.log(`Regression report`);
-  console.log(`  old: ${report.oldExportDir}`);
-  console.log(`  new: ${report.newExportDir}`);
-  console.log('');
-
-  for (const p of report.pages) {
-    if (p.kind === 'added') {
-      console.log(`+ page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
-      console.log(`    generated: ${p.affectedFiles.join(', ')}`);
-      console.log('');
-      continue;
-    }
-    if (p.kind === 'removed') {
-      console.log(`- page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
-      console.log(`    no longer generated: ${p.affectedFiles.join(', ')}`);
-      console.log('');
-      continue;
-    }
-    console.log(`~ page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
-    for (const change of p.pageChanges) console.log(`    ${change}`);
-    printComponentDiffs('item', p.items);
-    printComponentDiffs('region', p.regions);
-    printComponentDiffs('button', p.buttons);
-    printComponentDiffs('dynamicAction', p.dynamicActions);
-    printComponentDiffs('branch', p.branches);
-    printComponentDiffs('validation', p.validations);
-    printComponentDiffs('process', p.processes);
-    printComponentDiffs('computation', p.computations);
-    console.log(`    affected: ${p.affectedFiles.join(', ')}`);
-    console.log('');
-  }
-
-  const s = report.summary;
-  console.log(
-    `Summary: ${s.pagesAdded} added, ${s.pagesRemoved} removed, ${s.pagesChanged} changed, ${s.pagesUnchanged} unchanged`,
-  );
+  console.log(formatDiffStructured(report));
 }
 
 if (jsonOut) {

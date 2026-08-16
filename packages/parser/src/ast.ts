@@ -1,6 +1,6 @@
 /**
- * AST v0.1 — PROVISIONAL. Grammar assumptions inferred from Oracle's published
- * APEXlang documentation excerpts (26.1). Every assumption must be re-verified
+ * AST v0.1 — PROVISIONAL. Grammar contracts checked against Oracle's raw
+ * APEXlang 26.1 EBNF. Runtime assumptions must still be re-verified
  * against a real APEXlang export (see docs/grammar-assumptions.md) before this
  * contract is frozen. `raw` bags preserve everything we did not understand so
  * partial parsing never lies by omission.
@@ -39,6 +39,10 @@ export interface ComponentNode {
 
 export interface ApexAppAst {
   astVersion: '0.1.0-provisional';
+  /** Typed application metadata from application.apx, when present. */
+  application: ApexApplication | null;
+  /** Export-format manifest from .apex/apexlang.json, when loaded through loadApexlangExport(). */
+  manifest: ApexlangManifest | null;
   pages: ApexPage[];
   /** Every file consumed, for cache invalidation and provenance. */
   sourceFiles: string[];
@@ -46,11 +50,35 @@ export interface ApexAppAst {
   unmodeled: string[];
 }
 
+export interface ApexlangManifest {
+  mmdVersion: string;
+}
+
+export interface ApexApplication {
+  identifier: string | null;
+  name: string | null;
+  alias: string | null;
+  version: string | null;
+  type: string | null;
+  runtime: {
+    friendlyUrls: boolean;
+    compatibilityMode: string | null;
+  };
+  loc: Loc;
+  raw: RawBag;
+}
+
 export interface ApexPage {
+  /** Permanent APEXlang component identifier; distinct from the numeric page property. */
+  identifier: string | null;
   id: number;
   alias: string | null;
   name: string | null;
   title: string | null;
+  pageMode: 'normal' | 'modalDialog' | 'nonModalDialog' | null;
+  pageAccessProtection: 'unrestricted' | 'argumentsMustHaveChecksum' | 'noArgumentsSupported' | 'noUrlAccess' | null;
+  authentication: 'required' | 'public' | null;
+  isPublic: boolean;
   regions: ApexRegion[];
   items: ApexItem[];       // page-level items (not owned by a region)
   buttons: ApexButton[];
@@ -86,10 +114,10 @@ export interface ApexRegion {
    * `advanced { htmlDomId: ... }`, confirmed against the official EBNF's
    * `region-advanced-property` production. This is the real, deterministic
    * root cause of a long-open question in this project (see
-   * docs/quirks/26.1.json `region-id-not-static-id`): a region's RUNTIME
-   * static id -- the id `apex.region()` and the widget container element
-   * (`<runtime id>_jet` for Chart, `<runtime id>_ig` for Interactive Grid)
-   * actually use -- can differ from the `.apx` export's own `identifier`.
+   * docs/quirks/26.1.json `region-id-not-static-id`): a region's runtime
+   * region id -- the id accepted by `apex.region()` -- can differ from the
+   * `.apx` export's own `identifier`. The suffixed Chart/Interactive Grid
+   * elements are nested widget containers, not the runtime region id.
    * When `htmlDomId` is set here, it deterministically PREDICTS that
    * runtime id -- confirmed live across Chart (`pie1`, `donut1`,
    * `stackCategoryChart`) and Interactive Grid (`emp`, consistently across

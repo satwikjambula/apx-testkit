@@ -34,7 +34,7 @@ wrappers. ("26.1", not "26.1+" — no later release has been verified; see
    *means* at runtime.
 6. Runtime code never depends on an undocumented Oracle internal without
    live verification.
-7. A region's runtime static id is resolved in layers, never guessed — it
+7. A region's runtime region id is resolved in layers, never guessed — it
    can differ from the `.apx` export identifier (see `ApexRegion.htmlDomId`).
 8. Every new runtime API requires: live verification, a
    `docs/quirks/26.1.json` entry, regression tests, and a documentation

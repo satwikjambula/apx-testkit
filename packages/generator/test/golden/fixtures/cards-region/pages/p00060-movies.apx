@@ -1,8 +1,10 @@
 page 60 (
+  page: 60
   name: Movies
   alias: MOVIES
   title: Movies
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   region movie-cards (

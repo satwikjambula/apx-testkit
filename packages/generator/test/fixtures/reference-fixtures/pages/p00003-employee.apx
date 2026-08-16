@@ -1,8 +1,10 @@
 page 3 (
+  page: 3
   name: Employee
   alias: EMPLOYEE
   title: Employee
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   region employee (

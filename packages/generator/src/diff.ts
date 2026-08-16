@@ -47,6 +47,7 @@
  */
 import {
   parseApp,
+  type ApexApplication,
   type ApexBranch,
   type ApexButton,
   type ApexComputation,
@@ -59,10 +60,10 @@ import {
   type ApexRegionAction,
   type ApexReportColumn,
   type ApexValidation,
+  loadApexlangExport,
   type RawBag,
 } from '@apx/parser';
 import { resolve } from 'node:path';
-import { loadExport } from './lib.js';
 import { pageObjectFileName, specFileName } from './page-object.js';
 
 export type ChangeKind = 'added' | 'removed' | 'changed';
@@ -109,6 +110,8 @@ export interface DiffSummary {
 export interface DiffReport {
   oldExportDir: string;
   newExportDir: string;
+  applicationChanges: string[];
+  manifestChanges: string[];
   pages: PageDiff[];
   summary: DiffSummary;
 }
@@ -132,6 +135,26 @@ export function rawEqual(a: RawBag, b: RawBag): boolean {
 
 export const RAW_CHANGED_NOTE =
   'other metadata changed (raw properties differ -- may include LOV value/process changes, not individually tracked yet)';
+
+export function diffApplicationFields(a: ApexApplication | null, b: ApexApplication | null): string[] {
+  if (a === null || b === null) return a === b ? [] : [`application: ${a === null ? 'missing' : 'present'} -> ${b === null ? 'missing' : 'present'}`];
+  const changes: string[] = [];
+  if (a.identifier !== b.identifier) changes.push(`identifier: ${JSON.stringify(a.identifier)} -> ${JSON.stringify(b.identifier)}`);
+  if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
+  if (a.alias !== b.alias) changes.push(`alias: ${JSON.stringify(a.alias)} -> ${JSON.stringify(b.alias)}`);
+  if (a.version !== b.version) changes.push(`version: ${JSON.stringify(a.version)} -> ${JSON.stringify(b.version)}`);
+  if (a.type !== b.type) changes.push(`type: ${JSON.stringify(a.type)} -> ${JSON.stringify(b.type)}`);
+  if (a.runtime.friendlyUrls !== b.runtime.friendlyUrls) {
+    changes.push(`runtime.friendlyUrls: ${a.runtime.friendlyUrls} -> ${b.runtime.friendlyUrls}`);
+  }
+  if (a.runtime.compatibilityMode !== b.runtime.compatibilityMode) {
+    changes.push(
+      `runtime.compatibilityMode: ${JSON.stringify(a.runtime.compatibilityMode)} -> ${JSON.stringify(b.runtime.compatibilityMode)}`,
+    );
+  }
+  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  return changes;
+}
 
 export function diffItemFields(a: ApexItem, b: ApexItem): string[] {
   const changes: string[] = [];
@@ -388,9 +411,8 @@ export function diffBranches(oldList: readonly ApexBranch[], newList: readonly A
 }
 
 /**
- * `page`'s own direct scalar properties (alias/name/title), plus
- * `security.authentication`, read directly out of `raw` since it has no
- * dedicated typed field. Every OTHER page-level construct (items, regions,
+ * `page`'s own typed scalar properties. Every OTHER page-level construct
+ * (items, regions,
  * buttons, dynamicActions, branches, validations, processes, computations)
  * is intentionally NOT diffed here -- each gets its own dedicated top-level
  * diff call inside `diffPageContents` below instead (a page can have
@@ -406,12 +428,18 @@ export function diffBranches(oldList: readonly ApexBranch[], newList: readonly A
  */
 export function diffPageFields(a: ApexPage, b: ApexPage): string[] {
   const changes: string[] = [];
+  if (a.identifier !== b.identifier) changes.push(`identifier: ${JSON.stringify(a.identifier)} -> ${JSON.stringify(b.identifier)}`);
   if (a.alias !== b.alias) changes.push(`alias: ${JSON.stringify(a.alias)} -> ${JSON.stringify(b.alias)}`);
   if (a.name !== b.name) changes.push(`name: ${JSON.stringify(a.name)} -> ${JSON.stringify(b.name)}`);
   if (a.title !== b.title) changes.push(`title: ${JSON.stringify(a.title)} -> ${JSON.stringify(b.title)}`);
-  const authA = JSON.stringify(a.raw['security.authentication'] ?? null);
-  const authB = JSON.stringify(b.raw['security.authentication'] ?? null);
-  if (authA !== authB) changes.push(`security.authentication: ${authA} -> ${authB}`);
+  if (a.pageMode !== b.pageMode) changes.push(`pageMode: ${JSON.stringify(a.pageMode)} -> ${JSON.stringify(b.pageMode)}`);
+  if (a.pageAccessProtection !== b.pageAccessProtection) {
+    changes.push(`pageAccessProtection: ${JSON.stringify(a.pageAccessProtection)} -> ${JSON.stringify(b.pageAccessProtection)}`);
+  }
+  if (a.authentication !== b.authentication) {
+    changes.push(`authentication: ${JSON.stringify(a.authentication)} -> ${JSON.stringify(b.authentication)}`);
+  }
+  if (a.isPublic !== b.isPublic) changes.push(`isPublic: ${a.isPublic} -> ${b.isPublic}`);
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }
@@ -535,6 +563,10 @@ export function formatDiffHuman(report: DiffReport): string {
   lines.push(`  new: ${report.newExportDir}`);
   lines.push('');
 
+  for (const change of report.manifestChanges ?? []) lines.push(`Manifest: ${change}.`);
+  for (const change of report.applicationChanges ?? []) lines.push(`Application: ${change}.`);
+  if ((report.manifestChanges?.length ?? 0) + (report.applicationChanges?.length ?? 0) > 0) lines.push('');
+
   if (report.pages.length === 0) {
     lines.push('No page changes detected.');
   } else {
@@ -549,9 +581,58 @@ export function formatDiffHuman(report: DiffReport): string {
   return lines.join('\n');
 }
 
+/** Deterministic tree formatter used by the default `apx-diff` CLI mode. */
+export function formatDiffStructured(report: DiffReport): string {
+  const lines: string[] = [
+    'Regression report',
+    `  old: ${report.oldExportDir}`,
+    `  new: ${report.newExportDir}`,
+    '',
+  ];
+  const symbol: Record<ComponentDiff['kind'], string> = { added: '+', removed: '-', changed: '~' };
+  const addComponentDiffs = (label: string, diffs: ComponentDiff[]): void => {
+    for (const d of diffs) {
+      lines.push(`  ${symbol[d.kind]} ${label} ${d.identifier}`);
+      for (const change of d.changes) lines.push(`      ${change}`);
+    }
+  };
+
+  for (const change of report.manifestChanges) lines.push(`~ manifest: ${change}`);
+  for (const change of report.applicationChanges) lines.push(`~ application: ${change}`);
+  if (report.manifestChanges.length + report.applicationChanges.length > 0) lines.push('');
+
+  for (const p of report.pages) {
+    if (p.kind === 'added') {
+      lines.push(`+ page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
+      lines.push(`    generated: ${p.affectedFiles.join(', ')}`, '');
+      continue;
+    }
+    if (p.kind === 'removed') {
+      lines.push(`- page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
+      lines.push(`    no longer generated: ${p.affectedFiles.join(', ')}`, '');
+      continue;
+    }
+    lines.push(`~ page ${p.id}: ${p.name ?? p.alias} (${p.alias})`);
+    for (const change of p.pageChanges) lines.push(`    ${change}`);
+    addComponentDiffs('item', p.items);
+    addComponentDiffs('region', p.regions);
+    addComponentDiffs('button', p.buttons);
+    addComponentDiffs('dynamicAction', p.dynamicActions);
+    addComponentDiffs('branch', p.branches);
+    addComponentDiffs('validation', p.validations);
+    addComponentDiffs('process', p.processes);
+    addComponentDiffs('computation', p.computations);
+    lines.push(`    affected: ${p.affectedFiles.join(', ')}`, '');
+  }
+
+  const s = report.summary;
+  lines.push(`Summary: ${s.pagesAdded} added, ${s.pagesRemoved} removed, ${s.pagesChanged} changed, ${s.pagesUnchanged} unchanged`);
+  return lines.join('\n');
+}
+
 export function computeDiff(oldExportDir: string, newExportDir: string): DiffReport {
-  const oldResult = parseApp(loadExport(resolve(oldExportDir)));
-  const newResult = parseApp(loadExport(resolve(newExportDir)));
+  const oldResult = parseApp(loadApexlangExport(resolve(oldExportDir)));
+  const newResult = parseApp(loadApexlangExport(resolve(newExportDir)));
 
   const oldPages = new Map(
     oldResult.ast.pages.filter((p) => p.id !== 0 && p.alias).map((p) => [p.id, p]),
@@ -651,6 +732,11 @@ export function computeDiff(oldExportDir: string, newExportDir: string): DiffRep
   return {
     oldExportDir: resolve(oldExportDir),
     newExportDir: resolve(newExportDir),
+    applicationChanges: diffApplicationFields(oldResult.ast.application, newResult.ast.application),
+    manifestChanges:
+      oldResult.ast.manifest?.mmdVersion === newResult.ast.manifest?.mmdVersion
+        ? []
+        : [`mmdVersion: ${JSON.stringify(oldResult.ast.manifest?.mmdVersion ?? null)} -> ${JSON.stringify(newResult.ast.manifest?.mmdVersion ?? null)}`],
     pages,
     summary,
   };

@@ -18,14 +18,16 @@ export {
   type NavigationSafetyAssessment,
 } from './fixtures/navigation.js';
 export { login, loginAndSaveState, type ApexCredentials, type LoginOptions } from './fixtures/auth.js';
-export { callRegionMethodAndWaitForEvent, waitForRegionEvent } from './fixtures/lifecycle.js';
+export { refreshRegionAndWait, fetchFacetCountsAndWait, waitForRegionEvent } from './fixtures/lifecycle.js';
 export {
   coverageEnabled,
   recordCoverageTouch,
+  recordRegionCoverageTouch,
   recordButtonCoverageTouch,
   type CoverageKind,
   type CoverageTouch,
   type CoverageRuntimeLocator,
+  type RegionCoverageIdentity,
   type ButtonCoverageIdentity,
 } from './fixtures/coverage.js';
 
@@ -40,11 +42,13 @@ export {
 } from './components/item.js';
 export {
   ApexRegion,
+  ApexDataRegion,
+  ApexInteractiveReportRegion,
   probeRegions,
   expectRegionsResolve,
   refreshRegion,
-  callRegionMethod,
   type RegionProbe,
+  type RegionProbeTarget,
 } from './components/region.js';
 export {
   resolveRegion,

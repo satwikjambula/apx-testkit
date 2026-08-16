@@ -2,7 +2,9 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { recordButtonCoverageTouch, recordCoverageTouch } from '../src/fixtures/coverage.js';
+import { recordButtonCoverageTouch, recordCoverageTouch, recordRegionCoverageTouch } from '../src/fixtures/coverage.js';
+import { fetchFacetCountsAndWait } from '../src/fixtures/lifecycle.js';
+import { probeRegions } from '../src/components/region.js';
 
 /**
  * Regression coverage for the P0 item 4 fix (runtime-review):
@@ -50,6 +52,39 @@ describe('coverage touch recording', () => {
   it('retains null pageId for backward-compatible identity-free callers', () => {
     recordCoverageTouch('region', 'legacy-region');
     expect(readTouches()[0]).toMatchObject({ identifier: 'legacy-region', pageId: null });
+  });
+
+  it('stores a region semantic identifier separately from a manual runtime override', () => {
+    recordRegionCoverageTouch('emp', { pageId: 30, identifier: 'basic-editing' });
+    expect(readTouches()[0]).toMatchObject({
+      kind: 'region',
+      identifier: 'basic-editing',
+      pageId: 30,
+      runtimeLocator: { strategy: 'apex-region-id', value: 'emp' },
+    });
+  });
+
+  it('named lifecycle helpers retain semantic identity after successful completion', async () => {
+    const page = { evaluate: async () => undefined } as any;
+    await fetchFacetCountsAndWait(page, 'emp', 100, { pageId: 30, identifier: 'basic-editing' });
+    expect(readTouches()[0]).toMatchObject({
+      kind: 'region',
+      identifier: 'basic-editing',
+      pageId: 30,
+      runtimeLocator: { strategy: 'apex-region-id', value: 'emp' },
+    });
+  });
+
+  it('diagnostic probes can map a manual runtime id back to semantic identity', async () => {
+    const page = {
+      evaluate: async (_fn: unknown, ids: string[]) => ids.map((id) => ({ id, isWidgetRegion: true })),
+    } as any;
+    await probeRegions(page, [{ id: 'emp', identity: { pageId: 30, identifier: 'basic-editing' } }]);
+    expect(readTouches()[0]).toMatchObject({
+      identifier: 'basic-editing',
+      pageId: 30,
+      runtimeLocator: { strategy: 'apex-region-id', value: 'emp' },
+    });
   });
 
   it('two DIFFERENT buttons sharing the SAME label produce DISTINCT touch entries when identity is supplied', () => {

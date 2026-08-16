@@ -9,7 +9,7 @@
  * No interactiveReport/cards/facetedSearch regions on this page -- no region resolve-check to emit.
  * Interactive Grid view-check emitted for 1 region(s) with a known runtime id (htmlDomId set), resolved live via resolveRegion() before use.
  * 1 Interactive Grid region(s) SKIPPED -- no htmlDomId set, runtime id genuinely unconstructible from static data (ADR-003 layer 3): department-editing.
- * NOT AUTO-ROUTABLE (navigation unsafe): this page declares security.pageAccessProtection: argumentsMustHaveChecksum and is NOT authentication:public -- a bare page.goto() is confirmed to redirect an authenticated session to /login (docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'). Every test below is unconditionally skipped rather than generated to guaranteed-fail; see @apx/testkit's navigateViaUiPath() for the confirmed-working alternative (not auto-derivable here without Flow Map wiring).
+ * NOT AUTO-ROUTABLE (navigation unsafe): apx-testkit: navigation unsafe (security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page) -- a bare page.goto() is confirmed to redirect an authenticated session to /login. See @apx/testkit's navigateViaUiPath() for the confirmed-working alternative, and docs/quirks/26.1.json page-access-protection-blocks-bare-navigation.
  */
 import { expect, test } from '@playwright/test';
 import { resolveRegion, ApexInteractiveGridRegion, normalizeTitle } from '@apx/testkit';
@@ -48,11 +48,11 @@ test.describe('page 90: Employee Grid [not auto-routable -- skipped]', () => {
     // as a fallback for this component type (e.g. 'basic-editing'
     // resolves to null; only 'emp', the htmlDomId value, resolves).
     const regionCandidateSets = [
-      [{ value: 'emp', strategy: 'htmlDomId' as const }]
+      { identifier: 'employee-editing', candidates: [{ value: 'emp', strategy: 'htmlDomId' as const }] }
     ];
-    for (const candidates of regionCandidateSets) {
-      const { runtimeId } = await resolveRegion(page, candidates, 90);
-      const ig = new ApexInteractiveGridRegion(page, runtimeId, 90);
+    for (const { identifier, candidates } of regionCandidateSets) {
+      const { runtimeId } = await resolveRegion(page, candidates, { pageId: 90, identifier });
+      const ig = new ApexInteractiveGridRegion(page, runtimeId, { pageId: 90, identifier });
       expect(typeof await ig.getCurrentViewId()).toBe('string');
     }
   });

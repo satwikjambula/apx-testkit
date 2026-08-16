@@ -2,10 +2,9 @@
  * Cards region wrapper -- VERIFIED live against a real Cards region
  * (UX Pattern Catalog, faceted-search-cards page). Extends ApexRegion with
  * the additional pagination/record/selection methods confirmed present on
- * this widget type (region.ts's generic methods are also available: refresh,
- * getCurrentRecordId, getSessionState, etc. -- getViewName is NOT present on
- * Cards, unlike Interactive Report; calling it throws per ApexRegion's
- * fail-loud contract).
+ * this widget type. It extends `ApexDataRegion`, so the record/session
+ * operations verified on Cards remain available; IR-only `getViewName()`
+ * is absent from the type entirely.
  *
  * PageInfo shape confirmed live and reliable: { rowHeight, recordsPerRow,
  * firstOffset, lastOffset, pageSize, pageOffset, scrollOffset, viewOffset }.
@@ -18,12 +17,11 @@
  * -- both immediately after navigation AND after an awaited `refresh()`.
  * This is not a timing fluke (tested both ways); the underlying model
  * object this widget expects isn't present the way these methods assume.
- * Left in the API surface (rather than removed) so the failure is visible
- * and typed, not silently unavailable -- but treat any use of these two
- * methods as needing its own investigation, not a verified contract like
- * the rest of this class.
+ * They are preserved in the evidence ledger but deliberately excluded from
+ * this public class. Confirmed-broken methods do not cross the runtime
+ * evidence boundary.
  */
-import { ApexRegion } from './region.js';
+import { ApexDataRegion, internalCallRegionMethod } from './region.js';
 
 export interface CardsPageInfo {
   rowHeight: number;
@@ -36,54 +34,48 @@ export interface CardsPageInfo {
   viewOffset: number;
 }
 
-export class ApexCardsRegion extends ApexRegion {
+export class ApexCardsRegion extends ApexDataRegion {
+  private invokeCards<T>(method: string, ...args: unknown[]): Promise<T> {
+    return internalCallRegionMethod<T>(this.page, this.id, method, args, this.coverageIdentity);
+  }
+
   getPageInfo(): Promise<CardsPageInfo> {
-    return this.invoke('getPageInfo');
+    return this.invokeCards('getPageInfo');
   }
 
   firstPage(): Promise<void> {
-    return this.invoke('firstPage');
+    return this.invokeCards('firstPage');
   }
 
   lastPage(): Promise<void> {
-    return this.invoke('lastPage');
+    return this.invokeCards('lastPage');
   }
 
   nextPage(): Promise<void> {
-    return this.invoke('nextPage');
+    return this.invokeCards('nextPage');
   }
 
   previousPage(): Promise<void> {
-    return this.invoke('previousPage');
+    return this.invokeCards('previousPage');
   }
 
   gotoPage(page: number): Promise<void> {
-    return this.invoke('gotoPage', page);
+    return this.invokeCards('gotoPage', page);
   }
 
   loadMore(): Promise<void> {
-    return this.invoke('loadMore');
-  }
-
-  /** KNOWN BROKEN in this app -- see module doc. Throws, does not return records. */
-  getRecords(): Promise<unknown[]> {
-    return this.invoke('getRecords');
-  }
-
-  /** KNOWN BROKEN in this app -- see module doc. */
-  getModel(): Promise<unknown> {
-    return this.invoke('getModel');
+    return this.invokeCards('loadMore');
   }
 
   getSelectedRecords(): Promise<unknown[]> {
-    return this.invoke('getSelectedRecords');
+    return this.invokeCards('getSelectedRecords');
   }
 
   setSelectedRecords(records: unknown[]): Promise<void> {
-    return this.invoke('setSelectedRecords', records);
+    return this.invokeCards('setSelectedRecords', records);
   }
 
   selectAll(): Promise<void> {
-    return this.invoke('selectAll');
+    return this.invokeCards('selectAll');
   }
 }

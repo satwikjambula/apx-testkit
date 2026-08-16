@@ -37,21 +37,11 @@ test.describe('faceted-search-cards (Cards + Facets testkit wrappers)', () => {
     expect(info.lastOffset).toBeGreaterThanOrEqual(info.firstOffset);
   });
 
-  test('getRecords() is confirmed broken in this app, not silently empty', async ({ page }) => {
+  test('unsupported Interactive Report methods are absent from the Cards API', async ({ page }) => {
     await gotoApexPage(page, pageUrl());
     const cards = new ApexCardsRegion(page, CARDS_REGION_ID);
-    // Documented in cards.ts: throws even after an awaited refresh(). This
-    // test exists so a future APEX/app fix is NOTICED (test starts failing
-    // here, prompting the doc comment + this test to be updated) rather
-    // than the breakage being silently masked.
-    await expect(cards.getRecords()).rejects.toThrow(/reading 'each'/);
-  });
-
-  test('calling an unsupported method throws instead of failing silently', async ({ page }) => {
-    await gotoApexPage(page, pageUrl());
-    const cards = new ApexCardsRegion(page, CARDS_REGION_ID);
-    // Cards does not implement getViewName (confirmed live -- see region.ts) --
-    // this must throw a clear error, not resolve to undefined.
-    await expect(cards.getViewName()).rejects.toThrow(/not a function on this widget type/);
+    // Cards does not implement getViewName (confirmed live). The public
+    // type no longer exposes it, so callers cannot compile an invalid call.
+    expect('getViewName' in cards).toBe(false);
   });
 });

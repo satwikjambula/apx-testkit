@@ -39,7 +39,7 @@
       "applications": ["UX Pattern Catalog"],
       "runs": 1,
       "confidence": "high",
-      "publicApi": true,
+      "publicApi": false,
       "runtimeStrategy": "direct-method",
       "evidenceSource": "live-browser",
       "ebnfProduction": null,
@@ -151,7 +151,7 @@
         "order": 6,
         "component": "`@apx/testkit` interactive-grid.ts",
         "verifiedAgainst": "Live, against a real IG region (Sample Interactive Grids gallery app)",
-        "how": "`getActions`/`getViews`/`getCurrentView`/`getCurrentViewId`/`getSelectedRecords` confirmed via the widget-factory pattern. Region's runtime static id confirmed to differ from its `.apx` identifier (`basic-editing` export -> `emp` runtime); generator cannot auto-wire this component from static data alone when `htmlDomId` is absent -- see docs/quirks/26.1.json."
+        "how": "`getActions`/`getViews`/`getCurrentView`/`getCurrentViewId`/`getSelectedRecords` confirmed via the widget-factory pattern. Region's runtime region id confirmed to differ from its `.apx` identifier (`basic-editing` export -> `emp` runtime); generator cannot auto-wire this component from static data alone when `htmlDomId` is absent -- see docs/quirks/26.1.json."
       }
     },
     {
@@ -196,7 +196,7 @@
         "order": 7,
         "component": "`@apx/testkit` `ApexChartRegion` (chart.ts) against Chart",
         "verifiedAgainst": "Live, against real chart regions (Sample Charts gallery app, 3 chart types)",
-        "how": "`ApexRegion.refresh()` confirmed live, 3/3 repeated runs. `apex.region(id).widget()` returns a real jQuery-wrapped element for charts, confirmed independently on THREE chart types -- `widget().ojChart('option', ...)` is a real, working getter/setter API, shipped as `ApexChartRegion`. This row previously (wrongly) claimed `widget()` returns `null` for charts; corrected in place by this registry extraction pass, which found the drift. Runtime static id confirmed to differ from `.apx` identifier -- see docs/quirks/26.1.json `chart-region-widget-returns-null` and `region-id-not-static-id`."
+        "how": "`ApexRegion.refresh()` confirmed live, 3/3 repeated runs. `apex.region(id).widget()` returns a real jQuery-wrapped element for charts, confirmed independently on THREE chart types -- `widget().ojChart('option', ...)` is a real, working getter/setter API, shipped as `ApexChartRegion`. This row previously (wrongly) claimed `widget()` returns `null` for charts; corrected in place by this registry extraction pass, which found the drift. Runtime region id confirmed to differ from `.apx` identifier -- see docs/quirks/26.1.json `chart-region-widget-returns-null` and `region-id-not-static-id`."
       }
     },
     {
@@ -644,14 +644,14 @@
       "applications": ["UX Pattern Catalog"],
       "runs": 2,
       "confidence": "high",
-      "publicApi": true,
+      "publicApi": false,
       "runtimeStrategy": "direct-method",
       "evidenceSource": "live-browser",
       "ebnfProduction": null,
       "citation": "docs/quirks/26.1.json#cards-getrecords-broken",
       "lastVerified": "2026-07-24",
       "correctedFrom": null,
-      "notes": "Both methods exist on the widget's method list but throw \"TypeError: Cannot read properties of undefined (reading 'each')\" from inside APEX's own modelViewBase.min.js. Confirmed twice -- immediately after navigation, and again after an awaited refresh() -- not a timing fluke. This is the project's own cited precedent for 'evidence from only one instance tested once is not enough' (contrast: correctly retested twice here, vs. the Chart widget() claim's single-instance mistake).",
+      "notes": "Both methods exist on the widget's method list but throw \"TypeError: Cannot read properties of undefined (reading 'each')\" from inside APEX's own modelViewBase.min.js. Confirmed twice -- immediately after navigation, and again after an awaited refresh() -- not a timing fluke. They are deliberately excluded from the public API. This is the project's own cited precedent for 'evidence from only one instance tested once is not enough' (contrast: correctly retested twice here, vs. the Chart widget() claim's single-instance mistake).",
       "supportMatrixRow": null
     },
     {
@@ -811,7 +811,7 @@
       "citation": "packages/parser/src/ast.ts#L85-L103",
       "lastVerified": "2026-08-14",
       "correctedFrom": null,
-      "notes": "When set, deterministically predicts the runtime static id (confirmed live across Chart and Interactive Grid). When null (65/97 real chart regions in Sample Charts), the runtime id is an APEX-internal auto-generated numeric id with no corresponding field in the static export at all -- genuinely undiscoverable, not a parser gap. See runtime-region-id-resolution-live for the live implementation built on this field, and ADR-003.",
+      "notes": "When set, deterministically predicts the runtime region id (confirmed live across Chart and Interactive Grid). When null (65/97 real chart regions in Sample Charts), the runtime id is an APEX-internal auto-generated numeric id with no corresponding field in the static export at all -- genuinely undiscoverable, not a parser gap. See runtime-region-id-resolution-live for the live implementation built on this field, and ADR-003.",
       "supportMatrixRow": null
     },
     {
@@ -1209,16 +1209,16 @@
       "evidenceSource": "ebnf",
       "ebnfProduction": "<comment>",
       "citation": "docs/grammar-assumptions.md#Still-open",
-      "lastVerified": "2026-08-14",
+      "lastVerified": "2026-08-15",
       "correctedFrom": null,
-      "notes": "CONFIRMED real per the official EBNF's <comment> production -- not just an assumption. But zero real occurrences across all 13 (now 52+) real exports parsed -- the ~40 apparent matches found during a check were all false positives (JS/PLSQL comments embedded inside fenced multiline-string code blocks, already correctly captured as opaque text). Deliberately not implemented -- this project builds against real occurrences, not well-specified-but-unencountered ones; the parser would currently emit an 'Unrecognized line' warning for a real one rather than silently misparse.",
+      "notes": "CONFIRMED by the official EBNF's <comment> production and now implemented with lossless #comment nodes plus synthetic regression tests for // and multi-line /* */ forms. Still zero occurrences across the 52+ real-export corpus, so status remains documented rather than verified against real export data.",
       "supportMatrixRow": null
     },
     {
       "id": "parser-property-value-quoting-unverified",
       "component": "@apx/parser (property VALUE quoting/escaping)",
-      "capability": "A property value containing a leading [ / @ or a literal backtick fence",
-      "status": "unverified",
+      "capability": "Quoted property strings and token-aware arrays containing quoted whitespace",
+      "status": "documented",
       "outcome": "n/a",
       "apexVersion": "26.1",
       "applications": [],
@@ -1226,12 +1226,12 @@
       "confidence": "low",
       "publicApi": null,
       "runtimeStrategy": "parser-only",
-      "evidenceSource": "none",
-      "ebnfProduction": null,
+      "evidenceSource": "ebnf",
+      "ebnfProduction": "<string>, <escape>, <array-of-value>",
       "citation": "docs/grammar-assumptions.md#Still-open",
-      "lastVerified": "2026-08-14",
+      "lastVerified": "2026-08-15",
       "correctedFrom": null,
-      "notes": "No quoted PROPERTY VALUES have been observed in any real export parsed so far (distinct from the now-resolved quoted-identifier case, parser-quoted-space-containing-identifier-fixed). Needs a hostile fixture app to close.",
+      "notes": "Oracle's canonical 26.1 EBNF defines JSON-style quoted strings/escapes and token-separated arrays. Implemented via quoted-string decoding and a token-aware array scanner; regression tests cover escaped quotes plus multiple quoted array values containing spaces. No quoted property value has yet been witnessed in the real-export corpus, so this remains documented rather than real-data verified.",
       "supportMatrixRow": null
     },
     {
