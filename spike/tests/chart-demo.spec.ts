@@ -8,13 +8,13 @@
  * single region ("area1"). Re-tested live and found FALSE -- it returns a
  * real jQuery-wrapped element on every chart type tried. The real jQuery
  * UI widget-factory plugin is "ojChart" (Oracle JET), attached to the JET
- * container element (id convention: `<runtime static id>_jet`), reachable
+ * container element (id convention: `<runtime region id>_jet`), reachable
  * THROUGH `region.widget()`, not around it. `getProperty`/`getOption`
  * remain confirmed NOT valid method names ("no such method" errors) --
  * the real method is the standard widget-factory `option` (getter AND
  * setter), which chart.ts wraps as `getOption()`/`setOption()`.
  *
- * Runtime static ids used below ("area1", "pie1") are NOT the .apx
+ * Runtime region ids used below ("area1", "pie1") are NOT the .apx
  * export's region identifiers -- see `ApexRegion.htmlDomId`
  * (packages/parser/src/ast.ts) for the now-diagnosed root cause
  * (`advanced { htmlDomId: ... }` in the export, when present, predicts
@@ -49,7 +49,7 @@ test('ApexRegion.refresh() against a real Chart region (Area page)', async ({ pa
   expect(page.url()).toContain('/area');
   expect(await page.title()).toBe('Area');
 
-  // Real runtime static id ("area1"), NOT the .apx export identifier
+  // Real runtime region id ("area1"), NOT the .apx export identifier
   // ("area-chart-color-javascript-code-customization") -- predicted by
   // that region's `advanced { htmlDomId: area1 }` override.
   const chart = new ApexRegion(page, 'area1');

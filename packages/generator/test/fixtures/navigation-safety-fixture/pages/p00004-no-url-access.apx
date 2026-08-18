@@ -1,0 +1,9 @@
+page no-url-access (
+  page: 4
+  name: No URL Access
+  alias: NO-URL-ACCESS
+  security {
+    authentication: public
+    pageAccessProtection: noUrlAccess
+  }
+)

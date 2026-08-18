@@ -36,14 +36,14 @@ test.describe('page 80: Sales Chart', () => {
     // e.g. declared "donut" reports live "pie" -- see
     // docs/quirks/26.1.json). Kept here for context only.
     const charts = [
-      { candidates: [{ value: 'salesPie1', strategy: 'htmlDomId' as const }], declaredType: 'pie' }
+      { identifier: 'sales-by-region', candidates: [{ value: 'salesPie1', strategy: 'htmlDomId' as const }], declaredType: 'pie' }
     ];
-    for (const { candidates } of charts) {
+    for (const { identifier, candidates } of charts) {
       // ADR-003: htmlDomId is the ONLY evidence-backed candidate for
       // Chart -- the export identifier is confirmed NOT to work as a
       // fallback for this component type. resolveRegion() still confirms
       // it live rather than trusting the static field.
-      const { runtimeId } = await resolveRegion(page, candidates, 80);
+      const { runtimeId } = await resolveRegion(page, candidates, { pageId: 80, identifier });
       // JET chart widgets attach ojChart asynchronously -- wait for the
       // actual precondition (see ApexChartRegion's module doc) rather
       // than a fixed delay.
@@ -51,7 +51,7 @@ test.describe('page 80: Sales Chart', () => {
         const region = (window as any).apex?.region?.(regionId);
         return typeof region?.widget?.()?.ojChart === 'function';
       }, runtimeId);
-      const chart = new ApexChartRegion(page, runtimeId, 80);
+      const chart = new ApexChartRegion(page, runtimeId, { pageId: 80, identifier });
       const liveType = await chart.getOption('type');
       expect(typeof liveType).toBe('string');
       expect(liveType).not.toBe('');

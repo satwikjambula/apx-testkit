@@ -1,8 +1,10 @@
 page 10 (
+  page: 10
   name: Registration
   alias: REGISTRATION
   title: Registration
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   region registration-form (

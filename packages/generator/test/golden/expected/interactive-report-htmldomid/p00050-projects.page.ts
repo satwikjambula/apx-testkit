@@ -12,7 +12,7 @@
  * place below for why and what would resolve it.
  */
 import type { Page } from '@playwright/test';
-import { apexPageUrl, gotoApexPage } from '@apx/testkit';
+import { apexPageUrl, assessNavigationSafety, gotoApexPageAuto } from '@apx/testkit';
 import { APP_BASE } from '../playwright.config.js';
 
 export class ProjectsPage {
@@ -21,12 +21,16 @@ export class ProjectsPage {
   constructor(private readonly page: Page) {}
 
   url(): string {
-    return apexPageUrl(APP_BASE, ProjectsPage.alias);
+    return apexPageUrl(APP_BASE, ProjectsPage.alias, true);
   }
 
-  /** Navigate here and arm the console guard; returns any console/page errors seen. */
+  /** Navigate only when the page's declared security/mode permits a direct URL. */
   async goto(): Promise<string[]> {
-    return gotoApexPage(this.page, this.url());
+    return gotoApexPageAuto(
+      this.page,
+      this.url(),
+      assessNavigationSafety({ pageAccessProtection: 'unrestricted', isPublic: true }),
+    );
   }
 
 

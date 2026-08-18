@@ -10,6 +10,7 @@
     "typecheck": "npm run typecheck -w packages/parser && npm run typecheck -w packages/testkit && npm run typecheck -w packages/generator && npm run typecheck -w packages/mcp",
     "test": "npm run test --workspaces --if-present",
     "lint": "eslint packages",
+    "verify": "npm run build && npm run typecheck && npm test && npm run lint && npm run verify:registry && npm run docs:support-matrix:check && npm run verify:packages",
     "verify:registry": "node scripts/validate-verification-registry.mjs",
     "verify:packages": "node scripts/validate-package-contracts.mjs",
     "docs:support-matrix": "node scripts/generate-support-matrix.mjs",

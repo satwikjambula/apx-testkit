@@ -8,13 +8,15 @@ export {
   type NavigationSafetyAssessment,
 } from './navigation.js';
 export { login, loginAndSaveState, type ApexCredentials, type LoginOptions } from './auth.js';
-export { callRegionMethodAndWaitForEvent, waitForRegionEvent } from './lifecycle.js';
+export { refreshRegionAndWait, fetchFacetCountsAndWait, waitForRegionEvent } from './lifecycle.js';
 export {
   coverageEnabled,
   recordCoverageTouch,
+  recordRegionCoverageTouch,
   recordButtonCoverageTouch,
   type CoverageKind,
   type CoverageTouch,
   type CoverageRuntimeLocator,
+  type RegionCoverageIdentity,
   type ButtonCoverageIdentity,
 } from './coverage.js';

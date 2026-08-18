@@ -85,22 +85,11 @@ export's own `.apex/apexlang.json` manifest. There is no
 reads that manifest file, and no version-gating logic (known+verified →
 normal, known-but-unsupported → warn, unknown → refuse to silently
 assume compatibility). Every corpus addition in
-`.ai/knowledge/verification.md` confirms `mmdVersion 26.1.0+3102` by
-hand (`curl`/checkout + read the manifest directly) before being added —
-that discipline is real, but it's a human practice today, not an
-enforced one the parser itself performs at parse time. See
-`.ai/knowledge/constitution-reconciliation.md` §B for the full gap
-writeup (constitution §§3-4). If this gets built: the export-directory
-walk that would need to read `.apex/apexlang.json` alongside the rest
-(`pages/`, `application.apx`, etc.) currently lives in
-`loadExport()` (`packages/generator/src/lib.ts`, not this package,
-despite the name) — parsing the manifest's *content* into a typed shape
-belongs here in `@apx/parser` (it's the same kind of `.apex/`-adjacent
-file this package already owns), but reading it off disk in the first
-place is `loadExport()`'s job, matching how every other source file in
-an export is already handled. Not a new package either way — no reason
-to split manifest parsing from the rest of what these two packages
-already do to the same export directory.
+`loadApexlangExport()` now lives in `@apx/parser`. It walks the export
+deterministically, loads every `.apx` source (including shared components),
+parses `.apex/apexlang.json` into `ApexlangManifest`, loads deployment JSON
+metadata, and rejects manifest versions outside the verified 26.1 line by
+default. Every generator/MCP consumer uses this same loader.
 
 ## Adding a typed field — see `.ai/checklists/parser-change.md`
 

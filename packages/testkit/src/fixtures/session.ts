@@ -11,7 +11,13 @@
 import { expect, type Page } from '@playwright/test';
 import { armConsoleGuard } from './console-guard.js';
 
-export function apexPageUrl(appBase: string, pageAlias: string): string {
+export function apexPageUrl(appBase: string, pageAlias: string, friendlyUrls = true): string {
+  if (!friendlyUrls) {
+    throw new Error(
+      'apexPageUrl(): this application declares runtime.friendlyUrls: false. Legacy f?p URL generation is not yet ' +
+        'implemented because it requires additional application/session metadata; refusing to generate a wrong URL.',
+    );
+  }
   return `${appBase.replace(/\/+$/, '')}/${pageAlias.toLowerCase()}`;
 }
 

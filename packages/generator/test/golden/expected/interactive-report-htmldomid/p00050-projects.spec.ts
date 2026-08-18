@@ -34,11 +34,11 @@ test.describe('page 50: Projects', () => {
     // hard-fails with a specific message if neither candidate resolves,
     // rather than silently trusting a static guess.
     const regionCandidateSets = [
-      [{ value: 'projects_report', strategy: 'htmlDomId' as const }, { value: 'projects', strategy: 'export-identifier' as const }],
-      [{ value: 'archived-projects', strategy: 'export-identifier' as const }]
+      { identifier: 'projects', candidates: [{ value: 'projects_report', strategy: 'htmlDomId' as const }, { value: 'projects', strategy: 'export-identifier' as const }] },
+      { identifier: 'archived-projects', candidates: [{ value: 'archived-projects', strategy: 'export-identifier' as const }] }
     ];
-    for (const candidates of regionCandidateSets) {
-      await resolveRegion(page, candidates, 50);
+    for (const { identifier, candidates } of regionCandidateSets) {
+      await resolveRegion(page, candidates, { pageId: 50, identifier });
     }
   });
 });

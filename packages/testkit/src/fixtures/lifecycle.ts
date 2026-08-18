@@ -26,6 +26,7 @@
  * region method calls are.
  */
 import type { Page } from '@playwright/test';
+import { recordRegionCoverageTouch, type RegionCoverageIdentity } from './coverage.js';
 
 /**
  * Call `apex.region(regionId)[method](...args)` and resolve once
@@ -34,7 +35,7 @@ import type { Page } from '@playwright/test';
  * `fetchCounts`). Throws if the region/method doesn't exist, or if the
  * event never fires within `timeoutMs` -- never silently resolves early.
  */
-export async function callRegionMethodAndWaitForEvent(
+async function callKnownRegionMethodAndWaitForEvent(
   page: Page,
   regionId: string,
   method: string,
@@ -47,15 +48,15 @@ export async function callRegionMethodAndWaitForEvent(
         const $ = (window as any).apex?.jQuery;
         const region = (window as any).apex?.region?.(regionId);
         if (!region) {
-          reject(new Error(`callRegionMethodAndWaitForEvent: apex.region('${regionId}') did not resolve.`));
+          reject(new Error(`region lifecycle operation: apex.region('${regionId}') did not resolve.`));
           return;
         }
         if (!$) {
-          reject(new Error('callRegionMethodAndWaitForEvent: apex.jQuery is not available.'));
+          reject(new Error('region lifecycle operation: apex.jQuery is not available.'));
           return;
         }
         if (typeof region[method] !== 'function') {
-          reject(new Error(`callRegionMethodAndWaitForEvent: apex.region('${regionId}').${method} is not a function.`));
+          reject(new Error(`region lifecycle operation: apex.region('${regionId}').${method} is not a function.`));
           return;
         }
         const el = $(document.getElementById(regionId));
@@ -66,7 +67,7 @@ export async function callRegionMethodAndWaitForEvent(
           el.off(eventName, onEvent);
           reject(
             new Error(
-              `callRegionMethodAndWaitForEvent: '${eventName}' did not fire on region '${regionId}' ` +
+              `region lifecycle operation: '${eventName}' did not fire on region '${regionId}' ` +
                 `within ${timeoutMs}ms after calling ${method}().`,
             ),
           );
@@ -85,6 +86,34 @@ export async function callRegionMethodAndWaitForEvent(
   );
 }
 
+/** Refresh a verified widget region and wait for its documented completion event. */
+export async function refreshRegionAndWait(
+  page: Page,
+  regionId: string,
+  timeoutMs = 10_000,
+  identity?: RegionCoverageIdentity,
+): Promise<void> {
+  await callKnownRegionMethodAndWaitForEvent(page, regionId, 'refresh', {
+    eventName: 'apexafterrefresh',
+    timeoutMs,
+  });
+  recordRegionCoverageTouch(regionId, identity);
+}
+
+/** Fetch Faceted Search counts and wait for the verified completion event. */
+export async function fetchFacetCountsAndWait(
+  page: Page,
+  regionId: string,
+  timeoutMs = 10_000,
+  identity?: RegionCoverageIdentity,
+): Promise<void> {
+  await callKnownRegionMethodAndWaitForEvent(page, regionId, 'fetchCounts', {
+    eventName: 'apexafterrefresh',
+    timeoutMs,
+  });
+  recordRegionCoverageTouch(regionId, identity);
+}
+
 /**
  * Wait for `eventName` to fire on a region's own DOM element, without
  * triggering anything yourself (e.g. the refresh was triggered by a button
@@ -98,6 +127,7 @@ export async function waitForRegionEvent(
   regionId: string,
   eventName: string = 'apexafterrefresh',
   timeoutMs = 10_000,
+  identity?: RegionCoverageIdentity,
 ): Promise<void> {
   await page.evaluate(
     ([regionId, eventName, timeoutMs]: [string, string, number]) =>
@@ -126,4 +156,5 @@ export async function waitForRegionEvent(
       }),
     [regionId, eventName, timeoutMs] as [string, string, number],
   );
+  recordRegionCoverageTouch(regionId, identity);
 }

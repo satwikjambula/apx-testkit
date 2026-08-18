@@ -359,12 +359,19 @@ describe('diff_apex_exports against two real, different fixtures', () => {
     });
     expect(r.isError).toBeFalsy();
     const report = JSON.parse(firstText(r));
-    expect(Object.keys(report).sort()).toEqual(['newExportDir', 'oldExportDir', 'pages', 'summary']);
+    expect(Object.keys(report).sort()).toEqual([
+      'applicationChanges',
+      'manifestChanges',
+      'newExportDir',
+      'oldExportDir',
+      'pages',
+      'summary',
+    ]);
     // Real, live-confirmed evidence: reference-fixtures has only page 3
-    // (EMPLOYEE); navigation-safety-fixture has pages 1, 2, and 3 (a
-    // DIFFERENT page 3 -- so page 3 is "changed", pages 1/2 are "added").
-    expect(report.summary).toEqual({ pagesAdded: 2, pagesRemoved: 0, pagesChanged: 1, pagesUnchanged: 0 });
-    expect(report.pages).toHaveLength(3);
+    // (EMPLOYEE); navigation-safety-fixture has pages 1 through 4 (a
+    // DIFFERENT page 3 -- so page 3 is "changed", pages 1/2/4 are "added").
+    expect(report.summary).toEqual({ pagesAdded: 3, pagesRemoved: 0, pagesChanged: 1, pagesUnchanged: 0 });
+    expect(report.pages).toHaveLength(4);
     for (const page of report.pages) {
       expect(['added', 'removed', 'changed']).toContain(page.kind);
       expect(Array.isArray(page.affectedFiles)).toBe(true);

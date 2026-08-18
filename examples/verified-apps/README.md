@@ -137,7 +137,7 @@ output every time — see each app's `RESULTS.md` for the full breakdown.
 
 Running live coverage against `interactive-grids` and `sample-charts`
 (the two apps with real running instances) found that `apx-coverage`
-under-reports coverage for any region where the runtime static id differs
+under-reports coverage for any region where the runtime region id differs
 from the `.apx` export identifier (`ApexRegion.htmlDomId` / ADR-003 —
 Chart and Interactive Grid regions specifically). The touch log correctly
 records the runtime id; the coverage cross-reference doesn't yet resolve

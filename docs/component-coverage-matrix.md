@@ -16,12 +16,11 @@ Regenerate the counts with:
 
 ```bash
 node -e "
-const { parseApp } = require('./packages/parser/dist/index.js');
-const { loadExport } = require('./packages/generator/dist/lib.js');
+const { loadApexlangExport, parseApp } = require('./packages/parser/dist/index.js');
 const fs = require('fs'), path = require('path');
 // apps: any real .apx export directories you have locally, loaded via
-// the generator's own loadExport() (application.apx, page-groups.apx,
-// pages/*.apx) -- the same loader generate()/computeDiff() use, so this
+// the parser's loadApexlangExport() (all .apx sources plus manifest and
+// deployment metadata) -- the same loader generate()/computeDiff() use, so this
 // table's denominators can never drift from what the toolkit itself reads.
 "
 ```
@@ -37,7 +36,7 @@ your own exports to reproduce or extend it.)
 | `staticContent` | 46/46 | 2849 | N/A — not a widget region |
 | `breadcrumb` | 31/46 | 836 | N/A — not a widget region |
 | `classicReport` | 35/46 | 499 | No region-level component (no `apex.region()` widget dispatch for this type), but its COLUMN HEADERS are now **verified** — `report-column.ts`'s `reportColumnHeader()`/`classicReportColumnById()`, confirmed live (Eighth round, 2026-08-01) against `item-detail-full`'s `child-records` region |
-| `interactiveReport` | 29/46 | 377 | **Verified** — generic `ApexRegion` (refresh, getSessionState, getCurrentRecordId, getRecordValues, getSelectedValues, focus, getViewName); search/sort/pagination confirmed private (`_`-prefixed) at the JS-widget-API level; `expectRegionsResolve()` also confirmed live (ADR-003 htmlDomId-resolved where set). UPDATE (Eighth round, 2026-08-01): search/sort ARE now verified through a genuinely different path — accessible-role UI locators, not the JS API — see `interactive-report.ts`/`report-column.ts` and `docs/quirks/26.1.json` `interactive-report-accessible-locator-search-sort`. Pagination still not verified (no live multi-page dataset available) |
+| `interactiveReport` | 29/46 | 377 | **Verified** — `ApexRegion.refresh()`, `ApexDataRegion` record/session methods, and IR-specific `ApexInteractiveReportRegion.getViewName()`; search/sort/pagination confirmed private (`_`-prefixed) at the JS-widget-API level; `expectRegionsResolve()` also confirmed live (ADR-003 htmlDomId-resolved where set). UPDATE (Eighth round, 2026-08-01): search/sort ARE now verified through a genuinely different path — accessible-role UI locators, not the JS API — see `interactive-report.ts`/`report-column.ts` and `docs/quirks/26.1.json` `interactive-report-accessible-locator-search-sort`. Pagination still not verified (no live multi-page dataset available) |
 | `list` | 29/46 | 192 | Not verified — no dedicated region component. Its row-level actions were investigated (Eighth round, 2026-08-01, `faceted-search-content-row`): rendered behind a "Row Actions" menu, a confirmed-different DOM contract from Cards' `action-d` (see `region-action.ts` module doc) — not wrapped, see `docs/quirks/26.1.json` `region-action-cards-not-unique-inert` |
 | `chart` | 14/46 | 149 | **Verified** — `ApexChartRegion` (`getOption`/`setOption`, confirmed live on 3 chart types); generic `ApexRegion.refresh()` also confirmed. Static config typed: `ApexRegion.chartSettings.type` + `ApexRegion.htmlDomId`. Corrects an earlier wrong claim that `apex.region(id).widget()` returns `null` for charts — it does not (see `docs/quirks/26.1.json` `chart-region-widget-returns-null`). Also confirmed live: declared type ≠ runtime type in at least one case (`donut` reports as `pie` — `chart-declared-type-not-runtime-type`) |
 | `regionDisplaySelector` | 16/46 | 143 | Not verified |
@@ -539,7 +538,8 @@ A named-LOV *reference* on an item (`lov { type: sharedComponent, lov:
 @name }`), gated to `selectList`/`radioGroup`/`popupLov` per Product
 Architect's explicit narrow-scope decision (Seventh round). NOT the LOV
 *definition* itself (`shared-components/lovs.apx`'s actual list of
-values) — that remains out of `loadExport()`'s scope entirely.
+values) — that is loaded losslessly but remains outside the typed
+semantic AST.
 
 | App | Gated-type shared-LOV references |
 |---|---|

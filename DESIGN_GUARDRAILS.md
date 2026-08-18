@@ -17,9 +17,10 @@ line lives in `.ai/ADR/`; this file is the enforceable summary.
   `curl` the raw `.ebnf` file directly. A summarized fetch once
   hallucinated a `@{component-id}` syntax that does not exist anywhere in
   the real grammar. See ADR-004.
-- **Assume a region's `.apx` identifier is its runtime static id.** Check
+- **Assume a region's APEXlang identifier is its runtime region id.** Check
   `ApexRegion.htmlDomId` first — it deterministically predicts the
-  runtime id when set. See ADR-003.
+  runtime region id when set. The `_jet`/`_ig` suffix belongs to nested
+  widget containers, not to `apex.region()` identity. See ADR-003.
 - **Type a field out of `raw` into the semantic AST without wiring it
   into `apx-diff`'s field-by-field diffing in the same change.** This gap
   has already happened twice (`calendarSettings`, then
@@ -71,7 +72,7 @@ line lives in `.ai/ADR/`; this file is the enforceable summary.
   `.ai/knowledge/constitution-reconciliation.md` §C.
 - **Use `page.waitForTimeout()` as a synchronization strategy without a
   documented reason no real readiness signal exists.** Prefer a verified
-  lifecycle event (`callRegionMethodAndWaitForEvent`/
+  lifecycle event (`refreshRegionAndWait`/`fetchFacetCountsAndWait`/
   `waitForRegionEvent`, `packages/testkit/src/fixtures/lifecycle.ts`),
   network completion, or an explicit DOM/state assertion. The one
   existing exception — the `page.waitForTimeout(1000)` in generated

@@ -1,8 +1,10 @@
 page 50 (
+  page: 50
   name: Projects
   alias: PROJECTS
   title: Projects
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   region projects (

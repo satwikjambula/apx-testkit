@@ -1,7 +1,11 @@
 page 20 (
+  page: 20
   name: My Account
   alias: MY-ACCOUNT
   title: My Account
+  security {
+    pageAccessProtection: unrestricted
+  }
   region account-form (
     name: Account Form
     type: form

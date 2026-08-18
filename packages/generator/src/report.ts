@@ -35,11 +35,10 @@
  * `parseApp()` themselves already guarantee.
  */
 import { resolve } from 'node:path';
-import { parseApp, type ParseIssue } from '@apx/parser';
+import { loadApexlangExport, parseApp, type ParseIssue } from '@apx/parser';
 import { computeCoverage, type CoverageReport } from './coverage.js';
 import { COVERAGE_HTML_STYLE, escapeHtml, renderCoverageHtmlFragment } from './coverage-html.js';
 import { computeDiff, formatDiffHuman, type DiffReport } from './diff.js';
-import { loadExport } from './lib.js';
 
 export interface DashboardReport {
   oldExportDir: string;
@@ -64,7 +63,7 @@ export interface DashboardReport {
 export function computeReport(oldExportDir: string, newExportDir: string, touchLogPath: string): DashboardReport {
   const diff = computeDiff(oldExportDir, newExportDir);
   const coverage = computeCoverage(newExportDir, touchLogPath);
-  const parserWarnings = parseApp(loadExport(resolve(newExportDir))).warnings;
+  const parserWarnings = parseApp(loadApexlangExport(resolve(newExportDir))).warnings;
   return {
     oldExportDir: resolve(oldExportDir),
     newExportDir: resolve(newExportDir),

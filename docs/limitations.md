@@ -33,11 +33,11 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   resolve-region.ts, runtime-review P0 item 1) before constructing the
   wrapper, rather than trusting a static `htmlDomId ?? identifier` guess.
   When `htmlDomId` is absent, auto-wiring remains genuinely impossible:
-  confirmed live, the region's runtime static id can differ from its
+  confirmed live, the region's runtime region id can differ from its
   `.apx` identifier (`basic-editing` in the export, `emp` at runtime), AND
   the export identifier is confirmed NOT to work as a fallback for this
   component type — see docs/quirks/26.1.json `region-id-not-static-id`.
-  Construct it by hand with the real static id, discovered from the live
+  Construct it by hand with the runtime region id, discovered from the live
   DOM, in that case.
 - **Region assertions don't exist for arbitrary region types** — the
   region identifier -> DOM convention is still an open ledger item for
@@ -93,8 +93,8 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   docs/quirks/26.1.json `page-access-protection-blocks-bare-navigation`.
 - **`ApexCardsRegion.getRecords()`/`.getModel()` are confirmed broken** in
   the one app tested — they throw a genuine runtime error from inside
-  APEX's own client code, not a testkit bug. Left in the typed API so the
-  failure is visible rather than silently unavailable; see
+  APEX's own client code, not a testkit bug. They are documented in the
+  evidence ledger but excluded from the typed public API; see
   docs/grammar-assumptions.md.
 - **`ApexFacetsRegion.getTotalResourceCount()` needed a lifecycle-event wait
   — FIXED.** It could return `null` for a short window after navigation
@@ -103,7 +103,7 @@ workaround isn't obvious; that's exactly the signal M4 needs.
   region (verified live, deterministic, ~400ms), not a poll or a fixed
   timeout. See `fixtures/lifecycle.ts` and
   spike/tests/faceted-search-cards-demo.spec.ts. This event-based wait
-  pattern (`callRegionMethodAndWaitForEvent`/`waitForRegionEvent`) is
+  pattern (`refreshRegionAndWait`/`fetchFacetCountsAndWait`/`waitForRegionEvent`) is
   reusable for any region operation that fires a lifecycle event — it does
   NOT replace the one `page.waitForTimeout(1000)` in generated "clean
   console" specs, which exists to catch late/unpredictable async console

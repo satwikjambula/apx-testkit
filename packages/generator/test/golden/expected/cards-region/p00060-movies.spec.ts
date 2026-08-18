@@ -34,10 +34,10 @@ test.describe('page 60: Movies', () => {
     // hard-fails with a specific message if neither candidate resolves,
     // rather than silently trusting a static guess.
     const regionCandidateSets = [
-      [{ value: 'movie-cards', strategy: 'export-identifier' as const }]
+      { identifier: 'movie-cards', candidates: [{ value: 'movie-cards', strategy: 'export-identifier' as const }] }
     ];
-    for (const candidates of regionCandidateSets) {
-      await resolveRegion(page, candidates, 60);
+    for (const { identifier, candidates } of regionCandidateSets) {
+      await resolveRegion(page, candidates, { pageId: 60, identifier });
     }
   });
 });

@@ -28,6 +28,7 @@ import type {
   ApexRegionAction, ApexRegionActionTarget, ApexReportColumn, ApexServerSideCondition,
   ApexValidation, ApexValidationError, ComponentNode, Loc, RawBag, RawValue, RefValue,
 } from './ast.js';
+import type { LoadedApexlangExport } from './loader.js';
 
 export interface ParseIssue { message: string; loc: Loc; }
 export interface ParseResult {
@@ -36,7 +37,8 @@ export interface ParseResult {
   warnings: ParseIssue[];
 }
 
-const COMPONENT_OPEN = /^([A-Za-z][\w-]*)(?:\s+("[^"]*"|\S+))?\s*\($/;
+const QUOTED_STRING_SOURCE = String.raw`"(?:\\["\\/bfnrt]|\\u[0-9A-Fa-f]{4}|[^"\\\u0000-\u001F])*"`;
+const COMPONENT_OPEN = new RegExp(`^([A-Za-z][\\w-]*)(?:\\s+(${QUOTED_STRING_SOURCE}|(?!")\\S+))?\\s*\\($`);
 const GROUP_OPEN = /^([A-Za-z][\w-]*)\s*\{$/;
 const OBJ_PROP_OPEN = /^([A-Za-z][\w-]*)\s*:\s*\{$/;
 /**
@@ -63,7 +65,7 @@ const OBJ_PROP_OPEN = /^([A-Za-z][\w-]*)\s*:\s*\{$/;
  * literal (never evaluated), matching how `#substitution#` tokens are already
  * kept literal in property VALUES.
  */
-const PROPERTY = /^("[^"]*"|[A-Za-z0-9_][\w-]*)\s*:\s*(.*)$/;
+const PROPERTY = new RegExp(`^(${QUOTED_STRING_SOURCE}|[A-Za-z0-9_][\\w-]*)\\s*:\\s*(.*)$`);
 const FENCE_OPEN = /^```([A-Za-z0-9_-]*)\s*$/;
 
 export function parseApxFile(file: string, text: string, warnings: ParseIssue[]): ComponentNode[] {
@@ -80,12 +82,22 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
   /** Component identifiers may be a quoted, multi-word display name (e.g. an
    * Interactive Grid row-selector pseudo-column: `column "Row Header" (`) --
    * strip the surrounding quotes so the AST identifier is the plain string. */
+  function decodeQuotedString(tok: string): string {
+    try {
+      return JSON.parse(tok) as string;
+    } catch {
+      warnings.push({ message: `Invalid quoted string: ${tok.slice(0, 70)}`, loc: loc() });
+      return tok;
+    }
+  }
+
   function unquoteIdentifier(tok: string | undefined): string | null {
     if (tok === undefined) return null;
-    return tok.length >= 2 && tok.startsWith('"') && tok.endsWith('"') ? tok.slice(1, -1) : tok;
+    return tok.length >= 2 && tok.startsWith('"') && tok.endsWith('"') ? decodeQuotedString(tok) : tok;
   }
 
   function scalar(trimmed: string): RawValue {
+    if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) return decodeQuotedString(trimmed);
     if (trimmed.startsWith('@') && !/\s/.test(trimmed)) return refValue(trimmed);
     if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed);
     if (trimmed === 'true') return true;
@@ -118,26 +130,87 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
    * the guard the `end >= 0` branch already used below. Making the
    * `end < 0` branch use the identical guard fixes both shapes at once.
    */
-  function parseArray(inlineRest: string): RawValue[] {
-    const out: RawValue[] = [];
-    let chunk = inlineRest;
-    let consumedLine = false; // true once we're reading lines beyond the property line
-    for (;;) {
-      const end = chunk.indexOf(']');
-      const body = end >= 0 ? chunk.slice(0, end) : chunk;
-      for (const tok of body.split(/\s+/).filter(Boolean)) out.push(scalar(tok));
-      if (end >= 0) {
-        if (consumedLine) i++; // step past the line holding ']'
-        return out;
+  function closingBracket(text: string): number {
+    let quoted = false;
+    let escaped = false;
+    for (let index = 0; index < text.length; index++) {
+      const char = text[index];
+      if (quoted) {
+        if (escaped) escaped = false;
+        else if (char === '\\') escaped = true;
+        else if (char === '"') quoted = false;
+      } else if (char === '"') quoted = true;
+      else if (char === ']') return index;
+    }
+    return -1;
+  }
+
+  function arrayTokens(text: string): string[] {
+    const tokens: string[] = [];
+    let index = 0;
+    while (index < text.length) {
+      while (/\s/.test(text[index] ?? '')) index++;
+      if (index >= text.length) break;
+      const start = index;
+      if (text[index] === '"') {
+        index++;
+        let escaped = false;
+        while (index < text.length) {
+          const char = text[index++];
+          if (escaped) escaped = false;
+          else if (char === '\\') escaped = true;
+          else if (char === '"') break;
+        }
+        tokens.push(text.slice(start, index));
+      } else {
+        while (index < text.length && !/\s/.test(text[index]!)) index++;
+        tokens.push(text.slice(start, index));
       }
-      if (consumedLine) i++;
+    }
+    return tokens;
+  }
+
+  function parseArray(inlineRest: string): RawValue[] {
+    let text = inlineRest;
+    for (;;) {
+      const end = closingBracket(text);
+      if (end >= 0) return arrayTokens(text.slice(0, end)).map(scalar);
       if (i >= lines.length) {
         warnings.push({ message: 'Unterminated array', loc: loc() });
-        return out;
+        return arrayTokens(text).map(scalar);
       }
-      chunk = lines[i];
-      consumedLine = true;
+      text += `\n${lines[i]}`;
+      i++;
     }
+  }
+
+  function consumeComment(): ComponentNode | null {
+    const start = i;
+    const trimmed = lines[i].trim();
+    if (trimmed.startsWith('//')) {
+      i++;
+      return { type: '#comment', identifier: null, props: { text: lines[start] }, children: [], loc: { file, line: start + 1 } };
+    }
+    if (!trimmed.startsWith('/*')) return null;
+    const commentLines: string[] = [];
+    while (i < lines.length) {
+      commentLines.push(lines[i]);
+      const closed = lines[i].includes('*/');
+      i++;
+      if (closed) {
+        return {
+          type: '#comment',
+          identifier: null,
+          props: { text: commentLines.join('\n') },
+          children: [],
+          loc: { file, line: start + 1 },
+        };
+      }
+    }
+    warnings.push({ message: 'Unterminated block comment', loc: { file, line: start + 1 } });
+    return {
+      type: '#comment', identifier: null, props: { text: commentLines.join('\n') }, children: [], loc: { file, line: start + 1 },
+    };
   }
 
   /** Property with empty value: check for a fenced code block on following lines. */
@@ -174,6 +247,8 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
     while (i < lines.length) {
       const line = lines[i].trim();
       if (line === '') { i++; continue; }
+      const comment = consumeComment();
+      if (comment) { node.children.push(comment); continue; }
       if (line === closer) { i++; return; }
 
       let m = COMPONENT_OPEN.exec(line);
@@ -228,6 +303,8 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
   while (i < lines.length) {
     const line = lines[i].trim();
     if (line === '') { i++; continue; }
+    const comment = consumeComment();
+    if (comment) { roots.push(comment); continue; }
     const m = COMPONENT_OPEN.exec(line);
     if (m) {
       const root: ComponentNode = {
@@ -542,12 +619,42 @@ function projectValidation(n: ComponentNode): ApexValidation {
   };
 }
 
-export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmodeled: string[] } {
+export function projectPages(roots: ComponentNode[]): {
+  application: ApexAppAst['application'];
+  pages: ApexPage[];
+  unmodeled: string[];
+} {
   const pages: ApexPage[] = [];
   const unmodeled = new Set<string>();
+  let application: ApexAppAst['application'] = null;
   for (const n of roots) {
-    if (n.type === 'app') { continue; }
+    if (n.type === 'app') {
+      const friendlyUrls = bool(n.props['runtime.friendlyUrls']);
+      if (friendlyUrls === null) {
+        throw new Error(`${n.loc.file}:${n.loc.line}: app '${n.identifier ?? '(anonymous)'}' is missing required boolean 'runtime.friendlyUrls'.`);
+      }
+      application = {
+        identifier: n.identifier,
+        name: str(n.props['name']),
+        alias: str(n.props['alias']),
+        version: str(n.props['version']),
+        type: str(n.props['type']),
+        runtime: {
+          friendlyUrls,
+          compatibilityMode: str(n.props['runtime.compatibilityMode']),
+        },
+        loc: n.loc,
+        raw: n.props,
+      };
+      continue;
+    }
+    if (n.type === '#comment') continue;
     if (n.type !== 'page') { unmodeled.add(n.type); continue; }
+
+    const pageId = num(n.props['page']);
+    if (pageId === null || !Number.isInteger(pageId) || pageId < 0) {
+      throw new Error(`${n.loc.file}:${n.loc.line}: page '${n.identifier ?? '(anonymous)'}' is missing a valid integer 'page:' property.`);
+    }
 
     const regionNodes = n.children.filter((c) => c.type === 'region');
     const regions: ApexRegion[] = regionNodes.map((r) => {
@@ -623,7 +730,7 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
         processes.push(projectProcess(c));
       } else if (c.type === 'computation') {
         computations.push(projectComputation(c));
-      } else if (c.type !== 'region') {
+      } else if (c.type !== 'region' && c.type !== '#comment') {
         unmodeled.add(c.type);
       }
     }
@@ -642,34 +749,45 @@ export function projectPages(roots: ComponentNode[]): { pages: ApexPage[]; unmod
           byId.get(r.identifier ?? '')?.columns.push(projectColumn(c));
         } else if (c.type === 'action') {
           byId.get(r.identifier ?? '')?.actions.push(projectRegionAction(c));
-        } else unmodeled.add(c.type);
+        } else if (c.type !== '#comment') unmodeled.add(c.type);
       }
     }
 
     pages.push({
-      id: Number(n.identifier),
+      identifier: n.identifier,
+      id: pageId,
       alias: str(n.props['alias']),
       name: str(n.props['name']),
       title: str(n.props['title']),
+      pageMode: str(n.props['appearance.pageMode']) as ApexPage['pageMode'],
+      pageAccessProtection: str(n.props['security.pageAccessProtection']) as ApexPage['pageAccessProtection'],
+      authentication: str(n.props['security.authentication']) as ApexPage['authentication'],
+      isPublic: n.props['security.authentication'] === 'public',
       regions, items, buttons, dynamicActions, branches, validations, processes, computations,
       loc: n.loc,
       raw: n.props,
     });
   }
-  return { pages, unmodeled: [...unmodeled].sort() };
+  return { application, pages, unmodeled: [...unmodeled].sort() };
 }
 
-export function parseApp(files: Record<string, string>): ParseResult {
-  const warnings: ParseIssue[] = [];
+export function parseApp(input: Record<string, string> | LoadedApexlangExport): ParseResult {
+  const loaded =
+    'sources' in input && typeof input.sources === 'object' ? (input as LoadedApexlangExport) : null;
+  const files: Record<string, string> = loaded?.sources ?? (input as Record<string, string>);
+  const warnings: ParseIssue[] = (loaded?.warnings ?? []).map((message) => ({
+    message,
+    loc: { file: '.apex/apexlang.json', line: 1 },
+  }));
   const tree: ComponentNode[] = [];
   const sourceFiles: string[] = [];
   for (const [file, text] of Object.entries(files)) {
     sourceFiles.push(file);
     tree.push(...parseApxFile(file, text, warnings));
   }
-  const { pages, unmodeled } = projectPages(tree);
+  const { application, pages, unmodeled } = projectPages(tree);
   return {
-    ast: { astVersion: '0.1.0-provisional', pages, sourceFiles, unmodeled },
+    ast: { astVersion: '0.1.0-provisional', application, manifest: loaded?.manifest ?? null, pages, sourceFiles, unmodeled },
     tree,
     warnings,
   };

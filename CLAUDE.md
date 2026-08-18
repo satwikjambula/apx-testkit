@@ -34,12 +34,11 @@ the full section-by-section audit (what's already real, what's partial,
 what's newly adopted into `DESIGN_GUARDRAILS.md`, and what's flagged as
 a separate scope proposal — SQLcl validation, Oracle Skills/MCP
 ecosystem integration, Oracle Blueprints, AI Agent/Tool verification,
-and `npm run verify` all need their own product/architecture review
-before anyone builds toward them, not silent adoption). That pass also
-found `callRegionMethod` (`packages/testkit/src/components/region.ts`,
-publicly exported from `index.ts`) is a real, currently-unrestricted
-generic runtime-method escape hatch — flagged for Software Architect +
-Runtime & Test Automation Engineer review, not yet resolved either way.
+and several broader integrations still need their own product/architecture
+review rather than silent adoption). The previously-public arbitrary region
+method dispatchers are now package-internal; public wrappers expose named,
+evidence-backed methods only. `npm run verify` is the canonical local
+definition-of-done command.
 
 ## What this is
 - `packages/parser` (@apx/parser): .apx -> typed JSON AST. Read-only by
@@ -101,7 +100,7 @@ Oracle Export (.apx)
 Package boundaries this implies, already true today without a formal
 split: `@apx/parser` owns the AST and nothing downstream of it (no
 generation, no coverage, no diff logic). `@apx/testgen` consumes the AST
-directly via `parseApp()`/`loadExport()` — it does not re-parse or
+directly via `loadApexlangExport()`/`parseApp()` — it does not re-parse or
 duplicate parser logic. `@apx/testkit` is runtime-only and has zero
 dependency on `@apx/parser` — it never sees a `.apx` file or the AST,
 only a live `page` object.
@@ -160,8 +159,10 @@ detail, even though it lives inside `@apx/parser`.
    the .apx diff.
 
 ## Verified runtime facts (live 26.1 instance)
-- Friendly URL = lowercased page alias; `authentication: public` serves 200
-  with no redirect.
+- When `app.runtime.friendlyUrls` is true, the URL is the lowercased page
+  alias; `authentication: public` serves 200 with no redirect. Apps declaring
+  `friendlyUrls: false` fail loudly until legacy `f?p` URL construction has
+  sufficient verified metadata.
 - pageItem identifiers map to DOM node ids VERBATIM (all tested item types,
   incl. hidden); `apex.item(id)` setValue/getValue round-trips.
 - Page titles differ from .apx by invisible chars: compare only after NFKC
@@ -191,24 +192,25 @@ table for the fuller P0/P1/P2 cross-check.
    never captured. `packages/testkit/src/components/region.ts` only exposes
    `probeRegions`/`refreshRegion` via apex.region()'s own widget API — no
    selector guess. `button.ts` sidesteps the open question entirely via an
-   accessible-role/label locator (works today, but a static-id convention
+   accessible-role/label locator (works today, but an HTML DOM ID convention
    would be more robust once known). Get the discovery output (rerun
    `spike/tests/p410-simple-form.spec.ts` and read the two JSON blocks),
    then: record the convention in the ledger, extend region.ts, wire region
    assertions into the generator.
    UPDATE: confirmed concretely for Interactive Grid — the `.apx` export's
-   region identifier (`basic-editing`) is NOT the runtime static id
+   APEXlang identifier (`basic-editing`) is NOT the runtime region id
    (`emp`); see docs/quirks/26.1.json `region-id-not-static-id` and
    `packages/testkit/src/components/interactive-grid.ts`. Still open
-   whether IR/Cards/Faceted Search (where identifier == runtime id in
-   every app checked so far) can also diverge, or whether this is
-   IG-specific.
+   IR/Cards/Faceted Search can diverge too: `projects` resolves as
+   `projects_report` in Sample Charts.
    UPDATE 2: root cause diagnosed. The `.apx` export's `region { advanced {
    htmlDomId: ... } }` property, when present, deterministically predicts
-   the runtime id (`<htmlDomId>_jet` for Chart, `<htmlDomId>_ig` for IG) —
+   the runtime region id used by `apex.region()`. Chart and Interactive
+   Grid then use separate nested widget-container ids
+   (`<runtimeRegionId>_jet` and `<runtimeRegionId>_ig`) —
    now typed at the parser level as `ApexRegion.htmlDomId`
    (packages/parser/src/ast.ts). When absent (confirmed: 66/97 real chart
-   regions in Oracle's "Sample Charts" app), the runtime id is an
+   regions in Oracle's "Sample Charts" app), the runtime region id can be an
    APEX-internal auto-generated numeric id with no corresponding field
    anywhere in the static export — genuinely undiscoverable without live
    access, not a parser gap. See docs/quirks/26.1.json

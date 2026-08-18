@@ -340,9 +340,9 @@ to be consistent *about*).
   against Sample Interactive Grids (already live-accessible) to check
   whether `messages.ts`'s existing `expectError()` already covers
   validation failures. Full LOV *definition* resolution
-  (`shared-components/lovs.apx`) stays out of scope — outside
-  `loadExport()`'s current file coverage, a bigger architecture change
-  than a field addition.
+  (`shared-components/lovs.apx`) stays semantically untyped. The parser
+  loader now reads the file, but typed LOV-definition projection remains
+  a separate field-design change.
 
 ## Corpus size after this addition
 

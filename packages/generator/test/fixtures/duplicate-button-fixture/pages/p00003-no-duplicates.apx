@@ -1,8 +1,10 @@
 page 3 (
+  page: 3
   name: No Duplicates
   alias: NO-DUPLICATES
   title: No Duplicates
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   button save (

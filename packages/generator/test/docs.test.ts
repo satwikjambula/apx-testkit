@@ -222,10 +222,15 @@ const computationFixture: ApexComputation = {
 };
 
 const pageFixture: ApexPage = {
+  identifier: 'sentinel-page',
   id: 1,
   alias: 'SENTINEL_PAGE',
   name: 'SENTINEL_PAGE_NAME',
   title: 'SENTINEL_PAGE_TITLE',
+  pageMode: 'normal',
+  pageAccessProtection: 'unrestricted',
+  authentication: 'public',
+  isPublic: true,
   regions: [regionFixture],
   items: [itemFixture, pageLevelItemFixture],
   buttons: [buttonFixture, pageLevelButtonFixture],
@@ -345,10 +350,15 @@ describe('pageDocs — region vs. page-level item/button ownership', () => {
 
 describe('pageDocs — empty page renders cleanly', () => {
   const emptyPage: ApexPage = {
+    identifier: 'empty-page',
     id: 2,
     alias: 'EMPTY_PAGE',
     name: null,
     title: null,
+    pageMode: null,
+    pageAccessProtection: null,
+    authentication: null,
+    isPublic: false,
     regions: [],
     items: [],
     buttons: [],

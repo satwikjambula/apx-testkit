@@ -8,6 +8,10 @@ describe('apexPageUrl', () => {
     );
   });
 
+  it('fails loudly instead of fabricating a friendly URL when the app disables them', () => {
+    expect(() => apexPageUrl('https://example.test/ords/r/app', 'EMPLOYEE', false)).toThrow(/friendlyUrls: false/);
+  });
+
   it('handles a base with no trailing slash', () => {
     expect(apexPageUrl('https://host/ords/r/app', 'home')).toBe('https://host/ords/r/app/home');
   });

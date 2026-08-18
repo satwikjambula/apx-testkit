@@ -1,8 +1,10 @@
 page 1 (
+  page: 1
   name: Duplicate No HtmlDomId
   alias: DUPLICATE-NO-HTMLDOMID
   title: Duplicate No HtmlDomId
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   button save_employee (

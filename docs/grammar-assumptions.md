@@ -92,8 +92,9 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       `getCurrentRecordId`/`setCurrentRecordId`, `getRecordValues`/
       `setRecordValues`, `getSelectedValues`/`setSelectedValues`, `focus`.
       `getViewName` is Interactive-Report-only (absent on Cards; calling it
-      on Cards throws, confirmed). Shipped as `ApexRegion` in
-      `packages/testkit/src/components/region.ts`.
+      on Cards throws, confirmed). Shipped on the capability-scoped
+      `ApexDataRegion` base in `packages/testkit/src/components/region.ts`;
+      generic `ApexRegion` exposes only `refresh()`.
       `apex.region(id).call(action)` (the generic action-dispatch API) was
       tested against Interactive Report with a dozen plausible action names
       (refresh, search, getViews, getCurrentView, reset, collapse, ...) and
@@ -119,8 +120,8 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       after navigation AND after an awaited `refresh()`, both threw the
       same error): `getRecords()` and `getModel()` throw `TypeError: Cannot
       read properties of undefined (reading 'each')` from inside APEX's own
-      `modelViewBase.min.js`. Left in the typed API (so the failure is
-      visible, not silently absent) but do not treat as working.
+      `modelViewBase.min.js`. They are deliberately absent from the public
+      typed API; confirmed-broken methods do not cross the evidence boundary.
 - [x] Faceted Search region (`packages/testkit/src/components/faceted-search.ts`)
       confirmed live: `getTotalResourceCount()` returns a real number (24 in
       the ground-truth app) -- but NOT reliably right after navigation. A
@@ -139,7 +140,7 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       Waiting for `apexafterrefresh` before reading
       `getTotalResourceCount()` resolved the flakiness deterministically
       (~400ms observed, 3/3 repeated live runs passed). Shipped as
-      `callRegionMethodAndWaitForEvent()`/`waitForRegionEvent()` in
+      `refreshRegionAndWait()`/`fetchFacetCountsAndWait()`/`waitForRegionEvent()` in
       `packages/testkit/src/fixtures/lifecycle.ts` and
       `ApexFacetsRegion.fetchCountsAndWait()`. Scope note: this event-based
       pattern is for "did operation X finish" waits; it does NOT apply to
@@ -215,7 +216,7 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       Standard `@apex-accounts` scheme, `P101_USERNAME`/`P101_PASSWORD`
       confirmed again (third independent confirmation of this convention).
       Two real, load-bearing findings:
-      1. **Region identifier != runtime static id, confirmed concretely.**
+      1. **Region identifier != runtime region id, confirmed concretely.**
          The `.apx` export declares `region basic-editing (type:
          interactiveGrid ...)` on page 30; at runtime `apex.region
          ('basic-editing')` returns `null`, while `apex.region('emp')`
@@ -224,7 +225,7 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
          speculative to confirmed, at least for Interactive Grid -- see
          docs/quirks/26.1.json. Practical consequence: `@apx/testgen`
          cannot auto-wire an `ApexInteractiveGridRegion` from `.apx`
-         metadata alone; the real static id must be discovered from the
+         metadata alone; the runtime region id must be discovered from the
          live DOM by hand.
       2. **`security.pageAccessProtection: argumentsMustHaveChecksum`
          blocks bare `page.goto()` navigation, even post-login.** Right
@@ -261,10 +262,10 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       `pageAccessProtection: argumentsMustHaveChecksum` pattern as Sample
       Interactive Grids (navigate via real UI clicks, not `page.goto()`).
       Two significant findings:
-      1. **Region identifier != runtime static id, confirmed a SECOND
+      1. **Region identifier != runtime region id, confirmed a SECOND
          time on an independent widget type.** Export declares `region
          area-chart-color-javascript-code-customization (type: chart
-         ...)`; at runtime the real static id is `area1` (widget
+         ...)`; at runtime the runtime region id is `area1` (widget
          container `#area1_jet`). This broadens the earlier Interactive
          Grid-only finding to "confirmed on two independent region
          types" -- see docs/quirks/26.1.json.
@@ -1026,12 +1027,11 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         page. It therefore contributes no `plugin/*` item-type instance
         to this app's parse output. Separately, and true for every app in
         this corpus already, not something new here: `shared-components/**`
-        (plugin definitions, themes, static files) is outside
-        `@apx/generator`'s `loadExport()` scope entirely
-        (`application.apx` + `page-groups.apx` + `pages/*.apx` only) — a
-        plugin's own `plugin.apx` definition is never itself parsed by
-        this project's tooling, only a resulting `pageItem ( type:
-        plugin/... )` reference on a page that uses it, had one existed.
+        (plugin definitions, themes, static files) is now loaded
+        losslessly by `@apx/parser`'s `loadApexlangExport()`; plugin
+        definitions are not yet projected into the typed semantic AST.
+        Only a resulting `pageItem ( type: plugin/... )` reference on a
+        page that uses it has a typed consumer today.
       - **ADR-003 (`htmlDomId`) cross-checked specifically against this
         app**: present on 17/159 regions, across `staticContent`,
         `interactiveReport`, `interactiveGrid`, `dynamicContent` — all
@@ -1146,9 +1146,9 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
     honestly rather than silently expanding the gate, since the scope
     decision was explicit about which three types, not "wherever the
     data supports it." `shared-components/lovs.apx` (the LOV's actual
-    list of values) remains entirely out of `loadExport()`'s scope, per
-    the same roadmap entry — this field is a reference only, resolvable
-    to nothing further without a separate architecture change.
+    list of values) is loaded losslessly but remains outside the typed
+    semantic AST — this field is a reference only, resolvable to nothing
+    further without a separate architecture change.
   - **`Sawalhah/apexlang-view` cross-check**: fetched
     `github.com/Sawalhah/apexlang-view/blob/main/src/parser.js` directly
     (`curl` to raw.githubusercontent.com, browsed as text, never
@@ -2107,7 +2107,7 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
 been resolved — see the dated entry below, "RESOLVED: quoted,
 substitution-embedding property KEYS...". Left this pointer in place, not
 silently removed, per this project's correction discipline.)
-- [ ] Comment syntax: CONFIRMED real per Oracle's official EBNF
+- [x] Comment syntax: CONFIRMED real per Oracle's official EBNF
       (`<comment> ::= "//" { <any-character-except-newline> } <line-end> |
       "/*" { <any-character> | <nl> } "*/"`), not just an assumption
       anymore -- but still zero real occurrences across all 13 real
@@ -2116,17 +2116,14 @@ silently removed, per this project's correction discipline.)
       embedded INSIDE fenced multiline-string code blocks, e.g.
       `` ```javascript-browser // Update Badge Text ``` ``, which this
       parser's `tryFence()` already captures correctly as opaque text --
-      not top-level APEXlang comments at all). Not implemented: this
-      project's discipline is to build against real occurrences, not
-      well-specified-but-unencountered ones; revisit if a real export
-      ever actually contains one (the parser would currently emit
-      "Unrecognized line" warnings for it, fail loudly rather than
-      silently misparse).
-- [ ] Quoting/escaping in PROPERTY VALUES specifically: no quoted values
-      observed. What happens when a value must contain a leading `[`/`@` or a
-      literal ```? Unknown — needs a hostile fixture app. (Quoted, space-
-      containing component IDENTIFIERS are now handled — see "Verified"
-      above; this item is narrower than it used to be.)
+      not top-level APEXlang comments at all). Implemented losslessly as
+      `#comment` nodes with regression coverage for both forms; still
+      classified as documented/unwitnessed until real export data contains one.
+- [x] Quoting/escaping in PROPERTY VALUES and arrays: implemented directly
+      from `<string>`/`<escape>`/`<array-of-value>`. Quoted scalars decode
+      JSON escapes, and array tokenization preserves whitespace inside quoted
+      elements. Synthetic regression coverage exists; real-export occurrence
+      remains unwitnessed and is recorded as `documented`, not `verified`.
 - [ ] Whether components may legally appear inside `{ }` groups (parser
       tolerates; not observed).
 - [ ] `required` property canonical name — build a form with a required item
@@ -2200,9 +2197,9 @@ silently removed, per this project's correction discipline.)
       property group on an already-typed `ApexItem`, not its own
       top-level component) — the narrow `ApexItem.lovName` reference
       field added this pass does not change that; the bigger,
-      out-of-scope `shared-components/lovs.apx` LOV-definition file
-      remains outside `loadExport()`'s scope entirely, unrelated to this
-      list.
+      `shared-components/lovs.apx` LOV-definition file is loaded
+      losslessly but remains outside the typed semantic AST, unrelated
+      to this list.
 
       **CORRECTION (2026-07-29, Continuation-round follow-through)**:
       `process`, `computation`, `column`, and `action` are typed as of this

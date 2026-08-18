@@ -1,8 +1,10 @@
 page 40 (
+  page: 40
   name: Dashboard
   alias: DASHBOARD
   title: Dashboard
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   region dashboard-cards (

@@ -1,8 +1,10 @@
 page 4 (
+  page: 4
   name: Normal
   alias: NORMAL
   title: Normal
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   button save (

@@ -1,8 +1,10 @@
 page 100 (
+  page: 100
   name: Edit
   alias: EDIT
   title: Edit
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   item P100_JOB (

@@ -41,7 +41,7 @@ stopping point — see `.ai/checklists/parser-change.md` alone for that).
         (`.widget().someMethod(method, ...)`)? Try the standard
         widget-factory `option` getter/setter before assuming a bespoke
         API is needed (see `.ai/knowledge/oracle-apex.md`).
-  - [ ] **Confirm the runtime static id resolution** — check
+  - [ ] **Confirm the runtime region id resolution** — check
         `ApexRegion.htmlDomId` first (ADR-003) before assuming live DOM
         inspection is required.
   - [ ] **Implement the runtime wrapper** in `packages/testkit`, using

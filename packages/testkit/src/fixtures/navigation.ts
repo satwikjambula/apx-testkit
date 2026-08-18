@@ -27,6 +27,7 @@ export type NavigationMode = 'direct-url' | 'ui-navigation' | 'auto';
 export interface NavigationSafetyAssessment {
   /** 'direct-url' if a bare gotoApexPage() call is confirmed/assumed safe; 'ui-navigation' if it is NOT. */
   mode: 'direct-url' | 'ui-navigation';
+  restriction: 'none' | 'no-url-access' | 'checksum' | 'unknown';
   reason: string;
 }
 
@@ -70,16 +71,43 @@ export function assessNavigationSafety(page: {
   readonly pageAccessProtection: string | null;
   readonly isPublic: boolean;
 }): NavigationSafetyAssessment {
+  if (page.pageAccessProtection === 'noUrlAccess') {
+    return {
+      mode: 'ui-navigation',
+      restriction: 'no-url-access',
+      reason:
+        'security.pageAccessProtection: noUrlAccess forbids requesting this page through a URL; use an in-app branch/navigation mechanism.',
+    };
+  }
   if (page.pageAccessProtection === 'argumentsMustHaveChecksum' && !page.isPublic) {
     return {
       mode: 'ui-navigation',
+      restriction: 'checksum',
       reason:
         "security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page -- confirmed live that a bare " +
         'page.goto() silently redirects an authenticated session to /login (HTTP 200, not an error), even immediately ' +
         "after a successful login to the exact same page. See docs/quirks/26.1.json 'page-access-protection-blocks-bare-navigation'.",
     };
   }
-  return { mode: 'direct-url', reason: 'No confirmed-or-inferred-unsafe navigation condition detected for this page.' };
+  if (
+    page.pageAccessProtection === 'unrestricted' ||
+    page.pageAccessProtection === 'noArgumentsSupported' ||
+    (page.pageAccessProtection === 'argumentsMustHaveChecksum' && page.isPublic)
+  ) {
+    return {
+      mode: 'direct-url',
+      restriction: 'none',
+      reason:
+        page.pageAccessProtection === 'noArgumentsSupported'
+          ? 'Direct navigation is allowed only without URL arguments; apexPageUrl() emits no arguments.'
+          : 'No confirmed-or-inferred-unsafe navigation condition detected for this page.',
+    };
+  }
+  return {
+    mode: 'ui-navigation',
+    restriction: 'unknown',
+    reason: `Unknown pageAccessProtection value '${page.pageAccessProtection}'; refusing to assume direct URL access is safe.`,
+  };
 }
 
 /**
@@ -125,9 +153,15 @@ export async function navigateViaUiPath(page: Page, steps: readonly string[]): P
  */
 export async function gotoApexPageAuto(page: Page, url: string, safety: NavigationSafetyAssessment): Promise<string[]> {
   if (safety.mode === 'ui-navigation') {
+    const alternative =
+      safety.restriction === 'no-url-access'
+        ? 'Use a live-verified submit or branch action that does not request the target through a URL.'
+        : safety.restriction === 'checksum'
+          ? 'Use navigateViaUiPath() with a real, hand-verified link path so APEX supplies the checksum.'
+          : 'Use a live-verified in-app navigation mechanism appropriate to the protection mode.';
     throw new Error(
-      `gotoApexPageAuto(): bare navigation to '${url}' is NOT safe -- ${safety.reason} Use navigateViaUiPath() ` +
-        'with a real, hand-verified click path instead. Auto-deriving that path from the Flow Map is a scoped-out ' +
+      `gotoApexPageAuto(): bare navigation to '${url}' is NOT safe -- ${safety.reason} ${alternative} ` +
+        'Auto-deriving a path from the Flow Map is a scoped-out ' +
         'follow-up, not implemented here (see docs/ecosystem-roadmap.md).',
     );
   }

@@ -37,8 +37,7 @@
  */
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { parseApp, type ApexButton, type ApexRegion } from '@apx/parser';
-import { loadExport } from './lib.js';
+import { loadApexlangExport, parseApp, type ApexButton, type ApexRegion } from '@apx/parser';
 
 interface RawTouch {
   kind: 'item' | 'region' | 'button';
@@ -226,7 +225,7 @@ function mergeRegionCoverage(into: RegionCoverage, from: RegionCoverage): void {
 }
 
 export function computeCoverage(exportDir: string, touchLogPath: string): CoverageReport {
-  const result = parseApp(loadExport(resolve(exportDir)));
+  const result = parseApp(loadApexlangExport(resolve(exportDir)));
   const touches = readTouches(touchLogPath);
 
   const scopedTouches: ScopedTouches = {

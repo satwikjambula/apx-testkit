@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ComponentDiff, DiffReport, PageDiff } from '../src/diff.js';
-import { describeComponentChange, formatDiffHuman, formatPageHuman } from '../src/diff.js';
+import { describeComponentChange, formatDiffHuman, formatDiffStructured, formatPageHuman } from '../src/diff.js';
 
 /**
  * Regression tests for the human-readable/prose formatter over an
@@ -154,6 +154,8 @@ describe('formatDiffHuman', () => {
   const baseReport: Omit<DiffReport, 'pages' | 'summary'> = {
     oldExportDir: '/old/export',
     newExportDir: '/new/export',
+    applicationChanges: [],
+    manifestChanges: [],
   };
 
   it('reports "no page changes" when the report has zero pages (identity diff)', () => {
@@ -182,5 +184,18 @@ describe('formatDiffHuman', () => {
     expect(lines).toContain(formatPageHuman(changed));
     expect(lines).toContain(formatPageHuman(added));
     expect(lines[lines.length - 1]).toBe('Summary: 1 added, 0 removed, 1 changed, 2 unchanged');
+  });
+
+  it('renders app-only and manifest-only changes in structured output', () => {
+    const report: DiffReport = {
+      ...baseReport,
+      applicationChanges: ['runtime.friendlyUrls: true -> false'],
+      manifestChanges: ['mmdVersion: "26.1.0" -> "26.1.1"'],
+      pages: [],
+      summary: { pagesAdded: 0, pagesRemoved: 0, pagesChanged: 0, pagesUnchanged: 4 },
+    };
+    const text = formatDiffStructured(report);
+    expect(text).toContain('~ application: runtime.friendlyUrls: true -> false');
+    expect(text).toContain('~ manifest: mmdVersion: "26.1.0" -> "26.1.1"');
   });
 });

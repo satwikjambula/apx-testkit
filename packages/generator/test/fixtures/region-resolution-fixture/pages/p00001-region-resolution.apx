@@ -1,8 +1,10 @@
 page 1 (
+  page: 1
   name: Region Resolution
   alias: REGION-RESOLUTION
   title: Region Resolution
   security {
+    pageAccessProtection: unrestricted
     authentication: public
   }
   region projects (
