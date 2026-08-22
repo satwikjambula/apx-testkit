@@ -138,8 +138,9 @@ pass — flagging them here is explicitly not the same as adopting them.
   and starts a `oracle/apis/` directory next to the JSON file that
   already does this job.
 - **§60 — `npm run verify` as one canonical command — IMPLEMENTED.** It
-  runs build, typecheck, all workspace tests, lint, registry validation,
-  support-matrix drift detection, and packed-package contract checks.
+  runs build, workspace and `spike/` typechecks, all workspace tests, lint,
+  registry validation, support-matrix drift detection, and packed-package
+  contract checks.
   Live-instance/corpus checks remain separately gated because those inputs
   are intentionally not committed or universally available in CI.
 

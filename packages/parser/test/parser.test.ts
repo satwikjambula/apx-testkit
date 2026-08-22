@@ -73,6 +73,43 @@ describe('lossless handling of unrecognized top-level input', () => {
   });
 });
 
+describe('semantic identity validation', () => {
+  it('rejects duplicate page ids before downstream generators can overwrite files', () => {
+    expect(() =>
+      parseApp({
+        'pages/first.apx': 'page first (\n page: 1\n alias: FIRST\n)\n',
+        'pages/second.apx': 'page second (\n page: 1\n alias: SECOND\n)\n',
+      }),
+    ).toThrow(/pages\/second\.apx:1: duplicate page id 1.*pages\/first\.apx:1/);
+  });
+
+  it('rejects duplicate page-scoped component identifiers before Map projection loses one', () => {
+    expect(() =>
+      parseApp({
+        'pages/duplicate-region.apx': `page duplicate-region (
+  page: 1
+  alias: DUPLICATE-REGION
+  region results (
+    type: cards
+  )
+  region results (
+    type: interactiveReport
+  )
+)`,
+      }),
+    ).toThrow(/duplicate page 1 region identifier 'results'/);
+  });
+
+  it('rejects multiple application roots instead of silently keeping the last one', () => {
+    expect(() =>
+      parseApp({
+        'application.apx': 'app first (\n runtime {\n  friendlyUrls: true\n }\n)\n',
+        'other-application.apx': 'app second (\n runtime {\n  friendlyUrls: true\n }\n)\n',
+      }),
+    ).toThrow(/duplicate app component/);
+  });
+});
+
 describe('quoted multi-word component identifiers (Interactive Grid row-selector column)', () => {
   // Reproduces a real bug found via Oracle's "Sample Interactive Grids" gallery
   // app: `column "Row Header" (` -- a quoted, space-containing identifier --

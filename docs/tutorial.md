@@ -516,15 +516,12 @@ await facets.clearFacets();
 await facets.apply();
 await facets.enable();
 await facets.disable();
-
-// Per-facet methods: parameter shape (facetId: string) is INFERRED by
-// naming convention, not directly exercised live -- verify against your
-// own app before trusting these:
-await facets.getFacetCount('some-facet-id');
-await facets.getFacetValueCounts('some-facet-id');
-await facets.showFacet('some-facet-id');
-await facets.hideFacet('some-facet-id');
 ```
+
+The widget also contains per-facet methods named `getFacetCount`,
+`getFacetValueCounts`, `showFacet`, and `hideFacet`, but their parameter
+contract has not been exercised live. They are therefore recorded as an
+open verification item and excluded from the public wrapper.
 
 ### 2.6 Interactive Report
 

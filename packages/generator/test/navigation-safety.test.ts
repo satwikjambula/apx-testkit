@@ -108,10 +108,34 @@ describe('isNavigationUnsafe (generator) stays in sync with @apx/testkit assessN
 });
 
 describe('application URL mode', () => {
+  it('fails on structural parser errors before changing the output directory', () => {
+    const exportDir = mkdtempSync(join(tmpdir(), 'apx-structural-error-export-'));
+    const outDir = mkdtempSync(join(tmpdir(), 'apx-structural-error-out-'));
+    try {
+      mkdirSync(join(exportDir, '.apex'));
+      writeFileSync(join(exportDir, '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '26.1.0-test' }));
+      mkdirSync(join(exportDir, 'pages'));
+      writeFileSync(
+        join(exportDir, 'pages', 'p00001-truncated.apx'),
+        'page truncated (\n page: 1\n alias: TRUNCATED\n region results (\n  type: cards\n',
+      );
+      const sentinel = join(outDir, 'p99999-existing.spec.ts');
+      writeFileSync(sentinel, '// must survive failed generation\n');
+
+      expect(() => generate(exportDir, outDir)).toThrow(/refusing to generate.*Unterminated block 'region'/s);
+      expect(readFileSync(sentinel, 'utf8')).toBe('// must survive failed generation\n');
+    } finally {
+      rmSync(exportDir, { recursive: true, force: true });
+      rmSync(outDir, { recursive: true, force: true });
+    }
+  });
+
   it('fails generation before writing output when friendly URLs are disabled', () => {
     const exportDir = mkdtempSync(join(tmpdir(), 'apx-friendly-false-export-'));
     const outDir = mkdtempSync(join(tmpdir(), 'apx-friendly-false-out-'));
     try {
+      mkdirSync(join(exportDir, '.apex'));
+      writeFileSync(join(exportDir, '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '26.1.0-test' }));
       mkdirSync(join(exportDir, 'pages'));
       writeFileSync(
         join(exportDir, 'application.apx'),
@@ -129,6 +153,8 @@ describe('application URL mode', () => {
     const exportDir = mkdtempSync(join(tmpdir(), 'apx-escaped-export-'));
     const outDir = mkdtempSync(join(tmpdir(), 'apx-escaped-out-'));
     try {
+      mkdirSync(join(exportDir, '.apex'));
+      writeFileSync(join(exportDir, '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '26.1.0-test' }));
       writeFileSync(
         join(exportDir, 'application.apx'),
         'app test (\n runtime {\n  friendlyUrls: true\n  compatibilityMode: "26.1"\n }\n)\n',

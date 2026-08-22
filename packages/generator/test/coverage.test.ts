@@ -189,10 +189,16 @@ describe('summarizeButtons', () => {
 });
 
 describe('computeCoverage touch identity validation', () => {
+  function writeTestManifest(dir: string): void {
+    mkdirSync(join(dir, '.apex'));
+    writeFileSync(join(dir, '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '26.1.0-test' }));
+  }
+
   function withTwoPageExport(run: (exportDir: string, logPath: string) => void): void {
     const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-scoping-'));
     const pages = join(dir, 'pages');
     const log = join(dir, 'touches.jsonl');
+    writeTestManifest(dir);
     mkdirSync(pages);
     writeFileSync(join(pages, 'p00001-one.apx'), 'page 1 (\n page: 1\n name: One\n alias: ONE\n region shared (\n  type: cards\n )\n)\n');
     writeFileSync(join(pages, 'p00002-two.apx'), 'page 2 (\n page: 2\n name: Two\n alias: TWO\n region shared (\n  type: cards\n )\n)\n');
@@ -224,6 +230,7 @@ describe('computeCoverage touch identity validation', () => {
     const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-button-scoping-'));
     const pages = join(dir, 'pages');
     const log = join(dir, 'touches.jsonl');
+    writeTestManifest(dir);
     mkdirSync(pages);
     writeFileSync(
       join(pages, 'p00001-one.apx'),
@@ -246,6 +253,7 @@ describe('computeCoverage touch identity validation', () => {
     const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-region-alias-'));
     const pages = join(dir, 'pages');
     const log = join(dir, 'touches.jsonl');
+    writeTestManifest(dir);
     mkdirSync(pages);
     writeFileSync(
       join(pages, 'p00001-one.apx'),
@@ -264,6 +272,7 @@ describe('computeCoverage touch identity validation', () => {
     const dir = mkdtempSync(join(tmpdir(), 'apx-coverage-region-override-'));
     const pages = join(dir, 'pages');
     const log = join(dir, 'touches.jsonl');
+    writeTestManifest(dir);
     mkdirSync(pages);
     writeFileSync(
       join(pages, 'p00030-grid.apx'),

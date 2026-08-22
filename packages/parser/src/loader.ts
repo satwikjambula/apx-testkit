@@ -12,6 +12,12 @@ export interface LoadedApexlangExport {
 
 export interface LoadApexlangExportOptions {
   unsupportedVersion?: 'error' | 'warn';
+  /**
+   * Permit a directory without `.apex/apexlang.json`. Intended only for
+   * deliberately partial/synthetic inputs whose APEX version is established
+   * by the caller. Full-export consumers should retain the fail-closed default.
+   */
+  allowMissingManifest?: boolean;
 }
 
 function relativePath(root: string, path: string): string {
@@ -72,6 +78,12 @@ export function loadApexlangExport(
       `.apex/apexlang.json declares mmdVersion '${manifest.mmdVersion}', but this parser is verified only for APEX 26.1 exports.`;
     if ((options.unsupportedVersion ?? 'error') === 'error') throw new Error(message);
     warnings.push(message);
+  }
+  if (!manifest && !options.allowMissingManifest) {
+    throw new Error(
+      ".apex/apexlang.json is missing; cannot verify that this is an APEX 26.1 export. " +
+        'Pass { allowMissingManifest: true } only for an intentionally partial or synthetic input.',
+    );
   }
 
   return { manifest, sources, metadata, warnings };

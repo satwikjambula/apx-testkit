@@ -280,7 +280,12 @@ describe('invalid export path handling', () => {
 
   it('a malformed-but-present export (garbage .apx content) does not error -- @apx/parser is warning-based', async () => {
     const malformedDir = join(tmpDir, 'malformed-export');
+    mkdirSync(join(malformedDir, '.apex'), { recursive: true });
     mkdirSync(join(malformedDir, 'pages'), { recursive: true });
+    writeFileSync(
+      join(malformedDir, '.apex', 'apexlang.json'),
+      JSON.stringify({ mmdVersion: '26.1.0-test' }),
+    );
     writeFileSync(join(malformedDir, 'pages', 'p00001-garbage.apx'), 'this is not valid apexlang at all {{{ garbage');
 
     const r = await callTool('generate_flow_map', { exportDir: malformedDir });

@@ -30,7 +30,12 @@ import type {
 } from './ast.js';
 import type { LoadedApexlangExport } from './loader.js';
 
-export interface ParseIssue { message: string; loc: Loc; }
+export interface ParseIssue {
+  message: string;
+  loc: Loc;
+  /** Structural errors make typed projection unsafe; warnings remain losslessly preserved. */
+  severity: 'warning' | 'error';
+}
 export interface ParseResult {
   ast: ApexAppAst;
   tree: ComponentNode[];
@@ -86,7 +91,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
     try {
       return JSON.parse(tok) as string;
     } catch {
-      warnings.push({ message: `Invalid quoted string: ${tok.slice(0, 70)}`, loc: loc() });
+      warnings.push({ message: `Invalid quoted string: ${tok.slice(0, 70)}`, loc: loc(), severity: 'error' });
       return tok;
     }
   }
@@ -176,7 +181,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
       const end = closingBracket(text);
       if (end >= 0) return arrayTokens(text.slice(0, end)).map(scalar);
       if (i >= lines.length) {
-        warnings.push({ message: 'Unterminated array', loc: loc() });
+        warnings.push({ message: 'Unterminated array', loc: loc(), severity: 'error' });
         return arrayTokens(text).map(scalar);
       }
       text += `\n${lines[i]}`;
@@ -207,7 +212,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
         };
       }
     }
-    warnings.push({ message: 'Unterminated block comment', loc: { file, line: start + 1 } });
+    warnings.push({ message: 'Unterminated block comment', loc: { file, line: start + 1 }, severity: 'error' });
     return {
       type: '#comment', identifier: null, props: { text: commentLines.join('\n') }, children: [], loc: { file, line: start + 1 },
     };
@@ -231,7 +236,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
       j++;
     }
     if (j >= lines.length) {
-      warnings.push({ message: 'Unterminated code fence', loc: { file, line: i + 1 } });
+      warnings.push({ message: 'Unterminated code fence', loc: { file, line: i + 1 }, severity: 'error' });
     }
     i = Math.min(j + 1, lines.length);
     return { lang: lang as RawValue, code: body.join('\n') };
@@ -290,13 +295,13 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
         continue;
       }
 
-      warnings.push({ message: `Unrecognized line: "${line.slice(0, 70)}"`, loc: loc() });
+      warnings.push({ message: `Unrecognized line: "${line.slice(0, 70)}"`, loc: loc(), severity: 'warning' });
       const bucket = (node.props['#unparsed'] as RawValue[] | undefined) ?? [];
       bucket.push(line);
       node.props['#unparsed'] = bucket;
       i++;
     }
-    warnings.push({ message: `Unterminated block '${node.type}'`, loc: loc() });
+    warnings.push({ message: `Unterminated block '${node.type}'`, loc: loc(), severity: 'error' });
   }
 
   const roots: ComponentNode[] = [];
@@ -314,7 +319,7 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
       parseBody(root, ')', '');
       roots.push(root);
     } else {
-      warnings.push({ message: `Unrecognized top-level line: "${line.slice(0, 70)}"`, loc: loc() });
+      warnings.push({ message: `Unrecognized top-level line: "${line.slice(0, 70)}"`, loc: loc(), severity: 'warning' });
       roots.push({
         type: '#unparsed',
         identifier: null,
@@ -627,8 +632,37 @@ export function projectPages(roots: ComponentNode[]): {
   const pages: ApexPage[] = [];
   const unmodeled = new Set<string>();
   let application: ApexAppAst['application'] = null;
+  const pageIds = new Map<number, Loc>();
+
+  function assertUniqueIdentifiers(
+    scope: string,
+    components: readonly { identifier: string | null; loc: Loc }[],
+  ): void {
+    const seen = new Map<string, Loc>();
+    for (const component of components) {
+      // Anonymous is the projection fallback for constructs whose source did
+      // not contain an identifier. Do not turn multiple independently
+      // diagnosable missing identifiers into a misleading duplicate error.
+      if (component.identifier === null || component.identifier === '(anonymous)') continue;
+      const first = seen.get(component.identifier);
+      if (first) {
+        throw new Error(
+          `${component.loc.file}:${component.loc.line}: duplicate ${scope} identifier ` +
+            `'${component.identifier}' (first declared at ${first.file}:${first.line}).`,
+        );
+      }
+      seen.set(component.identifier, component.loc);
+    }
+  }
+
   for (const n of roots) {
     if (n.type === 'app') {
+      if (application) {
+        throw new Error(
+          `${n.loc.file}:${n.loc.line}: duplicate app component ` +
+            `(first declared at ${application.loc.file}:${application.loc.line}).`,
+        );
+      }
       // `runtime { }` is one of many OPTIONAL group blocks under `app` in
       // the EBNF (siblings: javaScript, css, authentication, ...) -- not
       // every real export declares it. Confirmed absent entirely in
@@ -676,6 +710,14 @@ export function projectPages(roots: ComponentNode[]): {
     if (pageId === null || !Number.isInteger(pageId) || pageId < 0) {
       throw new Error(`${n.loc.file}:${n.loc.line}: page '${n.identifier ?? '(anonymous)'}' has no derivable page number -- its component-id is not a plain non-negative integer, and no interior 'page:' property provides one either.`);
     }
+    const firstPage = pageIds.get(pageId);
+    if (firstPage) {
+      throw new Error(
+        `${n.loc.file}:${n.loc.line}: duplicate page id ${pageId} ` +
+          `(first declared at ${firstPage.file}:${firstPage.line}).`,
+      );
+    }
+    pageIds.set(pageId, n.loc);
 
     const regionNodes = n.children.filter((c) => c.type === 'region');
     const regions: ApexRegion[] = regionNodes.map((r) => {
@@ -774,6 +816,22 @@ export function projectPages(roots: ComponentNode[]): {
       }
     }
 
+    assertUniqueIdentifiers(`page ${pageId} region`, regions);
+    assertUniqueIdentifiers(`page ${pageId} item`, items);
+    assertUniqueIdentifiers(`page ${pageId} button`, buttons);
+    assertUniqueIdentifiers(`page ${pageId} dynamic action`, dynamicActions);
+    for (const dynamicAction of dynamicActions) {
+      assertUniqueIdentifiers(`dynamic action '${dynamicAction.identifier}' action`, dynamicAction.actions);
+    }
+    assertUniqueIdentifiers(`page ${pageId} branch`, branches);
+    assertUniqueIdentifiers(`page ${pageId} validation`, validations);
+    assertUniqueIdentifiers(`page ${pageId} process`, processes);
+    assertUniqueIdentifiers(`page ${pageId} computation`, computations);
+    for (const region of regions) {
+      assertUniqueIdentifiers(`region '${region.identifier}' column`, region.columns);
+      assertUniqueIdentifiers(`region '${region.identifier}' action`, region.actions);
+    }
+
     pages.push({
       identifier: n.identifier,
       id: pageId,
@@ -799,6 +857,7 @@ export function parseApp(input: Record<string, string> | LoadedApexlangExport): 
   const warnings: ParseIssue[] = (loaded?.warnings ?? []).map((message) => ({
     message,
     loc: { file: '.apex/apexlang.json', line: 1 },
+    severity: 'warning',
   }));
   const tree: ComponentNode[] = [];
   const sourceFiles: string[] = [];

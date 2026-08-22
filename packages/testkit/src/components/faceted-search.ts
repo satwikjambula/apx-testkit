@@ -17,11 +17,11 @@
  * was a stopgap. See fixtures/lifecycle.ts for how the event wait works and
  * why it must use apex.jQuery, not a native addEventListener.
  *
- * getFacetCount/getFacetValueCounts/showFacet/hideFacet are typed here as
- * taking a facetId: string by naming convention -- that parameter shape is
- * INFERRED, not directly exercised live. Verify against your own app before
- * trusting the per-facet methods; getTotalResourceCount (after
- * fetchCountsAndWait())/clear/apply are the higher-confidence entry points.
+ * Per-facet methods observed on the widget (`getFacetCount`,
+ * `getFacetValueCounts`, `showFacet`, `hideFacet`) are deliberately NOT
+ * exposed: their `facetId` parameter contract has not been exercised live.
+ * They can join this class only after live verification and evidence-registry
+ * updates, like every other public runtime wrapper.
  */
 import type { Page } from '@playwright/test';
 import type { RegionCoverageIdentity } from '../fixtures/coverage.js';
@@ -68,31 +68,11 @@ export class ApexFacetsRegion {
   /**
    * Preferred over bare `fetchCounts()` -- waits for the verified
    * `apexafterrefresh` event on this region before resolving, so
-   * `getTotalResourceCount()`/`getFacetCount()` are safe to call
+   * `getTotalResourceCount()` is safe to call
    * immediately after this resolves, no polling required.
    */
   fetchCountsAndWait(timeoutMs = 10_000): Promise<void> {
     return fetchFacetCountsAndWait(this.page, this.id, timeoutMs, this.coverageIdentity);
-  }
-
-  /** Parameter shape inferred (facetId), not directly exercised live -- see module doc. */
-  getFacetCount(facetId: string): Promise<number> {
-    return this.invoke('getFacetCount', facetId);
-  }
-
-  /** Parameter shape inferred (facetId), not directly exercised live -- see module doc. */
-  getFacetValueCounts(facetId: string): Promise<unknown> {
-    return this.invoke('getFacetValueCounts', facetId);
-  }
-
-  /** Parameter shape inferred (facetId), not directly exercised live -- see module doc. */
-  showFacet(facetId: string): Promise<void> {
-    return this.invoke('showFacet', facetId);
-  }
-
-  /** Parameter shape inferred (facetId), not directly exercised live -- see module doc. */
-  hideFacet(facetId: string): Promise<void> {
-    return this.invoke('hideFacet', facetId);
   }
 
   clear(): Promise<void> {

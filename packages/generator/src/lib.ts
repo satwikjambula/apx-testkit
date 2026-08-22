@@ -467,6 +467,15 @@ export interface GenerateResult {
 
 export function generate(exportDir: string, outDir: string): GenerateResult {
   const result = parseApp(loadApexlangExport(resolve(exportDir)));
+  const structuralErrors = result.warnings.filter((issue) => issue.severity === 'error');
+  if (structuralErrors.length > 0) {
+    const details = structuralErrors
+      .map((issue) => `${issue.loc.file}:${issue.loc.line} ${issue.message}`)
+      .join('\n');
+    throw new Error(
+      `apx-testgen: refusing to generate from structurally invalid APEXlang input; no output was changed:\n${details}`,
+    );
+  }
   if (result.ast.application?.runtime.friendlyUrls === false) {
     throw new Error(
       'apx-testgen: application.apx declares runtime.friendlyUrls: false. Legacy f?p URL generation is not yet ' +

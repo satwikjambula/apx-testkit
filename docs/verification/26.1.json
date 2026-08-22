@@ -684,14 +684,14 @@
       "applications": [],
       "runs": null,
       "confidence": "low",
-      "publicApi": null,
+      "publicApi": false,
       "runtimeStrategy": "direct-method",
       "evidenceSource": "none",
       "ebnfProduction": null,
-      "citation": "packages/testkit/src/components/faceted-search.ts#L79-L97",
+      "citation": "packages/testkit/src/components/faceted-search.ts#L20-L24",
       "lastVerified": "2026-07-24",
       "correctedFrom": null,
-      "notes": "Typed as taking a facetId: string by naming convention -- this parameter shape is INFERRED, not directly exercised live. Verify against a real app before trusting these four methods specifically.",
+      "notes": "The facetId: string parameter shape is INFERRED, not directly exercised live. These four methods are deliberately excluded from the public wrapper until a real APEX 26.1 app verifies their invocation and result contracts.",
       "supportMatrixRow": null
     },
     {

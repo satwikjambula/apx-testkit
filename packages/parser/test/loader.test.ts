@@ -43,13 +43,26 @@ describe('loadApexlangExport', () => {
     }
   });
 
+  it('rejects a missing manifest by default and permits an explicit partial-input opt-out', () => {
+    const root = mkdtempSync(join(tmpdir(), 'apx-loader-no-manifest-'));
+    try {
+      writeFileSync(join(root, 'page.apx'), '// synthetic partial source');
+      expect(() => loadApexlangExport(root)).toThrow(/cannot verify that this is an APEX 26\.1 export/);
+      const partial = loadApexlangExport(root, { allowMissingManifest: true });
+      expect(partial.manifest).toBeNull();
+      expect(Object.keys(partial.sources)).toEqual(['page.apx']);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
   it('uses locale-independent code-unit ordering for source paths', () => {
     const root = mkdtempSync(join(tmpdir(), 'apx-loader-order-'));
     try {
       writeFileSync(join(root, 'z.apx'), '// z');
       writeFileSync(join(root, 'B.apx'), '// B');
       writeFileSync(join(root, 'a.apx'), '// a');
-      expect(Object.keys(loadApexlangExport(root).sources)).toEqual(['B.apx', 'a.apx', 'z.apx']);
+      expect(Object.keys(loadApexlangExport(root, { allowMissingManifest: true }).sources)).toEqual(['B.apx', 'a.apx', 'z.apx']);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -62,8 +75,8 @@ describe('loadApexlangExport', () => {
       writeFileSync(join(root, 'page.apx'), '// source');
       writeFileSync(irrelevant, Buffer.from([0, 255, 0, 255]));
       if (process.platform !== 'win32') chmodSync(irrelevant, 0o000);
-      expect(() => loadApexlangExport(root)).not.toThrow();
-      expect(Object.keys(loadApexlangExport(root).sources)).toEqual(['page.apx']);
+      expect(() => loadApexlangExport(root, { allowMissingManifest: true })).not.toThrow();
+      expect(Object.keys(loadApexlangExport(root, { allowMissingManifest: true }).sources)).toEqual(['page.apx']);
     } finally {
       if (process.platform !== 'win32') chmodSync(irrelevant, 0o600);
       rmSync(root, { recursive: true, force: true });

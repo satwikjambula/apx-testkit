@@ -9,7 +9,7 @@ The full verification pass. Run this before every commit that touches
       errors.
 - [ ] `npm test --if-present` — full `vitest` suite across workspaces,
       all green.
-- [ ] `cd spike && npx tsc --noEmit` — the spike directory typechecks
+- [ ] `npm run typecheck:spike` — the spike directory typechecks
       against the freshly built `@apx/testkit` types.
 - [ ] Regenerate `packages/generator/test/fixtures/reference-fixtures`
       and diff against the committed `examples/employee-page` output —
