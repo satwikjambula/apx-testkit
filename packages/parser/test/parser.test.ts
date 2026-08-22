@@ -1043,13 +1043,23 @@ describe('Oracle-documented page identity and lexical values', () => {
     });
   });
 
-  it('rejects an app whose required friendlyUrls property is missing or not boolean', () => {
-    expect(() => parseApp({
+  it('represents friendlyUrls as null (unknown), never a guessed boolean, when the runtime group is absent or malformed', () => {
+    // `runtime { }` is one of many OPTIONAL group blocks under `app` in the
+    // EBNF (siblings: javaScript, css, authentication, ...) -- confirmed
+    // real: oracle/apex's own 26.1 sample-reporting app export has no
+    // `runtime { }` block at all (GitHub issue #21's reported app). This
+    // must NOT throw; friendlyUrls must NOT be silently coerced to a
+    // boolean either. See docs/grammar-assumptions.md
+    // `app-runtime-group-is-optional`.
+    expect(parseApp({
+      'application.apx': 'app example (\n  name: Example\n  alias: EXAMPLE\n)',
+    }).ast.application).toMatchObject({ runtime: { friendlyUrls: null } });
+    expect(parseApp({
       'application.apx': 'app example (\n  runtime {\n    compatibilityMode: "26.1"\n  }\n)',
-    })).toThrow(/required boolean 'runtime\.friendlyUrls'/);
-    expect(() => parseApp({
+    }).ast.application).toMatchObject({ runtime: { friendlyUrls: null, compatibilityMode: '26.1' } });
+    expect(parseApp({
       'application.apx': 'app example (\n  runtime {\n    friendlyUrls: "false"\n    compatibilityMode: "26.1"\n  }\n)',
-    })).toThrow(/required boolean 'runtime\.friendlyUrls'/);
+    }).ast.application).toMatchObject({ runtime: { friendlyUrls: null } });
   });
 
   it('uses the required page property rather than the component identifier', () => {
@@ -1077,9 +1087,30 @@ describe('Oracle-documented page identity and lexical values', () => {
     expect(result.ast.pages[0].raw['P#EDIT"PAGE#_ID']).toBe('value');
   });
 
-  it('rejects a missing or invalid page property', () => {
-    expect(() => parseApp({ 'missing.apx': 'page example (\n  name: Example\n)' })).toThrow(/missing a valid integer 'page:' property/);
-    expect(() => parseApp({ 'invalid.apx': 'page example (\n  page: nope\n  name: Example\n)' })).toThrow(/missing a valid integer 'page:' property/);
+  it('rejects a page with no derivable page number', () => {
+    expect(() => parseApp({ 'missing.apx': 'page example (\n  name: Example\n)' })).toThrow(/no derivable page number/);
+    expect(() => parseApp({ 'invalid.apx': 'page example (\n  page: nope\n  name: Example\n)' })).toThrow(/no derivable page number/);
+  });
+
+  it('rejects a page whose component-id contradicts its interior page: property', () => {
+    expect(() => parseApp({ 'contradiction.apx': 'page 1 (\n  page: 2\n  name: Example\n)' }))
+      .toThrow(/component-id \(1\) contradicts its interior 'page:' property \(2\)/);
+  });
+
+  it('derives the page number from the component-id alone, matching real Oracle-generated exports', () => {
+    // Real Oracle SQLcl/APEX exports never include an interior `page: N`
+    // property -- confirmed against oracle/apex's own 26.1 sample-reporting
+    // app (pages/p00001-interactive-report.apx opens `page 1 (` directly
+    // followed by `name: ...`, no interior `page:` line). See
+    // docs/quirks/26.1.json `page-number-not-required-property`.
+    const result = parseApp({
+      'p00001-interactive-report.apx': `page 1 (
+    name: Interactive Report
+    alias: INTERACTIVE-REPORT
+    title: Interactive Report
+)`,
+    });
+    expect(result.ast.pages[0]).toMatchObject({ identifier: '1', id: 1, alias: 'INTERACTIVE-REPORT' });
   });
 
   it('decodes quoted scalars and keeps whitespace inside quoted array values', () => {

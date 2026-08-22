@@ -61,7 +61,14 @@ export interface ApexApplication {
   version: string | null;
   type: string | null;
   runtime: {
-    friendlyUrls: boolean;
+    /** `null` when the app's `runtime { }` group is absent entirely --
+     * confirmed real: the EBNF lists `runtime` as one of many OPTIONAL
+     * group blocks under `app` (siblings: `javaScript`, `css`,
+     * `authentication`, ...), and oracle/apex's own 26.1 `sample-reporting`
+     * app export has no `runtime { }` block at all. `null` means "not
+     * declared," not "false" -- do not treat it as a legacy-URL signal.
+     * See docs/grammar-assumptions.md `app-runtime-group-is-optional`. */
+    friendlyUrls: boolean | null;
     compatibilityMode: string | null;
   };
   loc: Loc;
@@ -69,8 +76,14 @@ export interface ApexApplication {
 }
 
 export interface ApexPage {
-  /** Permanent APEXlang component identifier; distinct from the numeric page property. */
+  /** The `page <N> (` opening-line component-id. For pages specifically
+   * this IS the page's own numeric page number as a string (e.g. `page 1 (`
+   * -> "1"), confirmed against real Oracle-generated exports -- NOT a
+   * separate developer-facing name (that's `alias` below). `id` is derived
+   * from this field; see its own doc comment and docs/quirks/26.1.json
+   * `page-number-not-required-property`. */
   identifier: string | null;
+  /** The page number, as `Number(identifier)`. */
   id: number;
   alias: string | null;
   name: string | null;

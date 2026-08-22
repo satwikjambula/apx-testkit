@@ -49,6 +49,54 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       zero warnings, the correct unquoted identifier, the region's type
       surviving uncorrupted, and the trailing button not being orphaned) —
       confirmed the test fails all four ways on the pre-fix regex.
+- [x] **`page`'s component-id IS its own page number; the interior `page: N`
+      property the EBNF marks "required" is NOT present in real exports.**
+      `<page-direct-property> ::= "page" ":" <ws> <number> (* required *)` in
+      Oracle's own published EBNF — but oracle/apex's 26.1
+      `sample-reporting` app (`pages/p00001-interactive-report.apx`, fetched
+      directly from GitHub) opens `page 1 (` followed immediately by
+      `name: Interactive Report`, no interior `page:` line anywhere in the
+      895-line file except two unrelated `target: { page: N }` branch/link
+      redirect targets (lines 101, 858). Confirmed independently by a real
+      user's SQLcl 26.2.1 export failing for the same reason (GitHub issue
+      #21) — this project's own parser previously threw
+      `page 'N' is missing a valid integer 'page:' property` on every page of
+      every real export, because `projectPages()` only ever read the
+      interior property and never the component-id already captured as
+      `ComponentNode.identifier`. Fixed: the page number is now derived from
+      the component-id (parsed as a plain non-negative integer) first, with
+      the interior property — when present, as in this project's own
+      hand-written fixtures, which redundantly set both — used only as a
+      consistency cross-check (a mismatch between the two throws loudly,
+      never silently resolved one way). EBNF-vs-reality discrepancy, real
+      data wins per this file's own precedent (see the `calendarSettings`
+      entry below) — not filed as a `docs/quirks/26.1.json` entry because
+      that ledger is explicitly scoped to live-instance findings; this is a
+      static-export/parser finding instead.
+- [x] **`app-runtime-group-is-optional`: the app-level `runtime { }` group
+      (and the `friendlyUrls` property inside it) may be entirely absent
+      from a real export.** The EBNF lists `<app-runtime>` as one of ~20
+      OPTIONAL sibling group blocks under `<app>` (`javaScript`, `css`,
+      `authentication`, `security`, ... — clearly not all always present),
+      and marks `friendlyUrls` "required" only WITHIN that group, the same
+      shape as the page-number finding above. Confirmed real: oracle/apex's
+      26.1 `sample-reporting` app export (the exact app in GitHub issue
+      #21) has no `runtime { }` block anywhere in its `application.apx`.
+      This project's own parser previously hard-threw
+      `app '...' is missing required boolean 'runtime.friendlyUrls'` on
+      every app missing the group — meaning the SAME real app that
+      triggered the page-number bug above would have failed a SECOND time,
+      immediately after the first fix, on the exact same reported issue.
+      Fixed: `ApexApplication.runtime.friendlyUrls` is now typed
+      `boolean | null` (`null` = not declared, never coerced to a guessed
+      boolean, per this project's own §22-style "unknown, don't guess"
+      discipline). Downstream consumers (`page-object.ts`'s URL
+      construction) already had a safe `?? true` fallback for a missing
+      `application` entirely; `null` flows through that same fallback
+      correctly with no further change needed. Verified end-to-end against
+      the complete real 42-page `sample-reporting` export, fetched fresh
+      from GitHub: `apx-testgen` now generates all 42 page objects + specs
+      with zero warnings, where it previously failed to parse at all.
 - [x] Global page 0 exists with no alias; page files p00000-... zero-padded 5.
 - [x] Package layout: application.apx, page-groups.apx, pages/, shared-
       components/ (with themes/ + static-files/ native assets), .apex/
