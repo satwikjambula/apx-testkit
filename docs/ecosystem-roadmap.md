@@ -2252,6 +2252,19 @@ can justify as its next move.
 
 ### CRUD-generation discovery pass, results (Runtime & Test Automation Engineer, 2026-08-01) — blocked, discovery only, generation deferred
 
+**UPDATE (2026-08-22):** the first of this section's two named blockers —
+no typed primary-key field, forcing an ad hoc raw-bag cross-reference
+between the process and region AST nodes — is now resolved.
+`ApexProcess.target` (`{ tableName, pkColumn, pkItem, returnKeyIntoItem }`)
+is a real typed field on `autoRowProcessing`/`formAutoRowProcessing`
+processes, confirmed against the exact `customers`-starter-app citation
+already on record below, with parser tests and `apx-diff` field coverage.
+The second blocker — a real, reachable, credentialed form-over-table page
+to actually observe a create → PK assigned → read-back round trip — is
+unchanged; CRUD generation itself remains not-yet-buildable until that
+access gap closes. See `docs/quirks/26.1.json`
+`crud-generation-discovery-pass-blocked` for the full updated record.
+
 Item 3 above (GitHub issue #5) was picked up as scoped: a live discovery
 pass confirming primary-key detection and a save/delete-button
 identification convention over a real form-over-table page, before any

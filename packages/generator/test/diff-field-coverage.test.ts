@@ -272,10 +272,11 @@ const validationFixture: ApexValidation = {
 const processFixture: ApexProcess = {
   identifier: 'proc1',
   name: 'My Process',
-  type: 'executeCode',
+  type: 'autoRowProcessing',
   sequence: 10,
   point: 'afterSubmit',
   condition: { whenButtonPressed: 'BTN1', type: 'expression', item: 'P1_ITEM', value: '1', plsqlExpression: '1=1' },
+  target: { tableName: 'EBA_CUST_CUSTOMERS', pkColumn: 'ID', pkItem: 'P2_ID', returnKeyIntoItem: 'P2_ID' },
   loc: LOC,
   raw: { 'some.rawKey': 'raw value' },
 };
