@@ -629,10 +629,14 @@ export function projectPages(roots: ComponentNode[]): {
   let application: ApexAppAst['application'] = null;
   for (const n of roots) {
     if (n.type === 'app') {
+      // `runtime { }` is one of many OPTIONAL group blocks under `app` in
+      // the EBNF (siblings: javaScript, css, authentication, ...) -- not
+      // every real export declares it. Confirmed absent entirely in
+      // oracle/apex's own 26.1 sample-reporting app. `friendlyUrls: null`
+      // means "not declared," never coerced to a guessed boolean -- see
+      // ApexApplication.runtime's doc comment and docs/grammar-assumptions.md
+      // `app-runtime-group-is-optional`.
       const friendlyUrls = bool(n.props['runtime.friendlyUrls']);
-      if (friendlyUrls === null) {
-        throw new Error(`${n.loc.file}:${n.loc.line}: app '${n.identifier ?? '(anonymous)'}' is missing required boolean 'runtime.friendlyUrls'.`);
-      }
       application = {
         identifier: n.identifier,
         name: str(n.props['name']),
@@ -651,9 +655,26 @@ export function projectPages(roots: ComponentNode[]): {
     if (n.type === '#comment') continue;
     if (n.type !== 'page') { unmodeled.add(n.type); continue; }
 
-    const pageId = num(n.props['page']);
+    // Page number derivation: `page <N> (` -- the component-id captured as
+    // `n.identifier` -- confirmed live to BE the page's own numeric page
+    // number (e.g. `page 1 (` -> identifier "1"). The official EBNF marks an
+    // interior `page: N` direct property "required", but real Oracle-generated
+    // exports never include it -- confirmed against oracle/apex's own 26.1
+    // sample-reporting app (`pages/p00001-interactive-report.apx`), which
+    // opens with `page 1 (` followed immediately by `name: ...`, no interior
+    // `page:` line anywhere in the file except unrelated branch/link redirect
+    // targets (`target: { page: N }`). See docs/quirks/26.1.json
+    // `page-number-not-required-property`. The interior property is used only
+    // as an optional consistency cross-check when present (this project's own
+    // hand-written fixtures redundantly set both).
+    const idFromComponentId = n.identifier !== null && /^\d+$/.test(n.identifier) ? Number(n.identifier) : null;
+    const idFromInteriorProp = num(n.props['page']);
+    if (idFromComponentId !== null && idFromInteriorProp !== null && idFromComponentId !== idFromInteriorProp) {
+      throw new Error(`${n.loc.file}:${n.loc.line}: page's component-id (${idFromComponentId}) contradicts its interior 'page:' property (${idFromInteriorProp}) -- these must agree.`);
+    }
+    const pageId = idFromComponentId ?? idFromInteriorProp;
     if (pageId === null || !Number.isInteger(pageId) || pageId < 0) {
-      throw new Error(`${n.loc.file}:${n.loc.line}: page '${n.identifier ?? '(anonymous)'}' is missing a valid integer 'page:' property.`);
+      throw new Error(`${n.loc.file}:${n.loc.line}: page '${n.identifier ?? '(anonymous)'}' has no derivable page number -- its component-id is not a plain non-negative integer, and no interior 'page:' property provides one either.`);
     }
 
     const regionNodes = n.children.filter((c) => c.type === 'region');
