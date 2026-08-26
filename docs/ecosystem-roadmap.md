@@ -3712,3 +3712,147 @@ remembering: it would make any eventual AI authoring layer's job both
 easier and more tightly constrained, since the layer would be
 interpreting pre-extracted deterministic candidates rather than reading
 raw AST/Flow Map data itself.
+
+## Seventeenth round (2026-08-26): `apx-onboard` orchestrator + `onboard_generated_apex_app` MCP tool — Product Architect verdict
+
+**Status: Deferred, not Rejected.** Same disposition shape as the
+Sixteenth round's Functional Scenario Authoring RFC, for a related but
+distinct reason. The premise this proposal rests on was independently
+fact-checked before reaching this review and holds up completely (Oracle's
+spec-driven-development blueprint workflow is real and shipped in 26.1;
+SQLcl's `apex generate`/`apex validate -input`/`apex export -exptype
+APEXLANG`/`apex import -input` are all real; the Generative-AI-Service
+Web-Credential-omission claim is accurate) — nothing here is a factual
+correction. This is a scope/timing verdict, not a fact check.
+
+### 1. Real, validated user pain, or architecturally interesting ahead of need?
+
+Ahead of need, but for a narrower and cheaper-to-close reason than most
+prior rejections in this file. This project still has not hit its own M4
+milestone — no second real user (confirmed unchanged as of the Sixteenth
+round, 2026-08-14, and rechecked here: no evidence anything has changed).
+But the more specific gap is this: **nobody, including the maintainer, has
+yet run apx-testkit's existing tools by hand against a real AI-generated
+APEXlang export and reported what's actually tedious or missing.** Oracle's
+spec-driven blueprint doc was published 2026-07-28 — under a month before
+this proposal. The proposed onboarding report's contents (parser warnings;
+unmodeled AI-generated components; changed pages; unsafe or skipped
+assertions; generated files; live-verification requirements) are designed
+from reading Oracle's documentation and this project's own existing
+outputs, not from having actually produced one AI-generated app, exported
+it, and hit friction running the six existing tools against it in
+sequence. That is a materially different, and much cheaper, evidence gap
+to close than "wait for a second user" — it doesn't require an external
+customer, just one real walkthrough (see "What would change this verdict"
+below).
+
+### 2. Should the optional SQLcl `apex validate` step be scoped out of v1?
+
+Yes, unambiguously, and this was never really in question. `.ai/knowledge/
+constitution-reconciliation.md` §D (§18/§46) and §62's P1.13 already flag
+SQLcl integration as "not started — correctly flagged as needing its own
+proposal" — a new external dependency (SQLcl availability in CI/dev
+environments), not something that should ride into apx-onboard's v1 scope
+as an "optional" step just because the rest of the orchestrator is
+low-risk. If apx-onboard is ever built, the SQLcl step stays a separate,
+later, independently-evidenced proposal — not bundled in because it was
+convenient to describe in the same pipeline diagram.
+
+### 3. Is `apx-onboard` genuinely thin composition, or does it need new judgment?
+
+Checked directly against the real code, not taken on the maintainer's
+"most of this already exists" framing: **mostly genuine composition,
+closely matching the `apx-report` precedent** (Ninth round: pure bundling
+of already-computed coverage/diff/warning data, no new analysis, approved
+and shipped for exactly that reason). Confirmed in this repo:
+
+- Six MCP tools (`inspect_apex_export`, `generate_apex_tests`,
+  `generate_flow_map`, `diff_apex_exports`, `analyze_coverage`,
+  `generate_apex_docs`) already exist in `packages/mcp/src/server.ts`,
+  each a thin `registerTool` wrapper over an `@apx/testgen` function —
+  confirmed no LLM import anywhere in that file (the file's own doc
+  comment states this as a design invariant).
+- Six CLI binaries already exist in `packages/generator/package.json`'s
+  `bin` block: `apx-testgen`, `apx-coverage`, `apx-diff`, `apx-docs`,
+  `apx-flow`, `apx-report`.
+- The onboarding report's proposed sections are, with one exception,
+  already-computed data, not new heuristics: parser warnings is
+  `ParseResult.warnings` verbatim; "unmodeled AI-generated components" is
+  the generator's existing `unmodeled` list (CLAUDE.md debt #6); changed
+  pages is `apx-diff`'s existing `DiffReport`; generated files is already
+  derived from the shared `pageObjectFileName()`/`specFileName()` helpers
+  `apx-diff` itself reuses (Ninth round); "unsafe or skipped assertions"
+  has real, already-computed backing today
+  (`navigationUnsafeSkipReason()`, the `modalDialog` unroutable-page note,
+  `skippedRegions` — all in `packages/generator/src/lib.ts`, currently
+  surfaced only as comments inside generated spec files, not yet as
+  structured report data).
+
+The one exception is the SQLcl step (scoped out per Q2). Everything else
+is assembling outputs this project has already independently verified —
+genuinely low implementation risk, unlike Functional Scenario Authoring's
+new artifact type, new evidence-tiering scheme, and first-ever LLM
+dependency. But "low risk to build" is not the same as "known to be
+useful": nobody has assembled these specific fields into a report and
+had a real user read it. The design is plausible, not proven.
+
+### 4. Does a new MCP tool pull its weight?
+
+Not yet. A seventh MCP tool is premature surface area for a workflow that
+has never been exercised even once, manually. Any MCP-capable agent
+today can already dispatch the same six existing tools in sequence
+itself — composing multiple tool calls is exactly what agentic tool use
+already supports, and this project's own MCP server doc comment frames
+the agent's job as dispatching generation, not needing a bespoke
+meta-tool per workflow. A single new orchestration entry point earns its
+keep once the underlying sequence has been run for real and specifically
+shown to be tedious or error-prone to compose by hand or via existing
+tools — not before.
+
+### 5. Timing verdict
+
+**Deferred, not Rejected**, same framing this project used for the
+Sixteenth round's Functional Scenario Authoring RFC, and for the same
+reason that framing is accurate here: nothing about this proposal was
+found unsound. The maintainer's own stated boundaries (no APEXlang
+writer, no blueprint-to-test generation, no AI-response-text comparison
+in runtime tests, credentials stay external) are consistent with this
+project's existing philosophy and require no correction. What's missing
+is evidence the specific orchestration and report shape are what's
+actually needed, and that evidence is cheap to produce.
+
+**This does not proceed to a Software Architect pass right now.** Unlike
+the Sixteenth round (where the RFC's architecture was reviewed in
+parallel because the design itself needed correcting before any future
+build), there is no open architecture question here worth a dedicated
+pass yet — "does chaining six existing subsystems into one report need a
+new workspace" doesn't need answering until there's an actual proposal on
+the table with real evidence behind it. Revisit that question together
+with the revisit trigger below, not before.
+
+### What would change this verdict
+
+A concrete, cheap, and specific trigger, narrower than "wait for a second
+user": **run the existing pipeline by hand, once, for real.** Use Oracle
+APEX Assistant or the 26.1 spec-driven blueprint workflow to generate one
+real application, export it as APEXlang, and run apx-testkit's existing
+six tools/CLIs against it in the sequence this proposal describes
+(inspect → diff → flow map → docs → Playwright generation). If that
+walkthrough surfaces genuine friction — commands run in the wrong order,
+outputs that are awkward to cross-reference by hand, a report section
+that would have caught something a person missed — that's real evidence
+apx-onboard's specific shape is worth building, and exactly the kind of
+ground truth this project's whole evidence-over-assumption discipline
+already requires everywhere else (Chart and Calendar both waited for a
+live instance before runtime treatment; this is the same test applied to
+a workflow instead of a component). If the walkthrough instead shows the
+six existing tools already compose cleanly by hand or via an agent
+chaining six MCP calls, that's evidence *against* building a seventh tool,
+not a wasted exercise either way. Either outcome is useful; neither
+requires new code, an external customer, or the SQLcl dependency this
+review scoped out.
+
+Until that walkthrough happens, `apx-onboard` and `onboard_generated_apex_app`
+stay unbuilt and unscheduled, same as Functional Scenario Authoring — a
+well-reasoned idea whose time has not yet been earned by evidence, logged
+here so it isn't rediscovered as a gap later.
