@@ -152,7 +152,11 @@ output of the command above. In plain terms, for the one page
 - **loads the page and checks the browser console stayed clean** — catches
   a page that throws a JavaScript error the moment it loads;
 - **checks the page title matches what the export declares** — catches a
-  page that silently redirected or failed to render;
+  page that silently redirected or failed to render. Static application
+  substitutions exported by APEX (for example `&APP_NAME.`) are resolved
+  first. If a title still contains a runtime-dependent built-in, item,
+  column, filtered, or template substitution, the generator explicitly
+  omits the exact-title assertion instead of guessing its runtime value;
 - **checks every form field (`pageItem`) the export declares is actually
   present on the page** — catches a field a later change accidentally
   removed or renamed;

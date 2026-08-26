@@ -101,6 +101,15 @@ const applicationFixture: ApexApplication = {
   version: '1.0',
   type: 'standard',
   runtime: { friendlyUrls: true, compatibilityMode: '26.1' },
+  staticSubstitutions: [
+    {
+      identifier: 'APP_NAME',
+      name: 'APP_NAME',
+      staticValue: 'App',
+      loc: { file: 'application.apx', line: 10 },
+      raw: { 'value.staticValue': 'App' },
+    },
+  ],
   loc: { file: 'application.apx', line: 1 },
   raw: { 'runtime.friendlyUrls': true },
 };

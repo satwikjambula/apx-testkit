@@ -1077,7 +1077,77 @@ describe('Oracle-documented page identity and lexical values', () => {
       identifier: 'example',
       alias: 'EXAMPLE',
       runtime: { friendlyUrls: false, compatibilityMode: '26.1' },
+      staticSubstitutions: [],
     });
+  });
+
+  it('projects Oracle-documented static application substitutions from top-level components', () => {
+    // Raw APEX 26.1 EBNF: substitution-a has required `name` plus optional
+    // `value.staticValue`. Real Oracle exports also use the component id as
+    // the name and omit the direct property, reproduced by APP_NAME below.
+    const result = parseApp({
+      'application.apx': `app sample-reporting (
+  name: Sample Reporting
+  alias: SAMPLE-REPORTING
+)
+substitution APP_NAME (
+  value {
+    staticValue: Sample Reporting
+  }
+)
+substitution product-label (
+  name: PRODUCT_LABEL
+  value {
+    staticValue:
+    \`\`\`text
+    Sample
+    Reporting
+    \`\`\`
+  }
+)`,
+    });
+
+    expect(result.warnings).toEqual([]);
+    expect(result.ast.application?.staticSubstitutions).toEqual([
+      {
+        identifier: 'APP_NAME',
+        name: 'APP_NAME',
+        staticValue: 'Sample Reporting',
+        loc: { file: 'application.apx', line: 5 },
+        raw: { 'value.staticValue': 'Sample Reporting' },
+      },
+      {
+        identifier: 'product-label',
+        name: 'PRODUCT_LABEL',
+        staticValue: 'Sample\nReporting',
+        loc: { file: 'application.apx', line: 10 },
+        raw: {
+          name: 'PRODUCT_LABEL',
+          'value.staticValue': { lang: 'text', code: 'Sample\nReporting' },
+        },
+      },
+    ]);
+    expect(result.ast.unmodeled).not.toContain('substitution');
+  });
+
+  it('rejects duplicate static substitution names case-insensitively', () => {
+    expect(() => parseApp({
+      'application.apx': `app example (
+  name: Example
+)
+substitution first (
+  name: APP_NAME
+  value {
+    staticValue: First
+  }
+)
+substitution second (
+  name: app_name
+  value {
+    staticValue: Second
+  }
+)`,
+    })).toThrow(/duplicate static application substitution name 'app_name'/);
   });
 
   it('represents friendlyUrls as null (unknown), never a guessed boolean, when the runtime group is absent or malformed', () => {

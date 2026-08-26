@@ -1,0 +1,14 @@
+app customer-portal (
+  name: Customer Portal
+  alias: CUSTOMER-PORTAL
+  type: standard
+  runtime {
+    friendlyUrls: true
+    compatibilityMode: "26.1"
+  }
+)
+substitution APP_NAME (
+  value {
+    staticValue: Customer Portal
+  }
+)

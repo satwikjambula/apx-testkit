@@ -655,6 +655,45 @@ export function projectPages(roots: ComponentNode[]): {
     }
   }
 
+  // Oracle's raw 26.1 EBNF has two top-level `substitution` productions:
+  // application static substitutions (`substitution-a`, carrying
+  // `value.staticValue`) and supporting-object installation substitutions
+  // (`substitution-b`, carrying `installation.*`). Only the former is safe
+  // to attach to ApexApplication and resolve statically. Real Oracle exports
+  // have also been observed omitting substitution-a's EBNF-required `name`
+  // property while using the component id as the name, e.g.
+  // `substitution APP_NAME ( value { staticValue: ... } )`; prefer the
+  // direct property when present and fall back to that witnessed id shape.
+  const staticSubstitutions = roots
+    .filter((node) => node.type === 'substitution' && 'value.staticValue' in node.props)
+    .map((node) => {
+      const name = str(node.props['name']) ?? node.identifier;
+      if (!name) {
+        throw new Error(
+          `${node.loc.file}:${node.loc.line}: static application substitution has neither a 'name:' property nor a component identifier.`,
+        );
+      }
+      return {
+        identifier: node.identifier,
+        name,
+        staticValue: multilineText(node.props['value.staticValue']),
+        loc: node.loc,
+        raw: node.props,
+      };
+    });
+  const substitutionNames = new Map<string, Loc>();
+  for (const substitution of staticSubstitutions) {
+    const key = substitution.name.toUpperCase();
+    const first = substitutionNames.get(key);
+    if (first) {
+      throw new Error(
+        `${substitution.loc.file}:${substitution.loc.line}: duplicate static application substitution name ` +
+          `'${substitution.name}' (first declared at ${first.file}:${first.line}).`,
+      );
+    }
+    substitutionNames.set(key, substitution.loc);
+  }
+
   for (const n of roots) {
     if (n.type === 'app') {
       if (application) {
@@ -681,12 +720,14 @@ export function projectPages(roots: ComponentNode[]): {
           friendlyUrls,
           compatibilityMode: str(n.props['runtime.compatibilityMode']),
         },
+        staticSubstitutions,
         loc: n.loc,
         raw: n.props,
       };
       continue;
     }
     if (n.type === '#comment') continue;
+    if (n.type === 'substitution' && 'value.staticValue' in n.props) continue;
     if (n.type !== 'page') { unmodeled.add(n.type); continue; }
 
     // Page number derivation: `page <N> (` -- the component-id captured as
@@ -847,6 +888,10 @@ export function projectPages(roots: ComponentNode[]): {
       raw: n.props,
     });
   }
+  // A partial source set may contain substitutions without application.apx.
+  // The generic tree/raw data remains lossless, but do not claim the typed
+  // projection consumed them when there is no application to own them.
+  if (!application && staticSubstitutions.length > 0) unmodeled.add('substitution');
   return { application, pages, unmodeled: [...unmodeled].sort() };
 }
 
