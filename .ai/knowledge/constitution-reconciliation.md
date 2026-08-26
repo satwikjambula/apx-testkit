@@ -114,7 +114,7 @@ pass — flagging them here is explicitly not the same as adopting them.
   with a SQLcl MCP server, any cross-tool handshake — exists or is
   scheduled. Positioning ≠ integration; don't conflate the two.
 - **§37 — Oracle APEX Blueprints as an intent source.** **CORRECTED
-  (2026-08-22): no longer speculative — Oracle shipped this in APEX 26.1.**
+  (2026-08-26): no longer speculative — Oracle shipped this in APEX 26.1.**
   The prior "purely speculative" framing was wrong even at the time this
   file was written (2026-08-15) — Oracle's own spec-driven-development doc
   (docs.oracle.com, `creating-an-app-using-spec-driven-development.html`,
@@ -126,7 +126,7 @@ pass — flagging them here is explicitly not the same as adopting them.
   reconciliation pass, not a claim Oracle changed since. Still an open
   product/architecture question whether or how apx-testkit should consume
   blueprint-stage intent — see the newly flagged `apx-onboard` orchestrator
-  proposal (routed to Product Architect, 2026-08-22) for the concrete
+  proposal (routed to Product Architect, 2026-08-26) for the concrete
   version of that question now on the table.
 - **§38 — APEX 26.1 AI Agent/Tool verification surface.** Confirmed by
   direct search: **zero** references to AI agents/tools anywhere in
@@ -155,7 +155,7 @@ pass — flagging them here is explicitly not the same as adopting them.
   Live-instance/corpus checks remain separately gated because those inputs
   are intentionally not committed or universally available in CI.
 - **`apx-onboard` orchestrator + `onboard_generated_apex_app` MCP tool
-  (proposed 2026-08-22, not §-numbered — post-dates the original 65-section
+  (proposed 2026-08-26, not §-numbered — post-dates the original 65-section
   constitution).** A new CLI command chaining manifest validation → parse/
   inspect → optional SQLcl `apex validate` → diff → flow map → docs →
   Playwright generation → one onboarding report, positioned as the
@@ -226,7 +226,7 @@ resolved" note.
 | P2.18 Parser mutation tests | implied outstanding | Not verified this pass — `Sawalhah/apexlang-view` cross-checking (`.ai/knowledge/verification.md`) is a related but different practice (comparative, not mutation-based). No new finding either way. |
 | P2.19 Locator evidence metadata | implied outstanding | **Substantially done** — `docs/verification/26.1.json`'s `runtimeStrategy`/`evidenceSource`/`confidence` fields cover most of this; §C's new general rule (evidence-ordered locators) formalizes the rest. |
 | P2.20 AI Agent/tool verification | implied outstanding | **Confirmed genuinely unstarted.** See §D. |
-| P2.21 Prepare for Oracle Blueprint intent metadata | implied outstanding | **Genuinely unstarted, but NOT speculative** — corrected 2026-08-22, Oracle shipped Blueprints in 26.1. See §D's `apx-onboard` entry. |
+| P2.21 Prepare for Oracle Blueprint intent metadata | implied outstanding | **Genuinely unstarted, but NOT speculative** — corrected 2026-08-26, Oracle shipped Blueprints in 26.1. See §D's `apx-onboard` entry. |
 | P2.22 Improve Oracle Skills integration | implied outstanding | **Confirmed genuinely unstarted**, positioning-only today. See §D. |
 
 Separately, three real pieces of work not named in the constitution's
