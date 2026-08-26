@@ -24,7 +24,7 @@ test.describe('page 10: Registration', () => {
   test('title matches metadata (normalized)', async ({ page }) => {
     const po = new RegistrationPage(page);
     await po.goto();
-    expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Registration'));
+    expect(normalizeTitle(await page.title())).toBe(normalizeTitle('Registration | Customer Portal'));
   });
 
   test('every .apx pageItem exists in DOM/apex.item registry (3 items, 1 hidden)', async ({ page }) => {

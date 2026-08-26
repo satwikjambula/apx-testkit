@@ -1,0 +1,10 @@
+experiment:
+  name: momentum-classifier
+  seed: 42
+model:
+  type: random_forest
+  target: target
+  features:
+    - return_1
+strategy:
+  threshold: 0.6

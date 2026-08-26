@@ -71,6 +71,30 @@ export interface ApexApplication {
     friendlyUrls: boolean | null;
     compatibilityMode: string | null;
   };
+  /**
+   * Static application substitutions exported as top-level
+   * `substitution <id> (...)` components with `value.staticValue`.
+   *
+   * Oracle APEX 26.1's raw APEXlang EBNF defines this as
+   * `<substitution-a>` (`name` plus optional `value.staticValue`), and the
+   * App Builder guide describes application substitutions as centrally
+   * defined static strings. These are safe to resolve at generation time;
+   * built-ins, application/page items, and report-column substitutions are
+   * deliberately not represented here because their values can depend on
+   * runtime state.
+   */
+  staticSubstitutions: ApexApplicationStaticSubstitution[];
+  loc: Loc;
+  raw: RawBag;
+}
+
+export interface ApexApplicationStaticSubstitution {
+  /** APEXlang component id, when emitted. */
+  identifier: string | null;
+  /** Substitution name referenced by `&NAME.` syntax. */
+  name: string;
+  /** Exported static value; null only for malformed/unsupported value shape. */
+  staticValue: string | null;
   loc: Loc;
   raw: RawBag;
 }

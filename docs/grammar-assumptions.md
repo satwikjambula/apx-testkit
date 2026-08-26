@@ -1923,6 +1923,7 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
         `ux-pattern-catalog`'s Cards-region `icon:`/`meta:`/`htmlExpression:`
         column-attribute properties, e.g. `icon: &ICON_CLASS. fa-2x
         u-opacity-50` and `<iframe src="...&ID." title="&TITLE.">`) map
+
         to Oracle's separately-documented "3.10.1.3 Substitution Strings
         for Interactive Grid, Cards, and Map Columns" TOC entry — a
         DIFFERENT doc page from the one fetched for this task, not
@@ -1954,6 +1955,47 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       is available, per ADR-002/ADR-004): every runtime-only classification
       above is Oracle's own documented behavior, not independently
       observed against a running app this session.
+
+- [x] **2026-08-26 — static application substitutions promoted into the
+      typed AST and used to resolve generated page-title assertions.** A
+      real external SQLcl/APEX 26.1 user independently confirmed the
+      parser fix from GitHub issue #21, then found the generated login-page
+      title assertion expected the literal export text
+      `Sign In | &APP_NAME.` while the running application correctly
+      rendered `Sign In | Sample Reporting`. This was a deterministic
+      generator bug, not title-normalization noise.
+
+  Evidence was re-established from Oracle sources before implementation:
+
+  - Oracle's raw 26.1 APEXlang EBNF was fetched directly to a file and read
+    without an AI-summarizing intermediary. `<substitution-a>` is a
+    top-level `substitution` component with required `name` and optional
+    `value { staticValue: <multiline-string> }`; `<substitution-b>` is a
+    distinct supporting-object installation-prompt shape. The parser
+    therefore promotes only the `value.staticValue` shape into
+    `ApexApplication.staticSubstitutions` and leaves installation
+    substitutions alone.
+  - Oracle's App Builder User's Guide, "Editing the Application
+    Definition" §5.16.1.2.6, states that application Substitutions define
+    centrally managed **static substitution strings** and pairs a
+    Substitution String name with a Substitution Value:
+    `https://docs.oracle.com/en/database/oracle/apex/26.1/htmdb/editing-application-attributes.html`.
+  - Oracle's "About Using Substitution Strings" documents `&ITEM.` syntax
+    and makes clear that page/application items are substituted from
+    session state at render time; the separate built-in list documents
+    runtime values such as `&APP_USER.`. Those categories are deliberately
+    NOT resolved from static export data.
+
+  Implementation boundary: `@apx/testgen` replaces only unfiltered
+  `&NAME.` tokens that exactly match an exported static application
+  substitution. Built-ins, page/application items, report-column values,
+  filtered tokens (`&NAME!HTML.`), `#PLACEHOLDER#` template syntax, and
+  substitutions introduced by another substitution's value remain
+  unresolved. If any such token remains in a page title, the generator
+  emits an explicit comment and omits the exact-title assertion instead of
+  baking a guaranteed-wrong expected string into the spec. Parser, diff,
+  direct resolver, integration, and golden-output regressions cover this
+  boundary.
 
 - [x] **2026-08-13 — `flow.ts` substitution-syntax field-by-field audit
       (Runtime & Test Automation Engineer), following directly from the

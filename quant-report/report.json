@@ -1,0 +1,210 @@
+{
+  "fee_bps": 1.0,
+  "slippage_bps": 2.0,
+  "assets": [
+    {
+      "symbol": "NBIS",
+      "folds": [
+        {
+          "fold": 1,
+          "train_start": "2024-10-21",
+          "train_end": "2025-10-22",
+          "test_start": "2025-10-23",
+          "test_end": "2026-01-05",
+          "selected": "MACD 8/20/5",
+          "strategy_return": -0.1017374317978531,
+          "benchmark_return": -0.07503088670550806,
+          "excess_return": -0.026706545092345046,
+          "sharpe": -1.5892340872923105,
+          "max_drawdown": -0.15502220817363432,
+          "trades": 2
+        },
+        {
+          "fold": 2,
+          "train_start": "2024-10-21",
+          "train_end": "2026-01-05",
+          "test_start": "2026-01-06",
+          "test_end": "2026-03-19",
+          "selected": "MACD 8/20/5",
+          "strategy_return": 0.011187768090309191,
+          "benchmark_return": 0.2692215984130151,
+          "excess_return": -0.2580338303227059,
+          "sharpe": 0.41637080056144626,
+          "max_drawdown": -0.19058905159731487,
+          "trades": 5
+        },
+        {
+          "fold": 3,
+          "train_start": "2024-10-21",
+          "train_end": "2026-03-19",
+          "test_start": "2026-03-20",
+          "test_end": "2026-06-02",
+          "selected": "MA 20/40",
+          "strategy_return": 1.1622894034088866,
+          "benchmark_return": 1.1622894034088866,
+          "excess_return": 0.0,
+          "sharpe": 4.231722052168292,
+          "max_drawdown": -0.23442767957036503,
+          "trades": 1
+        },
+        {
+          "fold": 4,
+          "train_start": "2024-10-21",
+          "train_end": "2026-06-02",
+          "test_start": "2026-06-03",
+          "test_end": "2026-08-14",
+          "selected": "MA 30/120",
+          "strategy_return": 0.06679742745309603,
+          "benchmark_return": 0.06679742745309603,
+          "excess_return": 0.0,
+          "sharpe": 0.9197191290355285,
+          "max_drawdown": -0.4829955702728197,
+          "trades": 1
+        }
+      ],
+      "compounded_strategy_return": 1.0952260722476832,
+      "compounded_benchmark_return": 1.7080736072895961,
+      "excess_return": -0.6128475350419129,
+      "mean_sharpe": 0.9946444736182392,
+      "worst_drawdown": -0.4829955702728197,
+      "trades": 9,
+      "positive_folds": 3
+    },
+    {
+      "symbol": "AMZN",
+      "folds": [
+        {
+          "fold": 1,
+          "train_start": "1997-05-15",
+          "train_end": "2003-03-21",
+          "test_start": "2003-03-24",
+          "test_end": "2009-01-23",
+          "selected": "MA 30/80",
+          "strategy_return": 0.34826628931006454,
+          "benchmark_return": 0.8690847139967512,
+          "excess_return": -0.5208184246866867,
+          "sharpe": 0.320267457409435,
+          "max_drawdown": -0.6167820651948962,
+          "trades": 23
+        },
+        {
+          "fold": 2,
+          "train_start": "1997-05-15",
+          "train_end": "2009-01-23",
+          "test_start": "2009-01-26",
+          "test_end": "2014-11-26",
+          "selected": "MA 30/80",
+          "strategy_return": 3.4461950104156065,
+          "benchmark_return": 5.6454743936837115,
+          "excess_return": -2.199279383268105,
+          "sharpe": 0.9419265120883523,
+          "max_drawdown": -0.2810735124373155,
+          "trades": 18
+        },
+        {
+          "fold": 3,
+          "train_start": "1997-05-15",
+          "train_end": "2014-11-26",
+          "test_start": "2014-11-28",
+          "test_end": "2020-10-02",
+          "selected": "MA 30/80",
+          "strategy_return": 3.885313758402587,
+          "benchmark_return": 8.296974795162814,
+          "excess_return": -4.411661036760227,
+          "sharpe": 1.183014888463057,
+          "max_drawdown": -0.2274470190513036,
+          "trades": 15
+        },
+        {
+          "fold": 4,
+          "train_start": "1997-05-15",
+          "train_end": "2020-10-02",
+          "test_start": "2020-10-05",
+          "test_end": "2026-08-14",
+          "selected": "MA 30/80",
+          "strategy_return": -0.3654162966557032,
+          "benchmark_return": 0.6693232107675711,
+          "excess_return": -1.0347395074232741,
+          "sharpe": -0.20680594836122868,
+          "max_drawdown": -0.5774282740703478,
+          "trades": 30
+        }
+      ],
+      "compounded_strategy_return": 17.584272259409122,
+      "compounded_benchmark_return": 191.7689403925211,
+      "excess_return": -174.18466813311198,
+      "mean_sharpe": 0.5596007273999039,
+      "worst_drawdown": -0.6167820651948962,
+      "trades": 86,
+      "positive_folds": 3
+    },
+    {
+      "symbol": "AAPL",
+      "folds": [
+        {
+          "fold": 1,
+          "train_start": "1980-12-12",
+          "train_end": "1990-01-19",
+          "test_start": "1990-01-22",
+          "test_end": "1999-03-02",
+          "selected": "MACD 16/26/12",
+          "strategy_return": 1.4835664205274224,
+          "benchmark_return": 0.01807905222698425,
+          "excess_return": 1.4654873683004381,
+          "sharpe": 0.4984018333802358,
+          "max_drawdown": -0.3329721188827838,
+          "trades": 90
+        },
+        {
+          "fold": 2,
+          "train_start": "1980-12-12",
+          "train_end": "1999-03-02",
+          "test_start": "1999-03-03",
+          "test_end": "2008-04-25",
+          "selected": "MACD 16/20/12",
+          "strategy_return": 2.03692951379919,
+          "benchmark_return": 18.53139657459826,
+          "excess_return": -16.49446706079907,
+          "sharpe": 0.5615895964975648,
+          "max_drawdown": -0.605442440165753,
+          "trades": 141
+        },
+        {
+          "fold": 3,
+          "train_start": "1980-12-12",
+          "train_end": "2008-04-25",
+          "test_start": "2008-04-28",
+          "test_end": "2017-06-16",
+          "selected": "MA 10/40",
+          "strategy_return": 3.1850929559681065,
+          "benchmark_return": 4.865044258605338,
+          "excess_return": -1.6799513026372317,
+          "sharpe": 0.8831752115586367,
+          "max_drawdown": -0.295322255631393,
+          "trades": 73
+        },
+        {
+          "fold": 4,
+          "train_start": "1980-12-12",
+          "train_end": "2017-06-16",
+          "test_start": "2017-06-19",
+          "test_end": "2026-08-14",
+          "selected": "MA 10/40",
+          "strategy_return": 1.8093999046728144,
+          "benchmark_return": 7.515612025106563,
+          "excess_return": -5.706212120433749,
+          "sharpe": 0.6618554969321789,
+          "max_drawdown": -0.32431869970581495,
+          "trades": 70
+        }
+      ],
+      "compounded_strategy_return": 87.68071039213898,
+      "compounded_benchmark_return": 992.1205306930399,
+      "excess_return": -904.4398203009009,
+      "mean_sharpe": 0.651255534592154,
+      "worst_drawdown": -0.605442440165753,
+      "trades": 374,
+      "positive_folds": 4
+    }
+  ]
+}
