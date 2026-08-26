@@ -3761,10 +3761,12 @@ convenient to describe in the same pipeline diagram.
 ### 3. Is `apx-onboard` genuinely thin composition, or does it need new judgment?
 
 Checked directly against the real code, not taken on the maintainer's
-"most of this already exists" framing: **mostly genuine composition,
-closely matching the `apx-report` precedent** (Ninth round: pure bundling
-of already-computed coverage/diff/warning data, no new analysis, approved
-and shipped for exactly that reason). Confirmed in this repo:
+"most of this already exists" framing. **CORRECTED (review feedback,
+2026-08-26): the original version of this section overstated how much of
+step 8 (the report) is pure composition.** Steps 1, 2, 4, 5, 6, and 7
+genuinely are, closely matching the `apx-report` precedent (Ninth round:
+pure bundling of already-computed coverage/diff/warning data, no new
+analysis) — confirmed in this repo:
 
 - Six MCP tools (`inspect_apex_export`, `generate_apex_tests`,
   `generate_flow_map`, `diff_apex_exports`, `analyze_coverage`,
@@ -3774,27 +3776,39 @@ and shipped for exactly that reason). Confirmed in this repo:
   comment states this as a design invariant).
 - Six CLI binaries already exist in `packages/generator/package.json`'s
   `bin` block: `apx-testgen`, `apx-coverage`, `apx-diff`, `apx-docs`,
-  `apx-flow`, `apx-report`.
-- The onboarding report's proposed sections are, with one exception,
-  already-computed data, not new heuristics: parser warnings is
-  `ParseResult.warnings` verbatim; "unmodeled AI-generated components" is
-  the generator's existing `unmodeled` list (CLAUDE.md debt #6); changed
-  pages is `apx-diff`'s existing `DiffReport`; generated files is already
-  derived from the shared `pageObjectFileName()`/`specFileName()` helpers
-  `apx-diff` itself reuses (Ninth round); "unsafe or skipped assertions"
-  has real, already-computed backing today
-  (`navigationUnsafeSkipReason()`, the `modalDialog` unroutable-page note,
-  `skippedRegions` — all in `packages/generator/src/lib.ts`, currently
-  surfaced only as comments inside generated spec files, not yet as
-  structured report data).
+  `apx-flow`, `apx-report`. **These are NOT the same six entry points as
+  the MCP tools above** — `apx-report` has no MCP-tool counterpart, and
+  `inspect_apex_export` has no standalone CLI binary of its own. An
+  orchestrator description that says "the same six tools" for both layers
+  is wrong and needs to name each set separately.
+- Report fields with genuinely already-computed, already-structured
+  backing: parser warnings (`ParseResult.warnings` verbatim), "unmodeled
+  AI-generated components" (the generator's existing `unmodeled` list,
+  CLAUDE.md debt #6), changed pages (`apx-diff`'s existing `DiffReport`),
+  and generated files (the shared `pageObjectFileName()`/`specFileName()`
+  helpers `apx-diff` itself reuses, Ninth round).
 
-The one exception is the SQLcl step (scoped out per Q2). Everything else
-is assembling outputs this project has already independently verified —
-genuinely low implementation risk, unlike Functional Scenario Authoring's
-new artifact type, new evidence-tiering scheme, and first-ever LLM
-dependency. But "low risk to build" is not the same as "known to be
-useful": nobody has assembled these specific fields into a report and
-had a real user read it. The design is plausible, not proven.
+**"Unsafe or skipped assertions" is NOT already-computed backing — this is
+real, additional implementation work, not composition.**
+`GenerateResult` (`packages/generator/src/lib.ts`) exposes only
+`{ generated, skippedAuth, outDir, warnings, unmodeled, files }`.
+`navigationUnsafeSkipReason()`'s output, the `modalDialog` unroutable-page
+note, and `skippedRegions` are real and computed today, but only as
+strings rendered directly into generated `.spec.ts` file comments during
+page-object generation — never returned on any exported interface. An
+onboarding report cannot access this data structurally without refactoring
+the generator's public API to surface it (a real API design task, with
+its own tests, not free from calling an existing function) — and parsing
+the generated TypeScript comments back out to recover it should be
+rejected outright as an approach.
+
+The SQLcl step (scoped out per Q2) and this report-diagnostics gap are
+BOTH real, separate implementation items on top of the genuine
+composition in steps 1/2/4/5/6/7 — "low risk to build" was too strong a
+characterization of the whole proposal. It remains true that nobody has
+assembled even the genuinely-composable fields into a report and had a
+real user read it, so the design is plausible, not proven, independent of
+this correction.
 
 ### 4. Does a new MCP tool pull its weight?
 
@@ -3833,24 +3847,43 @@ with the revisit trigger below, not before.
 ### What would change this verdict
 
 A concrete, cheap, and specific trigger, narrower than "wait for a second
-user": **run the existing pipeline by hand, once, for real.** Use Oracle
-APEX Assistant or the 26.1 spec-driven blueprint workflow to generate one
-real application, export it as APEXlang, and run apx-testkit's existing
-six tools/CLIs against it in the sequence this proposal describes
-(inspect → diff → flow map → docs → Playwright generation). If that
-walkthrough surfaces genuine friction — commands run in the wrong order,
-outputs that are awkward to cross-reference by hand, a report section
-that would have caught something a person missed — that's real evidence
-apx-onboard's specific shape is worth building, and exactly the kind of
-ground truth this project's whole evidence-over-assumption discipline
-already requires everywhere else (Chart and Calendar both waited for a
-live instance before runtime treatment; this is the same test applied to
-a workflow instead of a component). If the walkthrough instead shows the
-six existing tools already compose cleanly by hand or via an agent
-chaining six MCP calls, that's evidence *against* building a seventh tool,
-not a wasted exercise either way. Either outcome is useful; neither
-requires new code, an external customer, or the SQLcl dependency this
-review scoped out.
+user": **run the existing pipeline by hand, once, for real.**
+
+**CORRECTED (review feedback, 2026-08-26): the original version of this
+trigger was not actually executable as described** — it said "six tools"
+but listed five operations (inspect/diff/flow map/docs/generate), and
+implied a single AI-generated export was sufficient input for all of
+them. Neither holds: `diff_apex_exports` requires BOTH an old and a new
+export directory (no single-export mode — `packages/mcp/src/server.ts`
+rejects a missing `oldExportDir`/`newExportDir` outright), and
+`analyze_coverage` requires a touch log that is written only by
+`@apx/testkit`'s opt-in recorder during an actual Playwright run with
+`APX_COVERAGE_LOG` set — it cannot exist before tests have been generated
+AND executed. The real walkthrough needs two branches, run against Oracle
+APEX Assistant or the 26.1 spec-driven blueprint workflow:
+
+- **No-baseline (first-ever generation of an app):** `inspect_apex_export`
+  → `generate_apex_tests` → `generate_flow_map` → `generate_apex_docs`. No
+  diff (nothing to diff against yet), no coverage (no test run yet).
+- **Baseline (a second AI-generated iteration of the same app):** the
+  no-baseline sequence, plus `diff_apex_exports` against the first
+  export's directory, plus — after actually running the generated
+  Playwright suite with `APX_COVERAGE_LOG` set — `analyze_coverage`
+  against the resulting touch log.
+
+Either branch, run once by hand, surfaces the same two possible outcomes
+the original trigger intended: genuine friction (commands run in the
+wrong order, outputs awkward to cross-reference, a report section that
+would have caught something a person missed) is real evidence
+`apx-onboard`'s specific shape is worth building — the same kind of
+ground truth this project's evidence-over-assumption discipline already
+requires everywhere else (Chart and Calendar both waited for a live
+instance before runtime treatment; this is the same test applied to a
+workflow instead of a component). Composing cleanly already — whether by
+hand or via an agent chaining the relevant MCP tool calls itself — is
+evidence *against* building a seventh MCP tool specifically, not a wasted
+exercise either way. Either outcome is useful; neither requires new code,
+an external customer, or the SQLcl dependency this review scoped out.
 
 Until that walkthrough happens, `apx-onboard` and `onboard_generated_apex_app`
 stay unbuilt and unscheduled, same as Functional Scenario Authoring — a
