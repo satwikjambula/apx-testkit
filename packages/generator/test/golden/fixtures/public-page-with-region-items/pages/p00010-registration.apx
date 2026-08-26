@@ -2,7 +2,7 @@ page 10 (
   page: 10
   name: Registration
   alias: REGISTRATION
-  title: Registration
+  title: Registration | &APP_NAME.
   security {
     pageAccessProtection: unrestricted
     authentication: public

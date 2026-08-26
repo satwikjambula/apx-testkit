@@ -154,6 +154,7 @@ describe('pageObjectFor -- duplicate button label handling (real-corpus fixture)
         version: '1',
         type: 'standard',
         runtime: { friendlyUrls: false, compatibilityMode: '26.1' },
+        staticSubstitutions: [],
         loc: { file: 'application.apx', line: 1 },
         raw: {},
       },

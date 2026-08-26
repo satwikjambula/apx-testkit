@@ -152,6 +152,15 @@ export function diffApplicationFields(a: ApexApplication | null, b: ApexApplicat
       `runtime.compatibilityMode: ${JSON.stringify(a.runtime.compatibilityMode)} -> ${JSON.stringify(b.runtime.compatibilityMode)}`,
     );
   }
+  const substitutionSemantics = (application: ApexApplication) =>
+    application.staticSubstitutions
+      .map(({ identifier, name, staticValue, raw }) => ({ identifier, name, staticValue, raw: canonical(raw) }))
+      .sort((left, right) => left.name.localeCompare(right.name));
+  if (JSON.stringify(substitutionSemantics(a)) !== JSON.stringify(substitutionSemantics(b))) {
+    // Do not echo static values: application substitutions can contain
+    // deployment-specific text that should not be copied into CI logs.
+    changes.push('static application substitutions changed');
+  }
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }
