@@ -1399,6 +1399,130 @@ programmatic use (e.g. embedding this dashboard's markup into a larger
 host page, the same reuse `renderCoverageHtmlFragment()` was already
 built for — see 2.9).
 
+### 2.19 Onboarding orchestration (`apx-onboard`)
+
+**Status: VERIFIED** (composition + a live-documentation-confirmed opt-in
+SQLcl step; see `docs/quirks/26.1.json` `sqlcl-apex-validate-command-shape`
+for exactly what is and isn't independently live-verified). Answers "I
+just got a new — often AI-generated — APEXlang export; what do I do with
+it?" by running the right subset of every tool above, in the right order,
+and bundling the results into one report. One shared function,
+`runOnboarding()` (`@apx/testgen/onboard`), backs BOTH the CLI below and
+the `onboard_generated_apex_app` MCP tool — never two parallel
+implementations (the same discipline `apx-report`/`apx-diff` already
+established).
+
+```bash
+node /path/to/apx-testkit/packages/generator/dist/onboard-cli.js \
+  --export <export-dir> \
+  [--baseline <prior-export-dir>] \
+  --tests <tests-out-dir> \
+  --docs <docs-out-dir> \
+  --report <report.json> \
+  [--touch-log <touch-log-path>] \
+  [--sqlcl[=<path-to-sqlcl-executable>]]
+```
+
+**No `--baseline` (first-ever onboarding of this export):**
+
+```
+Onboarding report written to report.json
+  export:   /path/to/export
+  baseline: (none -- first-ever generation)
+  parser warnings: 0
+  unmodeled components: (none)
+  generated tests: 1 page(s) into ./tests (0 require auth)
+  docs: 1 page(s) into ./docs
+  flow map: 1 node(s), 0 edge(s)
+  diff: not included -- Diff omitted: no --baseline given (first-ever onboarding of this export) -- there is no prior export to compare against.
+  coverage: not included -- Coverage omitted: this is a first-ever (no --baseline) onboarding run, and the generated suite has not been run yet.
+  sqlcl validate: not requested (pass --sqlcl to opt in)
+  live-verification requirements: 1
+```
+
+Runs exactly `inspect` (parser warnings + unmodeled components) ->
+`generate()` (2.1-2.14's assertions, `apx-testgen`) -> `computeFlowMap()`
+(2.17, `apx-flow`) -> `generateDocs()` (2.16, `apx-docs`). No diff (nothing
+to diff against yet) and no coverage (no test run has happened yet) —
+both sections are still present in the report JSON, `included: false`,
+with an explicit `note` explaining why, never a silent omission.
+
+**With `--baseline` (a later export of the same app):** adds a real
+`apx-diff` (2.10) section against the baseline. Coverage (2.9) is added
+ONLY when `--touch-log` points at a file that already exists — that file
+can only exist after the GENERATED suite has actually been run once with
+`APX_COVERAGE_LOG` set, and `apx-onboard` never runs Playwright itself.
+Every other combination (`--touch-log` omitted, or given but the file
+doesn't exist yet) gets an explicit note instead:
+
+```
+  diff: 3 added, 0 removed, 1 changed, 0 unchanged
+  coverage: not included -- Coverage requires running the generated suite first with APX_COVERAGE_LOG set to /path/to/touch.jsonl.
+```
+
+Real end-to-end run, against a genuine Oracle 26.1 export (`oracle/apex`'s
+`26.1` branch, `starter-apps/poll`, UPL-1.0 — 83 pages, no license
+question for this app per `.ai/knowledge/verification.md`):
+
+```
+Onboarding report written to report.json
+  export:   .../starter-apps/poll/apexlang/poll
+  baseline: (none -- first-ever generation)
+  parser warnings: 0
+  unmodeled components: appComputation, appGroup, appItem, appProcess, authentication, authorization, breadcrumb, buildOption, classicNavigationBarEntry, classicReportTemplate, componentSetting, customAttribute, emailTemplate, file, installScript, legacyDataLoadDefinition, list, lov, pageGroup, plugin, role, savedReport, series, shortcut, substitution, supportingObject, templateOptionGroup, textMessage, theme, upgradeScript
+  generated tests: 83 page(s) into ./tests (75 require auth)
+  docs: 83 page(s) into ./docs
+  flow map: 83 node(s), 170 edge(s)
+  diff: not included -- Diff omitted: no --baseline given (first-ever onboarding of this export) -- there is no prior export to compare against.
+  coverage: not included -- Coverage omitted: this is a first-ever (no --baseline) onboarding run, and the generated suite has not been run yet.
+  sqlcl validate: not requested (pass --sqlcl to opt in)
+  live-verification requirements: 440
+```
+
+**`liveVerificationRequirements`** in the report JSON is derived from THIS
+SAME run's real, already-collected diagnostics — never a
+separately-authored checklist: one entry per parser warning, per unmodeled
+component type, per not-auto-routable page (with its real reason string,
+e.g. `modalDialog requires parent-page navigation...`), and per skipped
+region (with a stable reason code: `no-verified-dom-convention`,
+`chart-no-html-dom-id`, or `interactive-grid-no-html-dom-id` — see
+`GenerateResult.pages`, `PageGenerationDiagnostics`, in `@apx/testgen/lib`).
+
+**Opt-in SQLcl validation.** OFF by default — nothing in the default path
+depends on SQLcl being installed. Pass `--sqlcl` (search `PATH` for a
+`sql`/`sql.exe`/`sql.cmd`/`sql.bat` executable) or `--sqlcl=<path>` (use
+that executable verbatim) to also run SQLcl's `apex validate -input
+<export-dir>` and capture the result (pass/fail, exit code, full
+stdout/stderr) in the report's `sqlcl` section. **If SQLcl was requested
+but cannot be resolved or invoked, the WHOLE run fails with a non-zero
+exit code** — never a silently skipped step:
+
+```
+$ apx-onboard --export ./export --tests ./tests --docs ./docs --report ./report.json --sqlcl
+apx-onboard: --sqlcl validation was requested but no SQLcl executable could be resolved (looked at PATH (searched for sql/sql.exe/sql.cmd/sql.bat)). Install SQLcl (https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/) and either add it to PATH or pass --sqlcl=<path-to-sql-executable>. Validation was explicitly requested and could not run -- this is a hard failure of the whole apx-onboard run, not a skipped step.
+$ echo $?
+1
+```
+
+`apex validate -input <path>`'s command/flag shape is independently
+confirmed against Oracle's own live SQLcl 26.2 documentation (not taken
+on an earlier pass's secondhand claim) — see `docs/quirks/26.1.json`
+`sqlcl-apex-validate-command-shape` for the exact citation and for what
+remains a documented-convention-based design decision rather than an
+independently-reproduced fact (no real SQLcl binary was available in this
+project's own development/CI environment to confirm the outer,
+non-interactive invocation shell against).
+
+**MCP tool:** `onboard_generated_apex_app` calls the identical
+`runOnboarding()` function — same `exportDir`/`baselineExportDir`/
+`testsOutDir`/`docsOutDir`/`touchLogPath` inputs, plus `sqlcl: boolean` /
+`sqlclExecutablePath: string` in place of the CLI's `--sqlcl` flag.
+
+Same determinism guarantee as every other artifact in this project: the
+same inputs (export dir, baseline dir, touch log path, and — for SQLcl —
+the same resolved executable/environment) always produce byte-identical
+report JSON. No timestamps, no random ids, no unstable ordering.
+
 ---
 
 ## 3. Page types & patterns
