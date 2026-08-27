@@ -168,6 +168,17 @@ pass — flagging them here is explicitly not the same as adopting them.
   (proposed 2026-08-26, not §-numbered — post-dates the original 65-section
   constitution). Product Architect verdict landed 2026-08-26 — see
   `docs/ecosystem-roadmap.md`'s Seventeenth round for the full review.**
+  **SUPERSEDED (maintainer override, 2026-08-27): Phase One APPROVED —
+  the "Deferred" verdict and the "SQLcl scoped out" recommendation below
+  are both historical record, not current status.** The maintainer
+  directed implementation directly, including keeping SQLcl validation as
+  an **opt-in** step (not scoped out, as this entry originally
+  recommended). Implementation is in progress/under review as PR #27 —
+  see the Seventeenth round's override note for the authoritative current
+  status. Everything below this line is preserved as the record of what
+  was considered, not what's currently true.
+
+  **Original entry (superseded, preserved for the record):**
   **Status: Deferred, not Rejected** — same disposition as Functional
   Scenario Authoring (Sixteenth round), and for a related reason: no forcing
   consumer, no second real user (M4 still open), and — more specifically —
