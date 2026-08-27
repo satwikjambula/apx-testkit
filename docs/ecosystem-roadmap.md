@@ -3715,7 +3715,24 @@ raw AST/Flow Map data itself.
 
 ## Seventeenth round (2026-08-26): `apx-onboard` orchestrator + `onboard_generated_apex_app` MCP tool — Product Architect verdict
 
-**Status: Deferred, not Rejected.** Same disposition shape as the
+**OVERRIDE (maintainer, 2026-08-27): Phase One APPROVED — implement now.**
+The Product Architect's "Deferred" verdict below was advisory, and the
+maintainer has since made the actual call: build `apx-onboard` in the
+existing generator workspace and expose it via
+`onboard_generated_apex_app`, with SQLcl validation kept as an **opt-in**
+step (not scoped out entirely, as this round originally recommended in
+Q2 below — resolve/require the SQLcl executable only when the option is
+explicitly requested, capture the result in the report, fail clearly if
+requested but unavailable). The analysis below is preserved as the record
+of what was considered — most of it (the MCP-vs-CLI distinction, the real
+`GenerateResult` API gap, the corrected baseline/no-baseline sequencing)
+remains directly load-bearing for the actual implementation; only the
+final timing verdict (Q5) and the SQLcl-out-of-scope recommendation (Q2)
+are superseded by this override, not the technical findings. See
+`.ai/knowledge/constitution-reconciliation.md`'s §37 entry for the
+corresponding record.
+
+**Original Status: Deferred, not Rejected** (superseded above). Same disposition shape as the
 Sixteenth round's Functional Scenario Authoring RFC, for a related but
 distinct reason. The premise this proposal rests on was independently
 fact-checked before reaching this review and holds up completely (Oracle's
@@ -3748,15 +3765,24 @@ below).
 
 ### 2. Should the optional SQLcl `apex validate` step be scoped out of v1?
 
-Yes, unambiguously, and this was never really in question. `.ai/knowledge/
-constitution-reconciliation.md` §D (§18/§46) and §62's P1.13 already flag
-SQLcl integration as "not started — correctly flagged as needing its own
-proposal" — a new external dependency (SQLcl availability in CI/dev
-environments), not something that should ride into apx-onboard's v1 scope
-as an "optional" step just because the rest of the orchestrator is
-low-risk. If apx-onboard is ever built, the SQLcl step stays a separate,
-later, independently-evidenced proposal — not bundled in because it was
-convenient to describe in the same pipeline diagram.
+**SUPERSEDED (maintainer override, 2026-08-27): No — keep it, as an
+explicit opt-in.** The recommendation below (scope it out entirely) is
+not what got built. The approved contract keeps SQLcl validation as part
+of `apx-onboard`, gated behind an explicit option: resolve/require the
+SQLcl executable only when that option is set, capture the validation
+result in the report, and fail with a clear, actionable error if the
+option is enabled but SQLcl isn't available — never silently skip a
+requested validation. This preserves portability (SQLcl is not a hard
+dependency for the default path) without dropping the capability the
+maintainer wants available.
+
+Original recommendation (not adopted, preserved for the record): scope it
+out entirely. `.ai/knowledge/constitution-reconciliation.md` §D (§18/§46)
+and §62's P1.13 already flag SQLcl integration as "not started —
+correctly flagged as needing its own proposal" — a new external
+dependency (SQLcl availability in CI/dev environments), not something
+that should ride into apx-onboard's v1 scope as an "optional" step just
+because the rest of the orchestrator is low-risk.
 
 ### 3. Is `apx-onboard` genuinely thin composition, or does it need new judgment?
 
@@ -3812,37 +3838,34 @@ this correction.
 
 ### 4. Does a new MCP tool pull its weight?
 
-Not yet. A seventh MCP tool is premature surface area for a workflow that
-has never been exercised even once, manually. Any MCP-capable agent
-today can already dispatch the same six existing tools in sequence
-itself — composing multiple tool calls is exactly what agentic tool use
-already supports, and this project's own MCP server doc comment frames
-the agent's job as dispatching generation, not needing a bespoke
-meta-tool per workflow. A single new orchestration entry point earns its
-keep once the underlying sequence has been run for real and specifically
-shown to be tedious or error-prone to compose by hand or via existing
-tools — not before.
+**SUPERSEDED (maintainer override, 2026-08-27): yes, build it.**
+`onboard_generated_apex_app` is part of the approved public surface, not
+a future possibility — implement one shared deterministic onboarding
+function in `@apx/testgen`, have the `apx-onboard` CLI call it, and
+register the MCP tool as a thin wrapper around that same function (the
+`apx-report`/`apx-diff` precedent for keeping CLI and MCP layers backed
+by one shared implementation, not two).
+
+Original recommendation (not adopted, preserved for the record): not yet
+— a seventh MCP tool is premature surface area for a workflow that has
+never been exercised even once, manually; any MCP-capable agent can
+already dispatch the same six existing tools in sequence itself.
 
 ### 5. Timing verdict
 
-**Deferred, not Rejected**, same framing this project used for the
-Sixteenth round's Functional Scenario Authoring RFC, and for the same
-reason that framing is accurate here: nothing about this proposal was
-found unsound. The maintainer's own stated boundaries (no APEXlang
-writer, no blueprint-to-test generation, no AI-response-text comparison
-in runtime tests, credentials stay external) are consistent with this
-project's existing philosophy and require no correction. What's missing
-is evidence the specific orchestration and report shape are what's
-actually needed, and that evidence is cheap to produce.
+**SUPERSEDED (maintainer override, 2026-08-27): build now.** See the
+override note at the top of this round.
 
-**This does not proceed to a Software Architect pass right now.** Unlike
-the Sixteenth round (where the RFC's architecture was reviewed in
-parallel because the design itself needed correcting before any future
-build), there is no open architecture question here worth a dedicated
-pass yet — "does chaining six existing subsystems into one report need a
-new workspace" doesn't need answering until there's an actual proposal on
-the table with real evidence behind it. Revisit that question together
-with the revisit trigger below, not before.
+Original verdict (not adopted, preserved for the record): **Deferred, not
+Rejected**, same framing this project used for the Sixteenth round's
+Functional Scenario Authoring RFC. The maintainer's own stated boundaries
+(no APEXlang writer, no blueprint-to-test generation, no AI-response-text
+comparison in runtime tests, credentials stay external) are consistent
+with this project's existing philosophy and require no correction. This
+recommended not proceeding to a Software Architect pass and waiting for
+one manual walkthrough as evidence — superseded by the maintainer
+deciding directly, which is the actual authority this analysis was always
+advisory to.
 
 ### What would change this verdict
 
@@ -3885,7 +3908,10 @@ evidence *against* building a seventh MCP tool specifically, not a wasted
 exercise either way. Either outcome is useful; neither requires new code,
 an external customer, or the SQLcl dependency this review scoped out.
 
-Until that walkthrough happens, `apx-onboard` and `onboard_generated_apex_app`
-stay unbuilt and unscheduled, same as Functional Scenario Authoring — a
-well-reasoned idea whose time has not yet been earned by evidence, logged
-here so it isn't rediscovered as a gap later.
+**SUPERSEDED (maintainer override, 2026-08-27):** the walkthrough-first
+gate above was this round's own recommended path to build; the maintainer
+instead approved Phase One directly. The corrected sequencing above
+(no-baseline vs. baseline branches, real tool names) remains the accurate
+technical description of how `apx-onboard` needs to behave — it just
+stopped being a revisit *trigger* and became the implementation's actual
+functional spec.
