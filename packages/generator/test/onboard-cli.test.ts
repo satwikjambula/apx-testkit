@@ -169,11 +169,13 @@ describe('apx-onboard CLI -- SQLcl opt-in (PATH hermetically emptied for this su
     // untested). Point PATH at this test's own freshly-created, guaranteed-
     // empty tmpDir instead of trusting the ambient host environment.
     const reportPath = join(tmpDir, 'report.json');
+    const testsOutDir = join(tmpDir, 'tests');
+    const docsOutDir = join(tmpDir, 'docs');
     const r = run(
       [
         '--export', REFERENCE_FIXTURE,
-        '--tests', join(tmpDir, 'tests'),
-        '--docs', join(tmpDir, 'docs'),
+        '--tests', testsOutDir,
+        '--docs', docsOutDir,
         '--report', reportPath,
         '--sqlcl',
       ],
@@ -182,6 +184,13 @@ describe('apx-onboard CLI -- SQLcl opt-in (PATH hermetically emptied for this su
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/no SQLcl executable could be resolved/);
     expect(existsSync(reportPath)).toBe(false);
+    // Real bug this guards against: SQLcl validation used to run LAST, so
+    // a failure here still left generated test/doc files on disk with no
+    // report explaining why. SQLcl now runs FIRST -- neither output
+    // directory should exist at all when it fails before generation ever
+    // starts.
+    expect(existsSync(testsOutDir)).toBe(false);
+    expect(existsSync(docsOutDir)).toBe(false);
   });
 
   it('--sqlcl=<nonexistent explicit path>: exit code 1, error names the explicit path', () => {

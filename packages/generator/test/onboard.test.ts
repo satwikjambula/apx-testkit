@@ -23,7 +23,7 @@
  *      run's parser warnings / unmodeled components / generation
  *      diagnostics, not a separately-authored static list.
  */
-import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
@@ -204,7 +204,9 @@ describe('runOnboarding -- determinism', () => {
     expect(r1.sqlcl).toEqual({
       requested: true,
       executablePath: '/opt/sqlcl/bin/sql',
-      command: ['/opt/sqlcl/bin/sql', '/nolog', 'apex', 'validate', '-input', REFERENCE_FIXTURE],
+      // Normalized, not the literal (randomly-located, per-run) temp
+      // script path -- that's the whole point of this determinism test.
+      command: ['/opt/sqlcl/bin/sql', '/nolog', '@<sqlcl-validation-script>'],
       exitCode: 0,
       passed: true,
       stdout: 'OK\n',
@@ -259,10 +261,21 @@ describe('runOnboarding -- SQLcl opt-in', () => {
     expect(called).toBe(false);
   });
 
-  it('requested and succeeds: passed true, exit code 0, real stdout captured, command records the exact argv', async () => {
+  it('requested and succeeds: writes a real /NOLOG-startable script, invokes sql /nolog @<script>, cleans it up, and normalizes the reported command', async () => {
+    let scriptPathSeenByExecFn: string | null = null;
     const execFn: SqlclExecFn = async (executablePath, args) => {
       expect(executablePath).toBe('/usr/local/bin/sql');
-      expect(args).toEqual(['/nolog', 'apex', 'validate', '-input', REFERENCE_FIXTURE]);
+      // Documented SQL startup syntax: SQL [[option] [logon|/NOLOG] [start]],
+      // where start is @{url|file_name}[arg...] -- never a bare trailing
+      // command (see onboard.ts's runSqlclValidation doc comment).
+      expect(args[0]).toBe('/nolog');
+      expect(args[1]).toMatch(/^@/);
+      scriptPathSeenByExecFn = args[1].slice(1);
+      // The script must be a real, readable file (still exists at the
+      // moment execFn runs, before cleanup) containing exactly the
+      // documented interactive-prompt command, plus an exit so the
+      // session terminates instead of hanging at a prompt.
+      expect(readFileSync(scriptPathSeenByExecFn, 'utf8')).toBe(`apex validate -input ${REFERENCE_FIXTURE}\nexit\n`);
       return { code: 0, stdout: 'Validation successful.\n', stderr: '' };
     };
     const report = await runOnboarding(
@@ -272,12 +285,15 @@ describe('runOnboarding -- SQLcl opt-in', () => {
     expect(report.sqlcl).toEqual({
       requested: true,
       executablePath: '/usr/local/bin/sql',
-      command: ['/usr/local/bin/sql', '/nolog', 'apex', 'validate', '-input', REFERENCE_FIXTURE],
+      command: ['/usr/local/bin/sql', '/nolog', '@<sqlcl-validation-script>'],
       exitCode: 0,
       passed: true,
       stdout: 'Validation successful.\n',
       stderr: '',
     });
+    // Cleaned up afterward -- no leftover temp script.
+    expect(scriptPathSeenByExecFn).not.toBeNull();
+    expect(existsSync(scriptPathSeenByExecFn as string)).toBe(false);
   });
 
   it('requested and the validation itself fails (nonzero exit): a real, reportable failure, NOT a thrown error', async () => {
@@ -357,13 +373,26 @@ describe('resolveSqlclExecutable', () => {
     expect(resolved).toBe('/usr/local/bin/sql');
   });
 
-  it('win32: searches for sql.exe/sql.cmd/sql.bat, separated by semicolons', () => {
-    const existsFn = (p: string) => p === 'C:\\sqlcl\\bin\\sql.cmd';
+  it('win32: searches for sql.exe only, separated by semicolons', () => {
+    const existsFn = (p: string) => p === 'C:\\sqlcl\\bin\\sql.exe';
     const resolved = resolveSqlclExecutable(
       {},
       { existsFn, pathEnv: 'C:\\Windows;C:\\sqlcl\\bin', platform: 'win32' },
     );
-    expect(resolved).toBe('C:\\sqlcl\\bin\\sql.cmd');
+    expect(resolved).toBe('C:\\sqlcl\\bin\\sql.exe');
+  });
+
+  it('win32: does NOT resolve a .cmd/.bat launcher via PATH search -- execFile() cannot run one directly', () => {
+    // Real bug this guards against: a .cmd/.bat file existing on PATH must
+    // never be silently "found" here, since invoking it via execFile()
+    // later would fail in a way this project doesn't attempt to work
+    // around (see resolveSqlclExecutable's own doc comment).
+    const existsFn = (p: string) => p === 'C:\\sqlcl\\bin\\sql.cmd' || p === 'C:\\sqlcl\\bin\\sql.bat';
+    const resolved = resolveSqlclExecutable(
+      {},
+      { existsFn, pathEnv: 'C:\\Windows;C:\\sqlcl\\bin', platform: 'win32' },
+    );
+    expect(resolved).toBeNull();
   });
 
   it('returns null when PATH is empty/unset and no explicit path is given', () => {

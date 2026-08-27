@@ -56,7 +56,12 @@
  * `sqlcl-apex-validate-command-shape` for the full evidence citation,
  * including what is NOT independently live-verified here (invoking a
  * real `sql` binary was not possible in this environment -- see that
- * entry and `resolveSqlclExecutable()`'s doc comment below).
+ * entry and `resolveSqlclExecutable()`'s doc comment below). The command
+ * is run non-interactively via a temporary `.sql` script (`sql /nolog
+ * @<script>`), matching SQLcl's documented `[start]` invocation syntax --
+ * see `runSqlclValidation()`'s doc comment for the full correction
+ * history (an earlier version of this code passed the command as bare
+ * trailing argv, which is not a documented shape).
  * If `--sqlcl` is requested but no executable can be resolved, or
  * resolved but not invocable, `runOnboarding()` THROWS -- this must fail
  * the whole run with a non-zero exit code, never a silent skip or a
@@ -69,8 +74,9 @@
  * random ids, no unstable ordering beyond what the composed functions
  * above already guarantee.
  */
-import { existsSync, statSync } from 'node:fs';
+import { existsSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs';
 import { execFile } from 'node:child_process';
+import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { loadApexlangExport, parseApp, type ParseIssue } from '@apx/parser';
 import { generate, type GenerateResult, type PageGenerationDiagnostics } from './lib.js';
@@ -151,9 +157,9 @@ export interface OnboardRuntimeDeps {
  * verbatim -- existence-checked only, never searched further (an explicit
  * path is a deliberate override, not a hint). Otherwise every directory
  * on `PATH` is searched, in order, for a platform-appropriate executable
- * name (`sql` on POSIX; `sql.exe`/`sql.cmd`/`sql.bat` on Windows, since
- * SQLcl ships all three launcher shapes across its Windows distribution
- * history). Returns `null` when nothing resolves -- the caller turns
+ * name (`sql` on POSIX; `sql.exe` only on Windows -- see the `names`
+ * assignment below for why `.cmd`/`.bat` are deliberately excluded).
+ * Returns `null` when nothing resolves -- the caller turns
  * that into a hard failure, never a silent skip.
  */
 export function resolveSqlclExecutable(
@@ -169,7 +175,21 @@ export function resolveSqlclExecutable(
   const isWindows = platform === 'win32';
   const separator = isWindows ? ';' : ':';
   const dirSeparator = isWindows ? '\\' : '/';
-  const names = isWindows ? ['sql.exe', 'sql.cmd', 'sql.bat'] : ['sql'];
+  // sql.exe only on Windows -- NOT sql.cmd/sql.bat. node:child_process's
+  // execFile() cannot run a .cmd/.bat file directly (Node's own docs:
+  // "On Windows, .bat and .cmd files cannot be executed with... execFile()
+  // directly"); the workaround (spawning through cmd.exe, or execFile with
+  // shell:true) introduces batch-file argument-quoting hazards this project
+  // isn't taking on for an optional validation step. NOTE: this limitation
+  // is inherent to execFile()/the file type, not to PATH search specifically
+  // -- an explicit `--sqlcl=<path>` pointing at a .cmd/.bat launcher would
+  // hit the identical problem at invocation time, it just isn't filtered
+  // out here since an explicit path is checked for existence only, never
+  // its shape (see the executablePath branch above). Current SQLcl Windows
+  // distributions ship sql.exe as the real launcher, so this is expected
+  // to be a non-issue in practice; documented honestly rather than implying
+  // a workaround that doesn't actually exist.
+  const names = isWindows ? ['sql.exe'] : ['sql'];
   for (const dir of pathEnv.split(separator).filter((d) => d.length > 0)) {
     for (const name of names) {
       // Deliberately NOT node:path's join()/sep -- those reflect the HOST
@@ -194,7 +214,14 @@ export interface SqlclValidationSection {
   stderr: string | null;
 }
 
-const SQLCL_NOT_REQUESTED: SqlclValidationSection = {
+// Object.freeze() -- this exact object is returned to every caller that
+// doesn't request SQLcl validation. In a long-lived process (the MCP
+// server handles many onboarding requests without restarting), a shared
+// mutable singleton returned by reference would let one consumer's
+// mutation corrupt every other run's report. Frozen, not just documented
+// as read-only, so a mutation attempt throws (strict mode) or silently
+// no-ops rather than actually corrupting state.
+const SQLCL_NOT_REQUESTED: SqlclValidationSection = Object.freeze({
   requested: false,
   executablePath: null,
   command: null,
@@ -202,27 +229,51 @@ const SQLCL_NOT_REQUESTED: SqlclValidationSection = {
   passed: null,
   stdout: null,
   stderr: null,
-};
+});
 
 /**
- * `/nolog` skips requiring a database connection -- confirmed appropriate
- * for `validate` specifically (Oracle's docs state "This command does not
- * require a database connection"). Passing the extension command
- * (`apex validate -input <dir>`) as trailing arguments to the `sql`
- * launcher itself, rather than via a script file piped over stdin, is
- * SQLcl's documented one-shot invocation convention for its extension
- * commands (the same convention SQLcl's own Liquibase integration uses
- * for CI/CD one-liners, e.g. `sql /nolog liquibase status`) -- applied
- * here by design. This outer invocation shell was NOT independently
- * reproduced against a real `sql` binary in this pass (none was
- * available in this environment); the `apex validate -input <path>`
- * command/flag shape itself IS independently confirmed directly against
- * Oracle's live SQLcl 26.2 documentation -- see this module's top doc
- * comment and `docs/quirks/26.1.json` `sqlcl-apex-validate-command-shape`
- * for the exact citation and what remains unverified.
+ * CORRECTED (review feedback, 2026-08-27): the prior version of this
+ * function passed `apex validate -input <dir>` as trailing argv to the
+ * `sql` launcher directly (`sql /nolog apex validate -input <dir>`) --
+ * NOT a documented SQLcl invocation shape. Verified fresh against Oracle's
+ * own docs: the `SQL` command-line syntax is `SQL [[option] [logon |
+ * /NOLOG] [start]]`, where `start` is `@{url|file_name[.ext]} [arg...]` --
+ * an "at-sign followed by a script reference," never a bare trailing
+ * command. Oracle's own APEXlang-validation walkthrough shows `apex
+ * validate -input <path>` typed at the interactive `SQL>` prompt after
+ * SQLcl has already started (`docs.oracle.com/.../using-sqlcl-apexlang.html`,
+ * "Validating an APEXlang Application with SQLcl") -- not passed on SQLcl's
+ * own command line. `/nolog`'s "skip database connection" scope is
+ * unaffected by this fix -- it still governs the SQLcl session itself, not
+ * the script mechanism. See `docs/quirks/26.1.json`
+ * `sqlcl-apex-validate-command-shape` for the full, updated citation
+ * (including what remains unverified: no real `sql` binary was available
+ * in this environment to independently confirm end-to-end exit-code
+ * behavior).
+ *
+ * Fix: write `apex validate -input <dir>` (plus `exit`, so the session
+ * terminates and returns control rather than sitting at an interactive
+ * prompt) to a temporary `.sql` script, and invoke `sql /nolog
+ * @<scriptPath>` -- exactly the documented `[start]` shape. The script's
+ * location is a real, securely-generated temp directory (`mkdtempSync`,
+ * avoiding the predictable-path/symlink risk of a fixed temp filename in
+ * a shared writable directory) and is always removed afterward, including
+ * on failure.
+ *
+ * DETERMINISM NOTE: the temp script's path is randomly generated per run
+ * (by design, for the reason above) and therefore is NOT itself
+ * reproducible across runs -- `SqlclValidationSection.command` reports a
+ * NORMALIZED form (`'@<sqlcl-validation-script>'` in place of the literal
+ * path) so the overall `OnboardingReport` stays byte-identical across
+ * runs with the same inputs, per this project's determinism invariant.
+ * The literal script path is real internally (needed to actually invoke
+ * SQLcl correctly) but is not meaningful information for a report reader,
+ * since the file no longer exists by the time the report is read.
  */
-function buildSqlclArgs(exportDir: string): string[] {
-  return ['/nolog', 'apex', 'validate', '-input', exportDir];
+const SQLCL_SCRIPT_PLACEHOLDER = '@<sqlcl-validation-script>';
+
+function buildSqlclScriptContents(exportDir: string): string {
+  return `apex validate -input ${exportDir}\nexit\n`;
 }
 
 async function runSqlclValidation(
@@ -234,7 +285,7 @@ async function runSqlclValidation(
   if (!executablePath) {
     const where = option.executablePath
       ? `the explicit --sqlcl path '${option.executablePath}'`
-      : 'PATH (searched for sql/sql.exe/sql.cmd/sql.bat)';
+      : 'PATH (searched for sql/sql.exe)';
     throw new Error(
       `apx-onboard: --sqlcl validation was requested but no SQLcl executable could be resolved (looked at ${where}). ` +
         'Install SQLcl (https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/) and either add it to PATH ' +
@@ -242,27 +293,39 @@ async function runSqlclValidation(
         'a hard failure of the whole apx-onboard run, not a skipped step.',
     );
   }
-  const args = buildSqlclArgs(exportDir);
-  const execFn = deps.execFn ?? defaultSqlclExecFn;
-  let result: SqlclExecResult;
+
+  // Real filesystem, not an injectable seam -- this is a tiny, local,
+  // side-effect-free temp-file write, not the external SQLcl process this
+  // project's "mock external processes" convention targets (only the
+  // actual `execFn` subprocess call below is mocked in tests).
+  const scriptDir = mkdtempSync(join(tmpdir(), 'apx-onboard-sqlcl-'));
+  const scriptPath = join(scriptDir, 'apx-onboard-validate.sql');
   try {
-    result = await execFn(executablePath, args);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    throw new Error(
-      `apx-onboard: --sqlcl validation was requested and an executable was found at ${executablePath}, but ` +
-        `invoking it failed (could not spawn the process): ${message}`,
-    );
+    writeFileSync(scriptPath, buildSqlclScriptContents(exportDir), 'utf8');
+    const args = ['/nolog', `@${scriptPath}`];
+    const execFn = deps.execFn ?? defaultSqlclExecFn;
+    let result: SqlclExecResult;
+    try {
+      result = await execFn(executablePath, args);
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      throw new Error(
+        `apx-onboard: --sqlcl validation was requested and an executable was found at ${executablePath}, but ` +
+          `invoking it failed (could not spawn the process): ${message}`,
+      );
+    }
+    return {
+      requested: true,
+      executablePath,
+      command: [executablePath, '/nolog', SQLCL_SCRIPT_PLACEHOLDER],
+      exitCode: result.code,
+      passed: result.code === 0,
+      stdout: result.stdout,
+      stderr: result.stderr,
+    };
+  } finally {
+    rmSync(scriptDir, { recursive: true, force: true });
   }
-  return {
-    requested: true,
-    executablePath,
-    command: [executablePath, ...args],
-    exitCode: result.code,
-    passed: result.code === 0,
-    stdout: result.stdout,
-    stderr: result.stderr,
-  };
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +463,18 @@ export async function runOnboarding(
     if (baselineProblem) throw new Error(baselineProblem);
   }
 
+  // CORRECTED (review feedback, 2026-08-27): SQLcl validation now runs
+  // FIRST, before generate()/generateDocs() write anything to disk. The
+  // prior ordering ran validation LAST -- if it was requested and then
+  // failed/couldn't be invoked, runOnboarding() threw with test and doc
+  // files already written to options.testsOutDir/docsOutDir and no report
+  // ever produced to explain why they're there. SQLcl validation depends
+  // on nothing computed below (only the export directory itself), so
+  // moving it first is a pure reordering, not a behavior change to what
+  // gets validated -- it just fails BEFORE any output exists instead of
+  // after some of it does.
+  const sqlcl = options.sqlcl ? await runSqlclValidation(exportDir, options.sqlcl, deps) : SQLCL_NOT_REQUESTED;
+
   // Parser warnings / unmodeled components: same independent parse
   // `report.ts`'s computeReport() already performs for the identical
   // reason (ParseIssue's structured loc is needed verbatim; GenerateResult
@@ -431,8 +506,6 @@ export async function runOnboarding(
   } else {
     coverage = { included: true, note: null, report: computeCoverage(exportDir, touchLogPath) };
   }
-
-  const sqlcl = options.sqlcl ? await runSqlclValidation(exportDir, options.sqlcl, deps) : SQLCL_NOT_REQUESTED;
 
   const liveVerificationRequirements = buildLiveVerificationRequirements({
     parserWarnings,
