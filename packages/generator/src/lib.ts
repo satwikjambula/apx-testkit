@@ -239,7 +239,48 @@ function wiredRegionCandidatesLiteral(region: { htmlDomId: string | null }): str
   return `[${candidateLiteral(region.htmlDomId!, 'htmlDomId')}]`;
 }
 
-function specFor(page: ApexPage, application: ApexApplication | null): string {
+/**
+ * A region skipped by the generator with no auto-generated assertion --
+ * either because its type has no verified DOM convention at all (the
+ * generic `skippedRegions` case), or because it's a Chart/Interactive
+ * Grid region with no `htmlDomId` and therefore a genuinely
+ * unconstructible runtime id (ADR-003 layer 3). `reason` is a short,
+ * stable, machine-readable-ish classification -- NOT the full prose
+ * sentence rendered into the generated file's header comment (that
+ * remains free to evolve wording without breaking a consumer parsing
+ * this field).
+ */
+export interface SkippedRegionDiagnostic {
+  identifier: string;
+  type: string | null;
+  reason: 'no-verified-dom-convention' | 'chart-no-html-dom-id' | 'interactive-grid-no-html-dom-id';
+}
+
+/**
+ * Per-page structural diagnostics for what the generator could NOT
+ * auto-generate a safe assertion for, and why -- surfaced here
+ * structurally (see this field's own doc comment on `GenerateResult`)
+ * instead of only as prose baked into the generated `.spec.ts` file's
+ * header comment. Additive: every page that generates a normal, fully
+ * auto-routable spec with no skipped regions still gets an entry here
+ * (`notAutoRoutable: false`, `notAutoRoutableReasons: []`,
+ * `skippedRegions: []`) -- a consumer never has to distinguish "not
+ * reported" from "nothing to report."
+ */
+export interface PageGenerationDiagnostics {
+  pageId: number;
+  alias: string | null;
+  notAutoRoutable: boolean;
+  notAutoRoutableReasons: string[];
+  skippedRegions: SkippedRegionDiagnostic[];
+}
+
+interface SpecForResult {
+  code: string;
+  diagnostics: PageGenerationDiagnostics;
+}
+
+function specFor(page: ApexPage, application: ApexApplication | null): SpecForResult {
   const isPublic = page.isPublic;
   const pageAccessProtection = page.pageAccessProtection;
   const navigationUnsafe = isNavigationUnsafe(pageAccessProtection, isPublic);
@@ -506,7 +547,34 @@ import { APP_BASE } from '../playwright.config.js';`}
   });`);
   }
 
-  return `${header}\n${describeOpen}\n${bodyParts.join('\n\n')}\n});\n`;
+  const skippedRegionDiagnostics: SkippedRegionDiagnostic[] = [
+    ...skippedRegions.map((r): SkippedRegionDiagnostic => ({
+      identifier: r.identifier,
+      type: r.type,
+      reason: 'no-verified-dom-convention',
+    })),
+    ...unwiredChartRegions.map((r): SkippedRegionDiagnostic => ({
+      identifier: r.identifier,
+      type: r.type,
+      reason: 'chart-no-html-dom-id',
+    })),
+    ...unwiredIgRegions.map((r): SkippedRegionDiagnostic => ({
+      identifier: r.identifier,
+      type: r.type,
+      reason: 'interactive-grid-no-html-dom-id',
+    })),
+  ];
+
+  return {
+    code: `${header}\n${describeOpen}\n${bodyParts.join('\n\n')}\n});\n`,
+    diagnostics: {
+      pageId: page.id,
+      alias: page.alias,
+      notAutoRoutable,
+      notAutoRoutableReasons,
+      skippedRegions: skippedRegionDiagnostics,
+    },
+  };
 }
 
 export interface GenerateResult {
@@ -516,6 +584,20 @@ export interface GenerateResult {
   warnings: string[];
   unmodeled: string[];
   files: string[];
+  /**
+   * Structural, per-page diagnostics for what could NOT be
+   * auto-generated and why (unroutable pages, skipped regions) --
+   * additive to the fields above. See `PageGenerationDiagnostics`.
+   * Previously this data existed ONLY as prose baked into each
+   * generated `.spec.ts` file's header comment
+   * (`navigationUnsafeSkipReason()`/`MODAL_DIALOG_SKIP_REASON`/the
+   * `skippedRegions` local in `specFor`) -- never on any exported
+   * interface. `apx-onboard`'s "live-verification-requirements" section
+   * is the first real consumer; regex-parsing the generated comment text
+   * back out was considered and rejected (see
+   * docs/ecosystem-roadmap.md "Seventeenth round").
+   */
+  pages: PageGenerationDiagnostics[];
 }
 
 export function generate(exportDir: string, outDir: string): GenerateResult {
@@ -541,14 +623,17 @@ export function generate(exportDir: string, outDir: string): GenerateResult {
   const expected = new Set(pages.flatMap((p) => [pageObjectFileName(p), specFileName(p)]));
   removeStaleGeneratedTests(resolvedOut, expected);
   const files: string[] = [];
+  const pageDiagnostics: PageGenerationDiagnostics[] = [];
   for (const p of pages) {
     const poName = pageObjectFileName(p);
     writeFileSync(join(resolvedOut, poName), pageObjectFor(p, result.ast.application));
     files.push(poName);
 
     const specName = specFileName(p);
-    writeFileSync(join(resolvedOut, specName), specFor(p, result.ast.application));
+    const { code, diagnostics } = specFor(p, result.ast.application);
+    writeFileSync(join(resolvedOut, specName), code);
     files.push(specName);
+    pageDiagnostics.push(diagnostics);
   }
   return {
     generated: pages.length,
@@ -557,6 +642,7 @@ export function generate(exportDir: string, outDir: string): GenerateResult {
     warnings: result.warnings.map((w) => `${w.loc.file}:${w.loc.line} ${w.message}`),
     unmodeled: result.ast.unmodeled,
     files,
+    pages: pageDiagnostics,
   };
 }
 
