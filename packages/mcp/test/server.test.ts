@@ -1,6 +1,7 @@
 /**
  * Tests for `packages/mcp/src/server.ts` -- the MCP stdio server exposing
- * `@apx/testgen`'s six deterministic CLIs as agent-callable tools.
+ * `@apx/testgen`'s deterministic CLIs (six pre-existing, plus
+ * `onboard_generated_apex_app`/`apx-onboard`) as agent-callable tools.
  *
  * Talks to a real `McpServer` (via `createServer()`) over
  * `InMemoryTransport.createLinkedPair()` and a real `Client`, exactly the
@@ -11,8 +12,11 @@
  * assertion below was independently reproduced against a real running
  * server first, not derived from reading the source alone).
  *
- * Six concerns, matching the maintainer's explicit review list:
- *   1. Tool registration -- all six tools discoverable via `listTools()`.
+ * Six concerns, matching the maintainer's explicit review list (plus a
+ * seventh describe block below covering `onboard_generated_apex_app`
+ * specifically -- baseline vs. no-baseline behavior, error propagation --
+ * per the apx-onboard feature's own explicit test requirements):
+ *   1. Tool registration -- all documented tools discoverable via `listTools()`.
  *   2. Input validation -- malformed/missing input rejected clearly, per tool.
  *   3. Invalid export path handling -- graceful (`isError: true`), never a
  *      thrown/rejected `callTool()` and never a crashed server.
@@ -55,6 +59,7 @@ const TOOL_NAMES = [
   'diff_apex_exports',
   'analyze_coverage',
   'generate_apex_docs',
+  'onboard_generated_apex_app',
 ] as const;
 
 interface ToolTextContent {
@@ -97,7 +102,7 @@ function firstText(result: ToolResult): string {
 // ---------------------------------------------------------------------------
 
 describe('tool registration', () => {
-  it('exposes exactly the six documented tools, no more, no fewer', async () => {
+  it('exposes exactly the seven documented tools, no more, no fewer', async () => {
     const { tools } = await client.listTools();
     const names = tools.map((t) => t.name).sort();
     expect(names).toEqual([...TOOL_NAMES].sort());
@@ -114,7 +119,7 @@ describe('tool registration', () => {
 
   it('exportDir-taking tools all require exportDir as a string property', async () => {
     const { tools } = await client.listTools();
-    for (const name of ['inspect_apex_export', 'generate_flow_map', 'analyze_coverage', 'generate_apex_docs']) {
+    for (const name of ['inspect_apex_export', 'generate_flow_map', 'analyze_coverage', 'generate_apex_docs', 'onboard_generated_apex_app']) {
       const tool = tools.find((t) => t.name === name)!;
       const props = tool.inputSchema.properties as Record<string, { type?: string }>;
       expect(props.exportDir?.type, `${name} exportDir type`).toBe('string');
@@ -487,5 +492,172 @@ describe('generation failure paths', () => {
     const r = await callTool('analyze_coverage', { exportDir: REFERENCE_FIXTURE, touchLogPath: aDir });
     expect(r.isError).toBe(true);
     expect(firstText(r)).toMatch(/EISDIR/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// 7. onboard_generated_apex_app -- registration/schema already covered
+// above; this block covers baseline vs. no-baseline behavior and error
+// propagation specifically, per the apx-onboard feature's own test
+// requirements. This tool wraps @apx/testgen/onboard's runOnboarding()
+// directly -- see packages/generator/test/onboard.test.ts for the
+// exhaustive library-level behavior (SQLcl injectable-execFn paths,
+// resolveSqlclExecutable resolution logic, determinism); this suite only
+// re-confirms the MCP transport layer shapes/propagates that same
+// behavior correctly, it does not re-derive it.
+// ---------------------------------------------------------------------------
+
+describe('onboard_generated_apex_app', () => {
+  it('missing exportDir is rejected by the zod schema', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+    });
+    expect(r.isError).toBe(true);
+    expect(firstText(r)).toMatch(/exportDir|Required/i);
+  });
+
+  it('missing testsOutDir is rejected by the zod schema', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      docsOutDir: join(tmpDir, 'docs'),
+    });
+    expect(r.isError).toBe(true);
+    expect(firstText(r)).toMatch(/testsOutDir|Required/i);
+  });
+
+  it('a non-boolean sqlcl value is rejected by the zod schema', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+      sqlcl: 'yes',
+    });
+    expect(r.isError).toBe(true);
+    expect(firstText(r)).toMatch(/invalid_type|boolean/i);
+  });
+
+  it('a nonexistent exportDir returns isError, does not throw or crash the server', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: '/nonexistent/apx/export',
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+    });
+    expect(r.isError).toBe(true);
+    expect(firstText(r)).toContain('Export directory not found');
+  });
+
+  it('a nonexistent baselineExportDir returns isError naming the baseline side specifically', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      baselineExportDir: '/nonexistent/baseline',
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+    });
+    expect(r.isError).toBe(true);
+    expect(firstText(r)).toMatch(/^Baseline export:/);
+  });
+
+  it('no baseline: real report with generate/docs/flowMap populated, diff and coverage explicitly omitted', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+    });
+    expect(r.isError).toBeFalsy();
+    const report = JSON.parse(firstText(r));
+    expect(report.baselineExportDir).toBeNull();
+    expect(report.generate.generated).toBe(1);
+    expect(report.docs.generated).toBe(1);
+    expect(report.flowMap.nodes).toHaveLength(1);
+    expect(report.diff).toEqual({ included: false, note: expect.stringContaining('no --baseline'), report: null });
+    expect(report.coverage).toEqual({ included: false, note: expect.stringContaining('first-ever'), report: null });
+    expect(report.sqlcl.requested).toBe(false);
+    expect(existsSync(join(tmpDir, 'tests', 'p00003-employee.spec.ts'))).toBe(true);
+    expect(existsSync(join(tmpDir, 'docs', 'index.md'))).toBe(true);
+  });
+
+  it('with baseline: report includes a real diff section against the baseline export', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: NAV_SAFETY_FIXTURE,
+      baselineExportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+    });
+    expect(r.isError).toBeFalsy();
+    const report = JSON.parse(firstText(r));
+    expect(report.diff.included).toBe(true);
+    expect(report.diff.report.summary).toEqual({ pagesAdded: 3, pagesRemoved: 0, pagesChanged: 1, pagesUnchanged: 0 });
+  });
+
+  it('with baseline + an existing touchLogPath: coverage is included with a real CoverageReport', async () => {
+    const touchLogPath = join(tmpDir, 'touch.jsonl');
+    writeFileSync(touchLogPath, `${JSON.stringify({ kind: 'region', identifier: 'employee', pageId: 3 })}\n`);
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      baselineExportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+      touchLogPath,
+    });
+    expect(r.isError).toBeFalsy();
+    const report = JSON.parse(firstText(r));
+    expect(report.coverage.included).toBe(true);
+    expect(report.coverage.report.touchCount).toBe(1);
+  });
+
+  it('with baseline but no touchLogPath: coverage omitted with a note, not an error', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      baselineExportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+    });
+    expect(r.isError).toBeFalsy();
+    const report = JSON.parse(firstText(r));
+    expect(report.coverage.included).toBe(false);
+    expect(report.coverage.note).toMatch(/APX_COVERAGE_LOG/);
+  });
+
+  it('sqlcl requested but unresolvable (no real sql binary in this environment): isError true, actionable message, error propagated through safeText, not a crash', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+      sqlcl: true,
+      sqlclExecutablePath: '/opt/does-not-exist/sql',
+    });
+    expect(r.isError).toBe(true);
+    expect(firstText(r)).toMatch(/no SQLcl executable could be resolved/);
+    expect(firstText(r)).toContain('/opt/does-not-exist/sql');
+  });
+
+  it('sqlclExecutablePath alone (sqlcl omitted) still opts in to validation', async () => {
+    const r = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests'),
+      docsOutDir: join(tmpDir, 'docs'),
+      sqlclExecutablePath: '/opt/does-not-exist/sql',
+    });
+    expect(r.isError).toBe(true);
+    expect(firstText(r)).toMatch(/no SQLcl executable could be resolved/);
+  });
+
+  it('is deterministic -- two calls against the same export produce byte-identical output', async () => {
+    const r1 = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests-1'),
+      docsOutDir: join(tmpDir, 'docs-1'),
+    });
+    const r2 = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE,
+      testsOutDir: join(tmpDir, 'tests-2'),
+      docsOutDir: join(tmpDir, 'docs-2'),
+    });
+    const normalize = (text: string): unknown => {
+      const parsed = JSON.parse(text);
+      return { ...parsed, generate: { ...parsed.generate, outDir: '<out>' }, docs: { ...parsed.docs, outDir: '<out>' } };
+    };
+    expect(normalize(firstText(r1))).toEqual(normalize(firstText(r2)));
   });
 });

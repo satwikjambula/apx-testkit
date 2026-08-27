@@ -12,7 +12,7 @@
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, describe, expect, it } from 'vitest';
 import { generate, type GenerateResult } from '../src/lib.js';
 
 const FIXTURES_ROOT = join(__dirname, 'fixtures');
