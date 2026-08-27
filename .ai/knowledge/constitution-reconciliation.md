@@ -123,11 +123,17 @@ pass — flagging them here is explicitly not the same as adopting them.
   metadata + a real published system prompt
   (`github.com/oracle/apex/tree/26.1/blueprints`, confirmed live: `README.md`,
   `QUICKSTART.md`, `examples/`, `prompt/`). This was missed in the original
-  reconciliation pass, not a claim Oracle changed since. Still an open
-  product/architecture question whether or how apx-testkit should consume
-  blueprint-stage intent — see the newly flagged `apx-onboard` orchestrator
-  proposal (routed to Product Architect, 2026-08-26) for the concrete
-  version of that question now on the table.
+  reconciliation pass, not a claim Oracle changed since. **Product decision
+  (maintainer, 2026-08-27): approved.** How apx-testkit consumes
+  blueprint-stage intent is no longer an open question — Phase One is to
+  implement `apx-onboard` (a deterministic onboarding orchestrator: manifest/
+  version validation, inspection, optional baseline diff, flow map, docs,
+  Playwright generation, one report, opt-in SQLcl validation) in the
+  existing generator workspace and expose it via `onboard_generated_apex_app`
+  in `@apx/mcp`. This overrides the Product Architect's earlier "Deferred"
+  recommendation — see `docs/ecosystem-roadmap.md`'s Seventeenth round for
+  that analysis (still valid as a record of what was considered) and its
+  in-progress implementation status.
 - **§38 — APEX 26.1 AI Agent/Tool verification surface.** Confirmed by
   direct search: **zero** references to AI agents/tools anywhere in
   `packages/parser/src/ast.ts` or `docs/ecosystem-roadmap.md` (the only
