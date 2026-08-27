@@ -42,8 +42,8 @@ afterEach(() => {
   rmSync(tmpDir, { recursive: true, force: true });
 });
 
-function run(args: string[]) {
-  return spawnSync(process.execPath, [CLI_PATH, ...args], { encoding: 'utf8' });
+function run(args: string[], env?: NodeJS.ProcessEnv) {
+  return spawnSync(process.execPath, [CLI_PATH, ...args], { encoding: 'utf8', env });
 }
 
 describe('apx-onboard CLI -- argument parsing', () => {
@@ -158,16 +158,27 @@ describe('apx-onboard CLI -- baseline run (two real, different fixtures)', () =>
   });
 });
 
-describe('apx-onboard CLI -- SQLcl opt-in (no real sql binary in this environment)', () => {
+describe('apx-onboard CLI -- SQLcl opt-in (PATH hermetically emptied for this suite)', () => {
   it('--sqlcl with no explicit path and no sql on PATH: exit code 1, clear actionable stderr, no report written', () => {
+    // Real CI failure caught here: spawnSync inherits the parent's real
+    // PATH by default, and at least one hosted CI runner has SOMETHING
+    // literally named `sql` on it (confirmed: resolveSqlclExecutable found
+    // a candidate there, so this test's "no sql on PATH" precondition
+    // silently didn't hold, and the whole point of the assertion -- that
+    // resolution failure produces a specific, actionable message -- went
+    // untested). Point PATH at this test's own freshly-created, guaranteed-
+    // empty tmpDir instead of trusting the ambient host environment.
     const reportPath = join(tmpDir, 'report.json');
-    const r = run([
-      '--export', REFERENCE_FIXTURE,
-      '--tests', join(tmpDir, 'tests'),
-      '--docs', join(tmpDir, 'docs'),
-      '--report', reportPath,
-      '--sqlcl',
-    ]);
+    const r = run(
+      [
+        '--export', REFERENCE_FIXTURE,
+        '--tests', join(tmpDir, 'tests'),
+        '--docs', join(tmpDir, 'docs'),
+        '--report', reportPath,
+        '--sqlcl',
+      ],
+      { ...process.env, PATH: tmpDir },
+    );
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/no SQLcl executable could be resolved/);
     expect(existsSync(reportPath)).toBe(false);
