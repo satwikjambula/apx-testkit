@@ -5,7 +5,7 @@
  * mode, Windsurf, ...). The agent DISPATCHES generation; it never authors
  * assertions — determinism is the product. stdio transport.
  *
- * Six tools total, every one a thin wrapper around an already-deterministic
+ * Seven tools total, every one a thin wrapper around an already-deterministic
  * `@apx/testgen` library function (the same function its own CLI calls) --
  * no LLM calls anywhere in this file, matching this project's "zero LLM
  * calls" runtime identity (DESIGN_GUARDRAILS.md). This file does not
@@ -18,6 +18,14 @@
  *   - analyze_coverage        -- @apx/testgen/coverage computeCoverage(),
  *                                 optionally @apx/testgen/coverage-html renderCoverageHtml()
  *   - generate_apex_docs      -- @apx/testgen/docs generateDocs()
+ *   - onboard_generated_apex_app -- @apx/testgen/onboard runOnboarding() --
+ *                                 the ONE shared onboarding orchestration
+ *                                 function the `apx-onboard` CLI also calls
+ *                                 (never a second, parallel implementation).
+ *                                 The only tool here with any subprocess
+ *                                 involvement at all (opt-in SQLcl `apex
+ *                                 validate`, off by default) -- still zero
+ *                                 LLM calls, per the invariant above.
  *
  * Editor config (Cursor: .cursor/mcp.json / Claude Code: claude mcp add):
  *   { "mcpServers": { "apx": { "command": "npx", "args": ["-y", "@apx/mcp"] } } }
@@ -34,6 +42,7 @@ import { computeDiff, formatDiffHuman } from '@apx/testgen/diff';
 import { computeCoverage } from '@apx/testgen/coverage';
 import { renderCoverageHtml } from '@apx/testgen/coverage-html';
 import { generateDocs } from '@apx/testgen/docs';
+import { runOnboarding } from '@apx/testgen/onboard';
 
 /**
  * Shared precondition, mirroring exactly what every CLI in this project
@@ -219,6 +228,58 @@ export function createServer(): McpServer {
         ]
           .filter(Boolean)
           .join('\n\n');
+      });
+    },
+  );
+
+  server.registerTool(
+    'onboard_generated_apex_app',
+    {
+      title: 'Onboard a newly generated/exported APEX app (deterministic orchestration)',
+      description:
+        'Runs the SAME deterministic onboarding orchestration as the apx-onboard CLI (runOnboarding(), @apx/testgen/onboard) -- ' +
+        'the single shared implementation both call, never a second parallel one. No baseline given (first-ever ' +
+        'generation of this export): inspects/parses, generates Playwright tests (generate_apex_tests), builds a Flow ' +
+        'Map (generate_flow_map), and generates Markdown docs (generate_apex_docs) -- diff and coverage are both ' +
+        'explicitly omitted from the report, with a note explaining why, never silently. baselineExportDir given: adds ' +
+        'a regression diff (diff_apex_exports) against it; coverage is added ONLY when touchLogPath points at a touch ' +
+        'log that ALREADY EXISTS (written by @apx/testkit\'s coverage recorder during a PRIOR run of the GENERATED ' +
+        'suite with APX_COVERAGE_LOG set) -- this tool never runs Playwright itself, so a missing/absent touch log ' +
+        'produces an explicit note, never an error or a silent omission. The report also includes parser warnings ' +
+        'verbatim, unmodeled AI-generated component types, and a liveVerificationRequirements list derived from this ' +
+        'same run\'s real diagnostics (not-auto-routable pages, regions with no verified DOM convention, unmodeled ' +
+        'component types, parser warnings) -- never a separately-authored checklist. ' +
+        'SQLcl validation (`apex validate -input <exportDir>`) is OFF by default; set sqlcl: true (optionally with ' +
+        'sqlclExecutablePath) to opt in. If requested but no SQLcl executable can be resolved or invoked, the WHOLE ' +
+        'call fails with isError: true -- never a silently skipped step. Same inputs always produce byte-identical ' +
+        'report JSON (no timestamps, no unstable ordering).',
+      inputSchema: {
+        exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root to onboard (contains pages/; application.apx is read when present)'),
+        baselineExportDir: z.string().optional().describe('Absolute path to a PRIOR export of the SAME app. Enables the diff section, and (given an existing touchLogPath) the coverage section. Omitted entirely (with a note) when absent.'),
+        testsOutDir: z.string().describe('Directory to write generated Playwright .page.ts/.spec.ts files into'),
+        docsOutDir: z.string().describe('Directory to write generated Markdown documentation into'),
+        touchLogPath: z.string().optional().describe('Absolute path to a touch log written by @apx/testkit\'s coverage recorder during a PRIOR run of the GENERATED suite (APX_COVERAGE_LOG). Only consulted when baselineExportDir is also given. A missing file produces an explicit note, not an error.'),
+        sqlcl: z.boolean().optional().describe('Set true to opt in to SQLcl `apex validate -input <exportDir>`. OFF by default -- no SQLcl dependency unless explicitly requested.'),
+        sqlclExecutablePath: z.string().optional().describe('Explicit path to the SQLcl executable (implies sqlcl: true even if sqlcl is omitted). When absent and sqlcl is true, PATH is searched.'),
+      },
+    },
+    async ({ exportDir, baselineExportDir, testsOutDir, docsOutDir, touchLogPath, sqlcl, sqlclExecutablePath }) => {
+      const problem = checkExportDir(exportDir);
+      if (problem) return { content: [{ type: 'text', text: problem }], isError: true };
+      if (baselineExportDir) {
+        const baselineProblem = checkExportDir(baselineExportDir);
+        if (baselineProblem) return { content: [{ type: 'text', text: `Baseline export: ${baselineProblem}` }], isError: true };
+      }
+      return safeText(async () => {
+        const report = await runOnboarding({
+          exportDir,
+          baselineExportDir,
+          testsOutDir,
+          docsOutDir,
+          touchLogPath,
+          sqlcl: sqlcl || sqlclExecutablePath !== undefined ? { executablePath: sqlclExecutablePath } : undefined,
+        });
+        return JSON.stringify(report, null, 2);
       });
     },
   );

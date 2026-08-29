@@ -173,9 +173,14 @@ The pipeline is four packages wired together, AST-first:
                  apx-diff CLI (pure AST-to-AST regression report), the
                  apx-docs CLI (AST -> per-page Markdown docs, no live app),
                  the apx-flow CLI (AST -> Flow Map navigation graph
-                 JSON, no live app), and apx-report (self-contained HTML CI
+                 JSON, no live app), apx-report (self-contained HTML CI
                  dashboard bundling coverage + diff + parser warnings -- no
-                 new analysis, pure composition of the above)
+                 new analysis, pure composition of the above), and
+                 apx-onboard (one shared runOnboarding() orchestration
+                 function driving inspect/generate/flow/docs, plus diff +
+                 coverage when a baseline/touch log are given, plus opt-in
+                 SQLcl `apex validate` -- also called directly by the MCP
+                 tool below, never duplicated)
     ▼
 @apx/testkit   — the primitives BOTH generated and hand-written specs
                  import: item.ts (apex.item, VERIFIED), region.ts
@@ -196,12 +201,13 @@ The pipeline is four packages wired together, AST-first:
                  APX_COVERAGE_LOG is set), console-guard.ts, session.ts
 
 @apx/mcp       — MCP stdio server wrapping @apx/testgen for agentic editors:
-                 six tools, each a thin deterministic wrapper (no LLM calls
+                 seven tools, each a thin deterministic wrapper (no LLM calls
                  anywhere in this file) around the same library function its
                  CLI counterpart calls -- inspect_apex_export,
                  generate_apex_tests, generate_flow_map (apx-flow),
                  diff_apex_exports (apx-diff), analyze_coverage
-                 (apx-coverage), generate_apex_docs (apx-docs)
+                 (apx-coverage), generate_apex_docs (apx-docs),
+                 onboard_generated_apex_app (apx-onboard)
 ```
 
 Repo layout: `packages/parser`, `packages/testkit`, `packages/generator`,
@@ -284,6 +290,7 @@ not existing).
 | Documentation generation (`apx-docs`) | — | ✅ (pure AST read, no live app needed) | — |
 | Flow Map / navigation graph (`apx-flow`) | — | ✅ (pure AST read, no live app needed) — Phase 1a scope: `ApexPage.branches`, `ApexRegion.actions` (Cards/List), `ApexRegion.columns[].linkTarget`, `ApexButton.target`/`.url`. Every edge carries a real confidence tier: `'high'` (all 8 of 8 mechanisms — live-witnessed real data; button page/app-redirect targets were `'medium'` until the Fourteenth round corrected a false "zero real occurrences" claim that had only ever checked one app — `concurrent-manager` has 17 real `redirectThisApp` occurrences across 12 pages, `redirectOtherApp` specifically still unwitnessed). Breadcrumbs/navigation lists (shared-component parser support needed), dialog-page detection (cross-page join needed), Dynamic Action redirects (no declarative metadata found), and `apex.navigation` (runtime JS API) are all explicitly out of scope — see `docs/ecosystem-roadmap.md`'s Thirteenth and Fourteenth rounds | — |
 | CI dashboard (`apx-report`) | — | ✅ (self-contained HTML bundling coverage + diff + parser-warning-summary; no new data source, pure composition of the three rows above) | — |
+| Onboarding orchestration (`apx-onboard`) | — | ✅ one shared `runOnboarding()` function (`@apx/testgen/onboard`) drives BOTH the CLI and the `onboard_generated_apex_app` MCP tool; sequences inspect/generate/flow-map/docs, plus diff (given `--baseline`) and coverage (given `--baseline` AND an already-existing `--touch-log`) — never silently omitted, always an explicit note when a section can't run yet; `liveVerificationRequirements` is derived from this same run's real parser warnings/unmodeled components/generation diagnostics. Opt-in SQLcl `apex validate -input <exportDir>` (OFF by default; hard-fails the whole run if requested but unresolvable — see `docs/quirks/26.1.json` `sqlcl-apex-validate-command-shape`) | — |
 
 Full list of limitations in docs/limitations.md; a few of the stories
 behind specific rows:
@@ -395,11 +402,22 @@ to attach to a CI run. Deliberately scoped to exactly these three already-
 real data sources, not the larger coverage/diff/screenshots/perf/
 failures/a11y/parser-warnings pitch — screenshots, performance metrics,
 and accessibility results don't exist anywhere in this project yet, so
-there's nothing to compose them from; see docs/tutorial.md §2.17. Still
-open: snapshot testing (needs a masking-policy design), and
-Trees as content — the only Tree widget seen live so far is the universal
-left-nav reused for a login picker (see docs/ecosystem-roadmap.md), not a
-distinct page-content pattern.
+there's nothing to compose them from; see docs/tutorial.md §2.17. Also
+done: `apx-onboard --export <export-dir> [--baseline <dir>] --tests
+<outDir> --docs <outDir> --report <path> [--touch-log <path>]
+[--sqlcl[=<path>]]` — one shared onboarding orchestration function
+(`runOnboarding()`, `@apx/testgen/onboard`) also exposed as the
+`onboard_generated_apex_app` MCP tool, for the "I just got a new
+(often AI-generated) APEXlang export — what do I do with it?" workflow:
+inspect/generate/flow-map/docs always; diff and coverage added only when
+a baseline export and an already-run touch log are available
+(never a silent omission — always an explicit note); an opt-in
+`--sqlcl` flag runs SQLcl's `apex validate -input <export-dir>` (off by
+default, hard-fails the whole run if requested but unavailable); see
+docs/tutorial.md §2.19. Still open: snapshot testing (needs a
+masking-policy design), and Trees as content — the only Tree widget seen
+live so far is the universal left-nav reused for a login picker (see
+docs/ecosystem-roadmap.md), not a distinct page-content pattern.
 
 ---
 
