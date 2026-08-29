@@ -113,10 +113,27 @@ pass — flagging them here is explicitly not the same as adopting them.
   But no actual integration work — detecting Oracle Skills, coordinating
   with a SQLcl MCP server, any cross-tool handshake — exists or is
   scheduled. Positioning ≠ integration; don't conflate the two.
-- **§37 — Oracle APEX Blueprints as a future intent source.** Purely
-  speculative; Oracle hasn't shipped anything this project has evidence
-  of yet. No action item, just noted so it isn't "discovered" again as
-  if new.
+- **§37 — Oracle APEX Blueprints as an intent source.** **CORRECTED
+  (2026-08-26): no longer speculative — Oracle shipped this in APEX 26.1.**
+  The prior "purely speculative" framing was wrong even at the time this
+  file was written (2026-08-15) — Oracle's own spec-driven-development doc
+  (docs.oracle.com, `creating-an-app-using-spec-driven-development.html`,
+  published 2026-07-28) describes a real, importable Markdown blueprint
+  format, generated from a functional specification + database schema
+  metadata + a real published system prompt
+  (`github.com/oracle/apex/tree/26.1/blueprints`, confirmed live: `README.md`,
+  `QUICKSTART.md`, `examples/`, `prompt/`). This was missed in the original
+  reconciliation pass, not a claim Oracle changed since. **Product decision
+  (maintainer, 2026-08-27): approved.** How apx-testkit consumes
+  blueprint-stage intent is no longer an open question — Phase One is to
+  implement `apx-onboard` (a deterministic onboarding orchestrator: manifest/
+  version validation, inspection, optional baseline diff, flow map, docs,
+  Playwright generation, one report, opt-in SQLcl validation) in the
+  existing generator workspace and expose it via `onboard_generated_apex_app`
+  in `@apx/mcp`. This overrides the Product Architect's earlier "Deferred"
+  recommendation — see `docs/ecosystem-roadmap.md`'s Seventeenth round for
+  that analysis (still valid as a record of what was considered) and its
+  in-progress implementation status.
 - **§38 — APEX 26.1 AI Agent/Tool verification surface.** Confirmed by
   direct search: **zero** references to AI agents/tools anywhere in
   `packages/parser/src/ast.ts` or `docs/ecosystem-roadmap.md` (the only
@@ -143,6 +160,30 @@ pass — flagging them here is explicitly not the same as adopting them.
   contract checks.
   Live-instance/corpus checks remain separately gated because those inputs
   are intentionally not committed or universally available in CI.
+- **`apx-onboard` orchestrator + `onboard_generated_apex_app` MCP tool
+  (proposed 2026-08-26, not §-numbered — post-dates the original 65-section
+  constitution).** A new CLI command chaining manifest validation → parse/
+  inspect → optional SQLcl `apex validate` → diff → flow map → docs →
+  Playwright generation → one onboarding report, positioned as the
+  deterministic acceptance gate after Oracle's AI-assisted app generation
+  (APEX Assistant / spec-driven-development blueprints, per the now-real
+  §37 finding above) rather than a second LLM inside apx-testkit. Real
+  verified technical grounding (all cited Oracle/SQLcl behavior confirmed
+  against raw docs this pass — see this proposal's own PR/commit for the
+  fetch evidence), and the stated boundaries (no APEXlang writer, no
+  blueprint-to-test generation, no AI-response-text comparison in runtime
+  tests, credentials stay external) are consistent with this project's
+  existing philosophy, not a departure from it. Still: this is a NEW CLI
+  surface, a NEW MCP tool, and — via the optional SQLcl step — the exact
+  external-dependency question §18/§46 above already flagged as needing
+  its own review before being built, not silently adopted. Routed to
+  Product Architect (is this worth building now vs. a documented "not yet"
+  like the SQLcl item above) and, if it proceeds, Software Architect (does
+  a single new command really need no new workspace, or does chaining six
+  existing subsystems' outputs into one report cross that line) — same
+  review pattern this project has applied to every prior proposal of this
+  shape (Functional Scenario Authoring, SQLcl validation). Not built in
+  this pass.
 
 ## E. Corrected factual claims found during this pass
 
@@ -191,7 +232,7 @@ resolved" note.
 | P2.18 Parser mutation tests | implied outstanding | Not verified this pass — `Sawalhah/apexlang-view` cross-checking (`.ai/knowledge/verification.md`) is a related but different practice (comparative, not mutation-based). No new finding either way. |
 | P2.19 Locator evidence metadata | implied outstanding | **Substantially done** — `docs/verification/26.1.json`'s `runtimeStrategy`/`evidenceSource`/`confidence` fields cover most of this; §C's new general rule (evidence-ordered locators) formalizes the rest. |
 | P2.20 AI Agent/tool verification | implied outstanding | **Confirmed genuinely unstarted.** See §D. |
-| P2.21 Prepare for Oracle Blueprint intent metadata | implied outstanding | **Confirmed genuinely unstarted, correctly speculative.** See §D. |
+| P2.21 Prepare for Oracle Blueprint intent metadata | implied outstanding | **Genuinely unstarted, but NOT speculative** — corrected 2026-08-26, Oracle shipped Blueprints in 26.1. See §D's `apx-onboard` entry. |
 | P2.22 Improve Oracle Skills integration | implied outstanding | **Confirmed genuinely unstarted**, positioning-only today. See §D. |
 
 Separately, three real pieces of work not named in the constitution's
