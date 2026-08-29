@@ -3712,3 +3712,206 @@ remembering: it would make any eventual AI authoring layer's job both
 easier and more tightly constrained, since the layer would be
 interpreting pre-extracted deterministic candidates rather than reading
 raw AST/Flow Map data itself.
+
+## Seventeenth round (2026-08-26): `apx-onboard` orchestrator + `onboard_generated_apex_app` MCP tool — Product Architect verdict
+
+**OVERRIDE (maintainer, 2026-08-27): Phase One APPROVED — implement now.**
+The Product Architect's "Deferred" verdict below was advisory, and the
+maintainer has since made the actual call: build `apx-onboard` in the
+existing generator workspace and expose it via
+`onboard_generated_apex_app`, with SQLcl validation kept as an **opt-in**
+step (not scoped out entirely, as this round originally recommended in
+Q2 below — resolve/require the SQLcl executable only when the option is
+explicitly requested, capture the result in the report, fail clearly if
+requested but unavailable). The analysis below is preserved as the record
+of what was considered — most of it (the MCP-vs-CLI distinction, the real
+`GenerateResult` API gap, the corrected baseline/no-baseline sequencing)
+remains directly load-bearing for the actual implementation; only the
+final timing verdict (Q5) and the SQLcl-out-of-scope recommendation (Q2)
+are superseded by this override, not the technical findings. See
+`.ai/knowledge/constitution-reconciliation.md`'s §37 entry for the
+corresponding record.
+
+**Original Status: Deferred, not Rejected** (superseded above). Same disposition shape as the
+Sixteenth round's Functional Scenario Authoring RFC, for a related but
+distinct reason. The premise this proposal rests on was independently
+fact-checked before reaching this review and holds up completely (Oracle's
+spec-driven-development blueprint workflow is real and shipped in 26.1;
+SQLcl's `apex generate`/`apex validate -input`/`apex export -exptype
+APEXLANG`/`apex import -input` are all real; the Generative-AI-Service
+Web-Credential-omission claim is accurate) — nothing here is a factual
+correction. This is a scope/timing verdict, not a fact check.
+
+### 1. Real, validated user pain, or architecturally interesting ahead of need?
+
+Ahead of need, but for a narrower and cheaper-to-close reason than most
+prior rejections in this file. This project still has not hit its own M4
+milestone — no second real user (confirmed unchanged as of the Sixteenth
+round, 2026-08-14, and rechecked here: no evidence anything has changed).
+But the more specific gap is this: **nobody, including the maintainer, has
+yet run apx-testkit's existing tools by hand against a real AI-generated
+APEXlang export and reported what's actually tedious or missing.** Oracle's
+spec-driven blueprint doc was published 2026-07-28 — under a month before
+this proposal. The proposed onboarding report's contents (parser warnings;
+unmodeled AI-generated components; changed pages; unsafe or skipped
+assertions; generated files; live-verification requirements) are designed
+from reading Oracle's documentation and this project's own existing
+outputs, not from having actually produced one AI-generated app, exported
+it, and hit friction running the six existing tools against it in
+sequence. That is a materially different, and much cheaper, evidence gap
+to close than "wait for a second user" — it doesn't require an external
+customer, just one real walkthrough (see "What would change this verdict"
+below).
+
+### 2. Should the optional SQLcl `apex validate` step be scoped out of v1?
+
+**SUPERSEDED (maintainer override, 2026-08-27): No — keep it, as an
+explicit opt-in.** The recommendation below (scope it out entirely) is
+not what got built. The approved contract keeps SQLcl validation as part
+of `apx-onboard`, gated behind an explicit option: resolve/require the
+SQLcl executable only when that option is set, capture the validation
+result in the report, and fail with a clear, actionable error if the
+option is enabled but SQLcl isn't available — never silently skip a
+requested validation. This preserves portability (SQLcl is not a hard
+dependency for the default path) without dropping the capability the
+maintainer wants available.
+
+Original recommendation (not adopted, preserved for the record): scope it
+out entirely. `.ai/knowledge/constitution-reconciliation.md` §D (§18/§46)
+and §62's P1.13 already flag SQLcl integration as "not started —
+correctly flagged as needing its own proposal" — a new external
+dependency (SQLcl availability in CI/dev environments), not something
+that should ride into apx-onboard's v1 scope as an "optional" step just
+because the rest of the orchestrator is low-risk.
+
+### 3. Is `apx-onboard` genuinely thin composition, or does it need new judgment?
+
+Checked directly against the real code, not taken on the maintainer's
+"most of this already exists" framing. **CORRECTED (review feedback,
+2026-08-26): the original version of this section overstated how much of
+step 8 (the report) is pure composition.** Steps 1, 2, 4, 5, 6, and 7
+genuinely are, closely matching the `apx-report` precedent (Ninth round:
+pure bundling of already-computed coverage/diff/warning data, no new
+analysis) — confirmed in this repo:
+
+- Six MCP tools (`inspect_apex_export`, `generate_apex_tests`,
+  `generate_flow_map`, `diff_apex_exports`, `analyze_coverage`,
+  `generate_apex_docs`) already exist in `packages/mcp/src/server.ts`,
+  each a thin `registerTool` wrapper over an `@apx/testgen` function —
+  confirmed no LLM import anywhere in that file (the file's own doc
+  comment states this as a design invariant).
+- Six CLI binaries already exist in `packages/generator/package.json`'s
+  `bin` block: `apx-testgen`, `apx-coverage`, `apx-diff`, `apx-docs`,
+  `apx-flow`, `apx-report`. **These are NOT the same six entry points as
+  the MCP tools above** — `apx-report` has no MCP-tool counterpart, and
+  `inspect_apex_export` has no standalone CLI binary of its own. An
+  orchestrator description that says "the same six tools" for both layers
+  is wrong and needs to name each set separately.
+- Report fields with genuinely already-computed, already-structured
+  backing: parser warnings (`ParseResult.warnings` verbatim), "unmodeled
+  AI-generated components" (the generator's existing `unmodeled` list,
+  CLAUDE.md debt #6), changed pages (`apx-diff`'s existing `DiffReport`),
+  and generated files (the shared `pageObjectFileName()`/`specFileName()`
+  helpers `apx-diff` itself reuses, Ninth round).
+
+**"Unsafe or skipped assertions" is NOT already-computed backing — this is
+real, additional implementation work, not composition.**
+`GenerateResult` (`packages/generator/src/lib.ts`) exposes only
+`{ generated, skippedAuth, outDir, warnings, unmodeled, files }`.
+`navigationUnsafeSkipReason()`'s output, the `modalDialog` unroutable-page
+note, and `skippedRegions` are real and computed today, but only as
+strings rendered directly into generated `.spec.ts` file comments during
+page-object generation — never returned on any exported interface. An
+onboarding report cannot access this data structurally without refactoring
+the generator's public API to surface it (a real API design task, with
+its own tests, not free from calling an existing function) — and parsing
+the generated TypeScript comments back out to recover it should be
+rejected outright as an approach.
+
+The SQLcl step (scoped out per Q2) and this report-diagnostics gap are
+BOTH real, separate implementation items on top of the genuine
+composition in steps 1/2/4/5/6/7 — "low risk to build" was too strong a
+characterization of the whole proposal. It remains true that nobody has
+assembled even the genuinely-composable fields into a report and had a
+real user read it, so the design is plausible, not proven, independent of
+this correction.
+
+### 4. Does a new MCP tool pull its weight?
+
+**SUPERSEDED (maintainer override, 2026-08-27): yes, build it.**
+`onboard_generated_apex_app` is part of the approved public surface, not
+a future possibility — implement one shared deterministic onboarding
+function in `@apx/testgen`, have the `apx-onboard` CLI call it, and
+register the MCP tool as a thin wrapper around that same function (the
+`apx-report`/`apx-diff` precedent for keeping CLI and MCP layers backed
+by one shared implementation, not two).
+
+Original recommendation (not adopted, preserved for the record): not yet
+— a seventh MCP tool is premature surface area for a workflow that has
+never been exercised even once, manually; any MCP-capable agent can
+already dispatch the same six existing tools in sequence itself.
+
+### 5. Timing verdict
+
+**SUPERSEDED (maintainer override, 2026-08-27): build now.** See the
+override note at the top of this round.
+
+Original verdict (not adopted, preserved for the record): **Deferred, not
+Rejected**, same framing this project used for the Sixteenth round's
+Functional Scenario Authoring RFC. The maintainer's own stated boundaries
+(no APEXlang writer, no blueprint-to-test generation, no AI-response-text
+comparison in runtime tests, credentials stay external) are consistent
+with this project's existing philosophy and require no correction. This
+recommended not proceeding to a Software Architect pass and waiting for
+one manual walkthrough as evidence — superseded by the maintainer
+deciding directly, which is the actual authority this analysis was always
+advisory to.
+
+### What would change this verdict
+
+A concrete, cheap, and specific trigger, narrower than "wait for a second
+user": **run the existing pipeline by hand, once, for real.**
+
+**CORRECTED (review feedback, 2026-08-26): the original version of this
+trigger was not actually executable as described** — it said "six tools"
+but listed five operations (inspect/diff/flow map/docs/generate), and
+implied a single AI-generated export was sufficient input for all of
+them. Neither holds: `diff_apex_exports` requires BOTH an old and a new
+export directory (no single-export mode — `packages/mcp/src/server.ts`
+rejects a missing `oldExportDir`/`newExportDir` outright), and
+`analyze_coverage` requires a touch log that is written only by
+`@apx/testkit`'s opt-in recorder during an actual Playwright run with
+`APX_COVERAGE_LOG` set — it cannot exist before tests have been generated
+AND executed. The real walkthrough needs two branches, run against Oracle
+APEX Assistant or the 26.1 spec-driven blueprint workflow:
+
+- **No-baseline (first-ever generation of an app):** `inspect_apex_export`
+  → `generate_apex_tests` → `generate_flow_map` → `generate_apex_docs`. No
+  diff (nothing to diff against yet), no coverage (no test run yet).
+- **Baseline (a second AI-generated iteration of the same app):** the
+  no-baseline sequence, plus `diff_apex_exports` against the first
+  export's directory, plus — after actually running the generated
+  Playwright suite with `APX_COVERAGE_LOG` set — `analyze_coverage`
+  against the resulting touch log.
+
+Either branch, run once by hand, surfaces the same two possible outcomes
+the original trigger intended: genuine friction (commands run in the
+wrong order, outputs awkward to cross-reference, a report section that
+would have caught something a person missed) is real evidence
+`apx-onboard`'s specific shape is worth building — the same kind of
+ground truth this project's evidence-over-assumption discipline already
+requires everywhere else (Chart and Calendar both waited for a live
+instance before runtime treatment; this is the same test applied to a
+workflow instead of a component). Composing cleanly already — whether by
+hand or via an agent chaining the relevant MCP tool calls itself — is
+evidence *against* building a seventh MCP tool specifically, not a wasted
+exercise either way. Either outcome is useful; neither requires new code,
+an external customer, or the SQLcl dependency this review scoped out.
+
+**SUPERSEDED (maintainer override, 2026-08-27):** the walkthrough-first
+gate above was this round's own recommended path to build; the maintainer
+instead approved Phase One directly. The corrected sequencing above
+(no-baseline vs. baseline branches, real tool names) remains the accurate
+technical description of how `apx-onboard` needs to behave — it just
+stopped being a revisit *trigger* and became the implementation's actual
+functional spec.

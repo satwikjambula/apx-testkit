@@ -134,15 +134,19 @@ pass — flagging them here is explicitly not the same as adopting them.
   recommendation — see `docs/ecosystem-roadmap.md`'s Seventeenth round for
   that analysis (still valid as a record of what was considered) and its
   in-progress implementation status.
-- **§38 — APEX 26.1 AI Agent/Tool verification surface.** Confirmed by
-  direct search: **zero** references to AI agents/tools anywhere in
-  `packages/parser/src/ast.ts` or `docs/ecosystem-roadmap.md` (the only
-  hits for "AI agent" in the whole repo are about *this project's own*
-  agents driving a browser, unrelated). This is a genuinely unstarted
-  capability, not a partially-built one. Needs Oracle APEX Architect
-  verification (does Oracle even expose enough at the APEXlang/export
-  level to model this statically?) before Compiler/Parser Engineer work
-  starts, per the standard pipeline in `.ai/AGENT.md`.
+- **§38 — APEX 26.1 AI Agent/Tool verification surface.** At the time this
+  pass was written: zero references to AI agents/tools anywhere in
+  `packages/parser/src/ast.ts` or `docs/ecosystem-roadmap.md`. **UPDATED
+  (2026-08-26): `docs/ecosystem-roadmap.md` now DOES discuss AI
+  agents/Blueprints extensively — the Seventeenth round's `apx-onboard`
+  review.** That's proposal-only documentation (a Product Architect
+  verdict record), not implementation — the accurate claim is **zero
+  implementation, zero typed-AST support** for APEX 26.1's AI Agent/Tool
+  capability itself, not "zero references in the repo." This is still a
+  genuinely unstarted capability, not a partially-built one. Needs Oracle
+  APEX Architect verification (does Oracle even expose enough at the
+  APEXlang/export level to model this statically?) before Compiler/Parser
+  Engineer work starts, per the standard pipeline in `.ai/AGENT.md`.
 - **§44 — "Oracle Evidence Registry" as a directory tree
   (`oracle/{apis/,components/,runtime/,grammar/,versions/}`).** This
   project already built the equivalent capability, in a different and
@@ -162,28 +166,81 @@ pass — flagging them here is explicitly not the same as adopting them.
   are intentionally not committed or universally available in CI.
 - **`apx-onboard` orchestrator + `onboard_generated_apex_app` MCP tool
   (proposed 2026-08-26, not §-numbered — post-dates the original 65-section
-  constitution).** A new CLI command chaining manifest validation → parse/
-  inspect → optional SQLcl `apex validate` → diff → flow map → docs →
-  Playwright generation → one onboarding report, positioned as the
-  deterministic acceptance gate after Oracle's AI-assisted app generation
-  (APEX Assistant / spec-driven-development blueprints, per the now-real
-  §37 finding above) rather than a second LLM inside apx-testkit. Real
-  verified technical grounding (all cited Oracle/SQLcl behavior confirmed
-  against raw docs this pass — see this proposal's own PR/commit for the
-  fetch evidence), and the stated boundaries (no APEXlang writer, no
-  blueprint-to-test generation, no AI-response-text comparison in runtime
-  tests, credentials stay external) are consistent with this project's
-  existing philosophy, not a departure from it. Still: this is a NEW CLI
-  surface, a NEW MCP tool, and — via the optional SQLcl step — the exact
-  external-dependency question §18/§46 above already flagged as needing
-  its own review before being built, not silently adopted. Routed to
-  Product Architect (is this worth building now vs. a documented "not yet"
-  like the SQLcl item above) and, if it proceeds, Software Architect (does
-  a single new command really need no new workspace, or does chaining six
-  existing subsystems' outputs into one report cross that line) — same
-  review pattern this project has applied to every prior proposal of this
-  shape (Functional Scenario Authoring, SQLcl validation). Not built in
-  this pass.
+  constitution). Product Architect verdict landed 2026-08-26 — see
+  `docs/ecosystem-roadmap.md`'s Seventeenth round for the full review.**
+  **SUPERSEDED (maintainer override, 2026-08-27): Phase One APPROVED —
+  the "Deferred" verdict and the "SQLcl scoped out" recommendation below
+  are both historical record, not current status.** The maintainer
+  directed implementation directly, including keeping SQLcl validation as
+  an **opt-in** step (not scoped out, as this entry originally
+  recommended). Implementation is in progress/under review as PR #27 —
+  see the Seventeenth round's override note for the authoritative current
+  status. Everything below this line is preserved as the record of what
+  was considered, not what's currently true.
+
+  **Original entry (superseded, preserved for the record):**
+  **Status: Deferred, not Rejected** — same disposition as Functional
+  Scenario Authoring (Sixteenth round), and for a related reason: no forcing
+  consumer, no second real user (M4 still open), and — more specifically —
+  nobody, including the maintainer, has yet run apx-testkit's existing six
+  MCP tools/CLIs by hand against a real Oracle-AI-generated APEXlang export
+  and reported genuine friction. The proposal's technical grounding is real
+  (Oracle's spec-driven-development blueprint workflow, SQLcl's `apex
+  generate`/`validate`/`import`/`export` surface, and the Generative-AI-
+  Service Web-Credential-omission claim all independently confirmed against
+  raw Oracle sources before this review), and its stated boundaries (no
+  APEXlang writer, no blueprint-to-test generation, no AI-response-text
+  comparison in runtime tests, credentials stay external) are consistent
+  with this project's philosophy and need no correction. What's missing is
+  evidence for the *specific* orchestration and report shape, not evidence
+  the underlying idea is sound. Steps 1, 2, 4, 5, 6, and 7 genuinely are
+  thin composition over already-verified, already-shipped output — the
+  `apx-report` precedent (Ninth round), not new capability. **CORRECTED
+  (review feedback, 2026-08-26): step 8's report is NOT pure composition —
+  the initial review overstated this.** `GenerateResult`
+  (`packages/generator/src/lib.ts`) exposes only `{ generated, skippedAuth,
+  outDir, warnings, unmodeled, files }`; the diagnostics an onboarding
+  report needs most (`navigationUnsafeSkipReason()`'s output, modal-page
+  skip notes, `skippedRegions`) exist today only as strings rendered into
+  generated `.spec.ts` comments, not as structured data on any exported
+  interface. Composing them into a report requires refactoring the
+  generator's public API — a real, separate implementation item needing
+  its own design and tests, not something `apx-onboard` gets for free by
+  calling existing functions. Parsing generated TypeScript comments back
+  out to recover this data should be rejected outright as an approach.
+  **The optional SQLcl `apex validate` step (step 3) stays scoped OUT of
+  any future v1 regardless of the rest of this proposal's fate** — it
+  remains the separate, already-flagged §18/§46 external-dependency
+  question, needing its own independent evidence and review, not something
+  to bundle in because it appeared in the same pipeline diagram. The new
+  MCP tool specifically does not pull its weight yet: any MCP-capable
+  agent can already dispatch the same six existing tools in sequence
+  itself — though "the same six" undersold a real distinction: the six
+  MCP tools (`inspect_apex_export`, `generate_apex_tests`,
+  `generate_flow_map`, `diff_apex_exports`, `analyze_coverage`,
+  `generate_apex_docs`) and the six CLI binaries (`apx-testgen`,
+  `apx-coverage`, `apx-diff`, `apx-docs`, `apx-flow`, `apx-report`) are NOT
+  the same six entry points — `apx-report` has no MCP-tool counterpart at
+  all. **Revisit trigger — CORRECTED (review feedback, 2026-08-26): the
+  original trigger wasn't actually executable as stated.** `diff_apex_exports`
+  requires BOTH an old and a new export directory (no single-export mode);
+  `analyze_coverage` requires a touch log that only exists after a
+  Playwright run with `APX_COVERAGE_LOG` set — neither is available from
+  "one real AI-generated app" alone. The real walkthrough needs two
+  branches: **no-baseline** (first-ever generation: `inspect` →
+  `generate_apex_tests` → `generate_flow_map` → `generate_apex_docs` — no
+  diff, no coverage yet) and **baseline** (a second AI-generated iteration
+  of the same app: adds `diff_apex_exports` against the first export, then
+  after running the generated Playwright suite with coverage logging
+  enabled, `analyze_coverage` against the resulting touch log). Either
+  branch, run once by hand, either surfaces genuine friction (evidence to
+  build `apx-onboard`, still without SQLcl) or composes cleanly (evidence
+  against the new MCP tool specifically) — the trigger's *purpose* survives
+  the correction unchanged, only its literal executability needed fixing.
+  **Does not proceed to a Software Architect pass at this time** — the
+  "does this need a new workspace" question is deferred along with the
+  rest of the proposal, to be taken up together once real evidence exists,
+  not before.
 
 ## E. Corrected factual claims found during this pass
 
