@@ -249,7 +249,7 @@ export function createServer(): McpServer {
         'verbatim, unmodeled AI-generated component types, and a liveVerificationRequirements list derived from this ' +
         'same run\'s real diagnostics (not-auto-routable pages, regions with no verified DOM convention, unmodeled ' +
         'component types, parser warnings) -- never a separately-authored checklist. ' +
-        'SQLcl validation (`apex validate -input <exportDir>`) is OFF by default; set sqlcl: true (optionally with ' +
+        'SQLcl validation (`apex validate` with exportDir as its working directory) is OFF by default; set sqlcl: true (optionally with ' +
         'sqlclExecutablePath) to opt in. If requested but no SQLcl executable can be resolved or invoked, the WHOLE ' +
         'call fails with isError: true -- never a silently skipped step. Same inputs always produce byte-identical ' +
         'report JSON (no timestamps, no unstable ordering).',
@@ -259,7 +259,7 @@ export function createServer(): McpServer {
         testsOutDir: z.string().describe('Directory to write generated Playwright .page.ts/.spec.ts files into'),
         docsOutDir: z.string().describe('Directory to write generated Markdown documentation into'),
         touchLogPath: z.string().optional().describe('Absolute path to a touch log written by @apx/testkit\'s coverage recorder during a PRIOR run of the GENERATED suite (APX_COVERAGE_LOG). Only consulted when baselineExportDir is also given. A missing file produces an explicit note, not an error.'),
-        sqlcl: z.boolean().optional().describe('Set true to opt in to SQLcl `apex validate -input <exportDir>`. OFF by default -- no SQLcl dependency unless explicitly requested.'),
+        sqlcl: z.boolean().optional().describe('Set true to opt in to SQLcl `apex validate` with exportDir as its working directory. OFF by default -- no SQLcl dependency unless explicitly requested.'),
         sqlclExecutablePath: z.string().optional().describe('Explicit path to the SQLcl executable (implies sqlcl: true even if sqlcl is omitted). When absent and sqlcl is true, PATH is searched.'),
       },
     },

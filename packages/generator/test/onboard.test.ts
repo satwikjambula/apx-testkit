@@ -23,9 +23,9 @@
  *      run's parser warnings / unmodeled components / generation
  *      diagnostics, not a separately-authored static list.
  */
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
+import { join, resolve } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import {
   NO_BASELINE_COVERAGE_NOTE,
@@ -187,7 +187,7 @@ describe('runOnboarding -- determinism', () => {
   });
 
   it('a fixed injected execFn also produces a byte-identical sqlcl section across two runs', async () => {
-    const execFn: SqlclExecFn = async () => ({ code: 0, stdout: 'OK\n', stderr: '' });
+    const execFn: SqlclExecFn = async () => ({ code: 0, stdout: 'Validation successful.\n', stderr: '' });
     const deps = { execFn, existsFn: (p: string) => p === '/opt/sqlcl/bin/sql' };
     const options = {
       exportDir: REFERENCE_FIXTURE,
@@ -209,7 +209,7 @@ describe('runOnboarding -- determinism', () => {
       command: ['/opt/sqlcl/bin/sql', '/nolog', '@<sqlcl-validation-script>'],
       exitCode: 0,
       passed: true,
-      stdout: 'OK\n',
+      stdout: 'Validation successful.\n',
       stderr: '',
     });
   });
@@ -234,6 +234,62 @@ describe('runOnboarding -- invalid directories', () => {
 
   it('throws a clear error when the export directory has no pages/ subdirectory', async () => {
     await expect(runOnboarding({ exportDir: tmpDir, ...dirs() })).rejects.toThrow(/no pages\/ subdirectory/);
+  });
+
+  it('rejects an unsupported manifest before invoking requested SQLcl validation', async () => {
+    const unsupportedExport = join(tmpDir, 'unsupported-export');
+    cpSync(REFERENCE_FIXTURE, unsupportedExport, { recursive: true });
+    writeFileSync(
+      join(unsupportedExport, '.apex', 'apexlang.json'),
+      JSON.stringify({ mmdVersion: '27.1.0' }),
+    );
+    let sqlclCalled = false;
+    const execFn: SqlclExecFn = async () => {
+      sqlclCalled = true;
+      return { code: 0, stdout: 'Validation successful.\n', stderr: '' };
+    };
+
+    await expect(
+      runOnboarding(
+        {
+          exportDir: unsupportedExport,
+          sqlcl: { executablePath: '/usr/local/bin/sql' },
+          ...dirs(),
+        },
+        { execFn, existsFn: () => true },
+      ),
+    ).rejects.toThrow(/verified only for APEX 26\.1/);
+    expect(sqlclCalled).toBe(false);
+  });
+
+  it('rejects an unsupported baseline before SQLcl or generated output', async () => {
+    const unsupportedBaseline = join(tmpDir, 'unsupported-baseline');
+    cpSync(REFERENCE_FIXTURE, unsupportedBaseline, { recursive: true });
+    writeFileSync(
+      join(unsupportedBaseline, '.apex', 'apexlang.json'),
+      JSON.stringify({ mmdVersion: '27.1.0' }),
+    );
+    let sqlclCalled = false;
+    const execFn: SqlclExecFn = async () => {
+      sqlclCalled = true;
+      return { code: 0, stdout: 'Validation successful.\n', stderr: '' };
+    };
+    const outputDirs = dirs();
+
+    await expect(
+      runOnboarding(
+        {
+          exportDir: REFERENCE_FIXTURE,
+          baselineExportDir: unsupportedBaseline,
+          sqlcl: { executablePath: '/usr/local/bin/sql' },
+          ...outputDirs,
+        },
+        { execFn, existsFn: () => true },
+      ),
+    ).rejects.toThrow(/verified only for APEX 26\.1/);
+    expect(sqlclCalled).toBe(false);
+    expect(existsSync(outputDirs.testsOutDir)).toBe(false);
+    expect(existsSync(outputDirs.docsOutDir)).toBe(false);
   });
 });
 
@@ -261,10 +317,13 @@ describe('runOnboarding -- SQLcl opt-in', () => {
     expect(called).toBe(false);
   });
 
-  it('requested and succeeds: writes a real /NOLOG-startable script, invokes sql /nolog @<script>, cleans it up, and normalizes the reported command', async () => {
+  it('requested and succeeds: validates from cwd without interpolating the export path into SQLcl source', async () => {
+    const spacedExport = join(tmpDir, 'export with spaces');
+    cpSync(REFERENCE_FIXTURE, spacedExport, { recursive: true });
     let scriptPathSeenByExecFn: string | null = null;
-    const execFn: SqlclExecFn = async (executablePath, args) => {
+    const execFn: SqlclExecFn = async (executablePath, args, options) => {
       expect(executablePath).toBe('/usr/local/bin/sql');
+      expect(options?.cwd).toBe(spacedExport);
       // Documented SQL startup syntax: SQL [[option] [logon|/NOLOG] [start]],
       // where start is @{url|file_name}[arg...] -- never a bare trailing
       // command (see onboard.ts's runSqlclValidation doc comment).
@@ -275,11 +334,11 @@ describe('runOnboarding -- SQLcl opt-in', () => {
       // moment execFn runs, before cleanup) containing exactly the
       // documented interactive-prompt command, plus an exit so the
       // session terminates instead of hanging at a prompt.
-      expect(readFileSync(scriptPathSeenByExecFn, 'utf8')).toBe(`apex validate -input ${REFERENCE_FIXTURE}\nexit\n`);
+      expect(readFileSync(scriptPathSeenByExecFn, 'utf8')).toBe('apex validate\nexit\n');
       return { code: 0, stdout: 'Validation successful.\n', stderr: '' };
     };
     const report = await runOnboarding(
-      { exportDir: REFERENCE_FIXTURE, sqlcl: { executablePath: '/usr/local/bin/sql' }, ...dirs() },
+      { exportDir: spacedExport, sqlcl: { executablePath: '/usr/local/bin/sql' }, ...dirs() },
       { execFn, existsFn: () => true },
     );
     expect(report.sqlcl).toEqual({
@@ -296,16 +355,68 @@ describe('runOnboarding -- SQLcl opt-in', () => {
     expect(existsSync(scriptPathSeenByExecFn as string)).toBe(false);
   });
 
-  it('requested and the validation itself fails (nonzero exit): a real, reportable failure, NOT a thrown error', async () => {
-    const execFn: SqlclExecFn = async () => ({ code: 1, stdout: '', stderr: 'ERROR: invalid APEXlang syntax at line 12\n' });
+  it('normalizes a relative explicit executable before changing the child working directory', async () => {
+    const relativeExecutable = './tools/sql';
+    const execFn: SqlclExecFn = async (executablePath, _args, options) => {
+      expect(executablePath).toBe(resolve(relativeExecutable));
+      expect(options?.cwd).toBe(REFERENCE_FIXTURE);
+      return { code: 0, stdout: 'Validation successful.\n', stderr: '' };
+    };
+    const report = await runOnboarding(
+      { exportDir: REFERENCE_FIXTURE, sqlcl: { executablePath: relativeExecutable }, ...dirs() },
+      { execFn, existsFn: (path) => path === relativeExecutable },
+    );
+    expect(report.sqlcl.executablePath).toBe(resolve(relativeExecutable));
+    expect(report.sqlcl.passed).toBe(true);
+  });
+
+  it('rejects an explicit Windows .cmd/.bat launcher with an actionable error', async () => {
+    await expect(
+      runOnboarding(
+        {
+          exportDir: REFERENCE_FIXTURE,
+          sqlcl: { executablePath: 'C:\\sqlcl\\bin\\sql.cmd' },
+          ...dirs(),
+        },
+        { existsFn: () => true, platform: 'win32' },
+      ),
+    ).rejects.toThrow(/Pass the SQLcl sql\.exe path instead/);
+  });
+
+  it('fails closed when SQLcl reports compile errors but exits successfully', async () => {
+    const execFn: SqlclExecFn = async () => ({
+      code: 0,
+      stdout: 'APEXLang Compile Errors:\nFile: pages/p00003-employee.apx\n',
+      stderr: '',
+    });
     const report = await runOnboarding(
       { exportDir: REFERENCE_FIXTURE, sqlcl: { executablePath: '/usr/local/bin/sql' }, ...dirs() },
       { execFn, existsFn: () => true },
     );
     expect(report.sqlcl.requested).toBe(true);
     expect(report.sqlcl.passed).toBe(false);
+    expect(report.sqlcl.exitCode).toBe(0);
+    expect(report.sqlcl.stdout).toContain('APEXLang Compile Errors');
+  });
+
+  it('fails closed on a zero exit with no documented success marker', async () => {
+    const execFn: SqlclExecFn = async () => ({ code: 0, stdout: 'SQLcl completed.\n', stderr: '' });
+    const report = await runOnboarding(
+      { exportDir: REFERENCE_FIXTURE, sqlcl: { executablePath: '/usr/local/bin/sql' }, ...dirs() },
+      { execFn, existsFn: () => true },
+    );
+    expect(report.sqlcl.passed).toBe(false);
+    expect(report.sqlcl.exitCode).toBe(0);
+  });
+
+  it('fails when the process exits nonzero even if output contains the success marker', async () => {
+    const execFn: SqlclExecFn = async () => ({ code: 1, stdout: 'Validation successful.\n', stderr: '' });
+    const report = await runOnboarding(
+      { exportDir: REFERENCE_FIXTURE, sqlcl: { executablePath: '/usr/local/bin/sql' }, ...dirs() },
+      { execFn, existsFn: () => true },
+    );
+    expect(report.sqlcl.passed).toBe(false);
     expect(report.sqlcl.exitCode).toBe(1);
-    expect(report.sqlcl.stderr).toContain('invalid APEXlang syntax');
   });
 
   it('requested but the executable cannot be resolved: the WHOLE run fails (throws), never a silent skip', async () => {
