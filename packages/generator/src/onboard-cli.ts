@@ -35,7 +35,7 @@ function usage(): void {
   console.error("  --touch-log <path> Optional. A touch log written by @apx/testkit's coverage recorder during a");
   console.error('                     PRIOR run of the GENERATED suite (APX_COVERAGE_LOG). Only consulted when');
   console.error('                     --baseline is also given -- apx-onboard never runs Playwright itself.');
-  console.error('  --sqlcl[=<path>]   Optional, OFF by default. Opt in to SQLcl `apex validate -input <export-dir>`.');
+  console.error('  --sqlcl[=<path>]   Optional, OFF by default. Opt in to SQLcl `apex validate` from the export directory.');
   console.error('                     With no explicit path, PATH is searched for a sql/sql.exe executable.');
   console.error('                     If SQLcl was requested but cannot be resolved or invoked, the');
   console.error('                     whole run fails (non-zero exit) -- never a silent skip.');

@@ -290,7 +290,7 @@ not existing).
 | Documentation generation (`apx-docs`) | — | ✅ (pure AST read, no live app needed) | — |
 | Flow Map / navigation graph (`apx-flow`) | — | ✅ (pure AST read, no live app needed) — Phase 1a scope: `ApexPage.branches`, `ApexRegion.actions` (Cards/List), `ApexRegion.columns[].linkTarget`, `ApexButton.target`/`.url`. Every edge carries a real confidence tier: `'high'` (all 8 of 8 mechanisms — live-witnessed real data; button page/app-redirect targets were `'medium'` until the Fourteenth round corrected a false "zero real occurrences" claim that had only ever checked one app — `concurrent-manager` has 17 real `redirectThisApp` occurrences across 12 pages, `redirectOtherApp` specifically still unwitnessed). Breadcrumbs/navigation lists (shared-component parser support needed), dialog-page detection (cross-page join needed), Dynamic Action redirects (no declarative metadata found), and `apex.navigation` (runtime JS API) are all explicitly out of scope — see `docs/ecosystem-roadmap.md`'s Thirteenth and Fourteenth rounds | — |
 | CI dashboard (`apx-report`) | — | ✅ (self-contained HTML bundling coverage + diff + parser-warning-summary; no new data source, pure composition of the three rows above) | — |
-| Onboarding orchestration (`apx-onboard`) | — | ✅ one shared `runOnboarding()` function (`@apx/testgen/onboard`) drives BOTH the CLI and the `onboard_generated_apex_app` MCP tool; sequences inspect/generate/flow-map/docs, plus diff (given `--baseline`) and coverage (given `--baseline` AND an already-existing `--touch-log`) — never silently omitted, always an explicit note when a section can't run yet; `liveVerificationRequirements` is derived from this same run's real parser warnings/unmodeled components/generation diagnostics. Opt-in SQLcl `apex validate -input <exportDir>` (OFF by default; hard-fails the whole run if requested but unresolvable — see `docs/quirks/26.1.json` `sqlcl-apex-validate-command-shape`) | — |
+| Onboarding orchestration (`apx-onboard`) | — | ✅ one shared `runOnboarding()` function (`@apx/testgen/onboard`) drives BOTH the CLI and the `onboard_generated_apex_app` MCP tool; sequences inspect/generate/flow-map/docs, plus diff (given `--baseline`) and coverage (given `--baseline` AND an already-existing `--touch-log`) — never silently omitted, always an explicit note when a section can't run yet; `liveVerificationRequirements` is derived from this same run's real parser warnings/unmodeled components/generation diagnostics. Opt-in SQLcl `apex validate` runs from the export directory (OFF by default; hard-fails the whole run if requested but unresolvable — see `docs/quirks/26.1.json` `sqlcl-apex-validate-command-shape`) | — |
 
 Full list of limitations in docs/limitations.md; a few of the stories
 behind specific rows:
@@ -412,7 +412,7 @@ done: `apx-onboard --export <export-dir> [--baseline <dir>] --tests
 inspect/generate/flow-map/docs always; diff and coverage added only when
 a baseline export and an already-run touch log are available
 (never a silent omission — always an explicit note); an opt-in
-`--sqlcl` flag runs SQLcl's `apex validate -input <export-dir>` (off by
+`--sqlcl` flag runs SQLcl's `apex validate` from the export directory (off by
 default, hard-fails the whole run if requested but unavailable); see
 docs/tutorial.md §2.19. Still open: snapshot testing (needs a
 masking-policy design), and Trees as content — the only Tree widget seen

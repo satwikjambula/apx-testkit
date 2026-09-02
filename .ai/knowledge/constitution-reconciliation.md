@@ -173,10 +173,13 @@ pass — flagging them here is explicitly not the same as adopting them.
   are both historical record, not current status.** The maintainer
   directed implementation directly, including keeping SQLcl validation as
   an **opt-in** step (not scoped out, as this entry originally
-  recommended). Implementation is in progress/under review as PR #27 —
-  see the Seventeenth round's override note for the authoritative current
-  status. Everything below this line is preserved as the record of what
-  was considered, not what's currently true.
+  recommended). Phase One shipped via PR #27; the SQLcl subprocess was
+  subsequently hardened to validate from the export working directory,
+  classify success from Oracle's documented output marker rather than an
+  unverified exit-status assumption, and enforce the 26.1 manifest gate
+  before invocation. See the Seventeenth round's override note for the
+  authoritative current status. Everything below this line is preserved
+  as the record of what was considered, not what's currently true.
 
   **Original entry (superseded, preserved for the record):**
   **Status: Deferred, not Rejected** — same disposition as Functional
@@ -281,7 +284,7 @@ resolved" note.
 | P1.10 Improve authentication modeling | implied outstanding | **Partially done.** Page authentication is typed and consumed; custom login-form discovery remains configurable and evidence-gated. |
 | P1.11 Fix button label-based coverage identity | implied outstanding | **Done** (commit `0753b7b`). See §A. |
 | P1.12 Separate generic region APIs from component-specific | implied outstanding | **Done, and was already the design from the start** — `.ai/knowledge/runtime.md`. |
-| P1.13 Introduce Oracle SQLcl validation | implied outstanding | **Not started — correctly flagged as needing its own proposal**, see §D. |
+| P1.13 Introduce Oracle SQLcl validation | implied outstanding | **Done as an opt-in onboarding step.** Shipped via PR #27 and hardened afterward: manifest-first, path-safe working-directory invocation, documented success-marker classification, fail-closed unknown output. See §D and `docs/quirks/26.1.json`. |
 | P1.14 Oracle grammar evidence/versioning | implied outstanding | **Substantially done in spirit**, differently shaped — `docs/verification/26.1.json` plus per-EBNF-production citations in `ast.ts` doc comments cover most of what §44/§45 ask for; see §D's note on not duplicating it. |
 | P1.15 Improve shared-component modeling | implied outstanding | **Still outstanding, confirmed.** See §B. |
 | P2.16 Remove arbitrary `waitForTimeout` | implied outstanding | **Effectively done** — one documented, justified exception remains; see §A. |

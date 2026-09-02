@@ -46,8 +46,9 @@
  * override note). OFF by default: nothing in the default path depends on
  * SQLcl being installed. When requested (`sqlcl` option set), the SQLcl
  * executable is resolved (explicit path, or searched on PATH) and
- * `apex validate -input <exportDir>` is run -- confirmed against Oracle's
- * live SQLcl 26.2 documentation for this pass (Chapter 12.1, "validate":
+ * `apex validate` is run with the export directory as SQLcl's working
+ * directory -- confirmed against Oracle's live SQLcl 26.1 documentation
+ * for this pass (Chapter 12.1, "validate":
  * "Syntax: apex validate [options]" / "-input <input> {PATH} -- ...This
  * can be a directory, a zip file, or a single APEXlang file..."; also
  * confirmed via Chapter 7.2 "Commands Overview": "validate -- Compiles
@@ -119,9 +120,13 @@ export interface SqlclExecResult {
  * never a number, which is how this distinguishes "ran and failed" from
  * "never ran").
  */
-export const defaultSqlclExecFn: SqlclExecFn = (executablePath, args) =>
+export interface SqlclExecOptions {
+  cwd: string;
+}
+
+export const defaultSqlclExecFn: SqlclExecFn = (executablePath, args, options) =>
   new Promise((resolvePromise, reject) => {
-    execFile(executablePath, args as string[], { maxBuffer: 20 * 1024 * 1024 }, (error, stdout, stderr) => {
+    execFile(executablePath, args as string[], { cwd: options?.cwd, maxBuffer: 20 * 1024 * 1024 }, (error, stdout, stderr) => {
       if (error) {
         const code = (error as NodeJS.ErrnoException & { code?: number | string }).code;
         if (typeof code !== 'number') {
@@ -135,7 +140,11 @@ export const defaultSqlclExecFn: SqlclExecFn = (executablePath, args) =>
     });
   });
 
-export type SqlclExecFn = (executablePath: string, args: readonly string[]) => Promise<SqlclExecResult>;
+export type SqlclExecFn = (
+  executablePath: string,
+  args: readonly string[],
+  options?: Readonly<SqlclExecOptions>,
+) => Promise<SqlclExecResult>;
 
 export interface SqlclOption {
   /** Explicit executable path from `--sqlcl=<path>`. When absent, PATH is searched. */
@@ -182,10 +191,9 @@ export function resolveSqlclExecutable(
   // shell:true) introduces batch-file argument-quoting hazards this project
   // isn't taking on for an optional validation step. NOTE: this limitation
   // is inherent to execFile()/the file type, not to PATH search specifically
-  // -- an explicit `--sqlcl=<path>` pointing at a .cmd/.bat launcher would
-  // hit the identical problem at invocation time, it just isn't filtered
-  // out here since an explicit path is checked for existence only, never
-  // its shape (see the executablePath branch above). Current SQLcl Windows
+  // -- runSqlclValidation() rejects an explicit `--sqlcl=<path>` pointing
+  // at a .cmd/.bat launcher with a targeted error before resolution.
+  // Current SQLcl Windows
   // distributions ship sql.exe as the real launcher, so this is expected
   // to be a non-issue in practice; documented honestly rather than implying
   // a workaround that doesn't actually exist.
@@ -206,7 +214,7 @@ export function resolveSqlclExecutable(
 export interface SqlclValidationSection {
   requested: boolean;
   executablePath: string | null;
-  /** Full argv, executable included, exactly as invoked -- e.g. `['/usr/local/bin/sql', '/nolog', 'apex', 'validate', '-input', '/path/to/export']`. `null` when `requested` is `false`. */
+  /** Normalized argv, executable included. The random temporary script path is represented by `@<sqlcl-validation-script>`. `null` when `requested` is `false`. */
   command: string[] | null;
   exitCode: number | null;
   passed: boolean | null;
@@ -251,11 +259,15 @@ const SQLCL_NOT_REQUESTED: SqlclValidationSection = Object.freeze({
  * in this environment to independently confirm end-to-end exit-code
  * behavior).
  *
- * Fix: write `apex validate -input <dir>` (plus `exit`, so the session
+ * Fix: run SQLcl with the already-resolved export directory as its working
+ * directory and write `apex validate` (plus `exit`, so the session
  * terminates and returns control rather than sitting at an interactive
- * prompt) to a temporary `.sql` script, and invoke `sql /nolog
- * @<scriptPath>` -- exactly the documented `[start]` shape. The script's
- * location is a real, securely-generated temp directory (`mkdtempSync`,
+ * prompt) to a temporary `.sql` script. Oracle 26.1 explicitly documents
+ * that omitting `-input` validates the current directory. This avoids
+ * interpolating a user-controlled filesystem path into SQLcl source, so
+ * spaces and newlines cannot corrupt or inject script commands. Invoke
+ * `sql /nolog @<scriptPath>` -- exactly the documented `[start]` shape.
+ * The script's location is a real, securely-generated temp directory (`mkdtempSync`,
  * avoiding the predictable-path/symlink risk of a fixed temp filename in
  * a shared writable directory) and is always removed afterward, including
  * on failure.
@@ -272,8 +284,23 @@ const SQLCL_NOT_REQUESTED: SqlclValidationSection = Object.freeze({
  */
 const SQLCL_SCRIPT_PLACEHOLDER = '@<sqlcl-validation-script>';
 
-function buildSqlclScriptContents(exportDir: string): string {
-  return `apex validate -input ${exportDir}\nexit\n`;
+function buildSqlclScriptContents(): string {
+  return 'apex validate\nexit\n';
+}
+
+/**
+ * Oracle 26.1 documents the observable validation contract as follows:
+ * successful validation prints `Validation successful`; otherwise errors
+ * or warnings are printed. It does NOT document that the extension command
+ * controls SQLcl's process exit status, and bare `exit` defaults to SUCCESS.
+ * Require both a clean process exit and the documented success marker. Any
+ * other output fails closed instead of turning an invalid export into a
+ * false-positive pass.
+ */
+function sqlclValidationPassed(result: SqlclExecResult): boolean {
+  if (result.code !== 0) return false;
+  const output = `${result.stdout}\n${result.stderr}`;
+  return /(?:^|\r?\n)Validation successful\.?(?:\r?\n|$)/i.test(output);
 }
 
 async function runSqlclValidation(
@@ -281,8 +308,16 @@ async function runSqlclValidation(
   option: SqlclOption,
   deps: OnboardRuntimeDeps,
 ): Promise<SqlclValidationSection> {
-  const executablePath = resolveSqlclExecutable(option, deps);
-  if (!executablePath) {
+  const platform = deps.platform ?? process.platform;
+  if (platform === 'win32' && option.executablePath && /\.(?:cmd|bat)$/i.test(option.executablePath)) {
+    throw new Error(
+      `apx-onboard: --sqlcl cannot execute the Windows batch launcher '${option.executablePath}'. ` +
+        'Pass the SQLcl sql.exe path instead; Node execFile cannot execute .cmd/.bat files directly.',
+    );
+  }
+
+  const resolvedExecutablePath = resolveSqlclExecutable(option, deps);
+  if (!resolvedExecutablePath) {
     const where = option.executablePath
       ? `the explicit --sqlcl path '${option.executablePath}'`
       : 'PATH (searched for sql/sql.exe)';
@@ -290,9 +325,13 @@ async function runSqlclValidation(
       `apx-onboard: --sqlcl validation was requested but no SQLcl executable could be resolved (looked at ${where}). ` +
         'Install SQLcl (https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/) and either add it to PATH ' +
         'or pass --sqlcl=<path-to-sql-executable>. Validation was explicitly requested and could not run -- this is ' +
-        'a hard failure of the whole apx-onboard run, not a skipped step.',
+      'a hard failure of the whole apx-onboard run, not a skipped step.',
     );
   }
+  // Child-process executable lookup happens relative to `cwd`. Normalize
+  // before switching cwd to the export directory so an explicit relative
+  // path such as `./tools/sql` keeps referring to the caller's directory.
+  const executablePath = resolve(resolvedExecutablePath);
 
   // Real filesystem, not an injectable seam -- this is a tiny, local,
   // side-effect-free temp-file write, not the external SQLcl process this
@@ -301,12 +340,12 @@ async function runSqlclValidation(
   const scriptDir = mkdtempSync(join(tmpdir(), 'apx-onboard-sqlcl-'));
   const scriptPath = join(scriptDir, 'apx-onboard-validate.sql');
   try {
-    writeFileSync(scriptPath, buildSqlclScriptContents(exportDir), 'utf8');
+    writeFileSync(scriptPath, buildSqlclScriptContents(), 'utf8');
     const args = ['/nolog', `@${scriptPath}`];
     const execFn = deps.execFn ?? defaultSqlclExecFn;
     let result: SqlclExecResult;
     try {
-      result = await execFn(executablePath, args);
+      result = await execFn(executablePath, args, { cwd: exportDir });
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
       throw new Error(
@@ -319,7 +358,7 @@ async function runSqlclValidation(
       executablePath,
       command: [executablePath, '/nolog', SQLCL_SCRIPT_PLACEHOLDER],
       exitCode: result.code,
-      passed: result.code === 0,
+      passed: sqlclValidationPassed(result),
       stdout: result.stdout,
       stderr: result.stderr,
     };
@@ -438,7 +477,7 @@ export interface OnboardOptions {
   docsOutDir: string;
   /** Path to a touch log written by @apx/testkit's coverage recorder during a prior run of the GENERATED suite. */
   touchLogPath?: string;
-  /** When set, opt in to SQLcl `apex validate -input <exportDir>`. Absent = SQLcl is never invoked, never required. */
+  /** When set, opt in to SQLcl `apex validate` with `exportDir` as its working directory. Absent = SQLcl is never invoked, never required. */
   sqlcl?: SqlclOption;
 }
 
@@ -463,8 +502,23 @@ export async function runOnboarding(
     if (baselineProblem) throw new Error(baselineProblem);
   }
 
-  // CORRECTED (review feedback, 2026-08-27): SQLcl validation now runs
-  // FIRST, before generate()/generateDocs() write anything to disk. The
+  // Parse and enforce the APEXlang 26.1 manifest before invoking any
+  // external tool. This is read-only and preserves the approved pipeline:
+  // manifest/version gate -> inspect/parse -> optional SQLcl -> outputs.
+  const parsed = parseApp(loadApexlangExport(exportDir));
+  const parserWarnings = parsed.warnings;
+  const unmodeledComponents = [...parsed.ast.unmodeled].sort();
+  if (baselineExportDir) {
+    // Fail before SQLcl or generated output when the baseline itself is
+    // missing its manifest, targets an unsupported APEX version, or cannot
+    // be parsed. computeDiff() loads it again later; this early read is the
+    // side-effect-free acceptance gate that keeps failures atomic.
+    parseApp(loadApexlangExport(baselineExportDir));
+  }
+
+  // CORRECTED (review feedback, 2026-08-27): SQLcl validation runs after
+  // the read-only manifest/parser gate but before generate()/generateDocs()
+  // write anything to disk. The
   // prior ordering ran validation LAST -- if it was requested and then
   // failed/couldn't be invoked, runOnboarding() threw with test and doc
   // files already written to options.testsOutDir/docsOutDir and no report
@@ -474,14 +528,6 @@ export async function runOnboarding(
   // gets validated -- it just fails BEFORE any output exists instead of
   // after some of it does.
   const sqlcl = options.sqlcl ? await runSqlclValidation(exportDir, options.sqlcl, deps) : SQLCL_NOT_REQUESTED;
-
-  // Parser warnings / unmodeled components: same independent parse
-  // `report.ts`'s computeReport() already performs for the identical
-  // reason (ParseIssue's structured loc is needed verbatim; GenerateResult
-  // only carries a pre-stringified form of the same warnings).
-  const parsed = parseApp(loadApexlangExport(exportDir));
-  const parserWarnings = parsed.warnings;
-  const unmodeledComponents = [...parsed.ast.unmodeled].sort();
 
   const generateResult: GenerateResult = generate(exportDir, options.testsOutDir);
   const flowMap = computeFlowMap(exportDir);

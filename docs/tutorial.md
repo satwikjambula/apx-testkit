@@ -1489,29 +1489,31 @@ region (with a stable reason code: `no-verified-dom-convention`,
 `GenerateResult.pages`, `PageGenerationDiagnostics`, in `@apx/testgen/lib`).
 
 **Opt-in SQLcl validation.** OFF by default — nothing in the default path
-depends on SQLcl being installed. Pass `--sqlcl` (search `PATH` for a
-`sql`/`sql.exe`/`sql.cmd`/`sql.bat` executable) or `--sqlcl=<path>` (use
-that executable verbatim) to also run SQLcl's `apex validate -input
-<export-dir>` and capture the result (pass/fail, exit code, full
+depends on SQLcl being installed. Pass `--sqlcl` (search `PATH` for
+`sql` on POSIX or `sql.exe` on Windows) or `--sqlcl=<path>` (use that
+executable verbatim) to run SQLcl's `apex validate` with the export
+directory as its working directory and capture the result (pass/fail,
+exit code, full
 stdout/stderr) in the report's `sqlcl` section. **If SQLcl was requested
 but cannot be resolved or invoked, the WHOLE run fails with a non-zero
 exit code** — never a silently skipped step:
 
 ```
 $ apx-onboard --export ./export --tests ./tests --docs ./docs --report ./report.json --sqlcl
-apx-onboard: --sqlcl validation was requested but no SQLcl executable could be resolved (looked at PATH (searched for sql/sql.exe/sql.cmd/sql.bat)). Install SQLcl (https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/) and either add it to PATH or pass --sqlcl=<path-to-sql-executable>. Validation was explicitly requested and could not run -- this is a hard failure of the whole apx-onboard run, not a skipped step.
+apx-onboard: --sqlcl validation was requested but no SQLcl executable could be resolved (looked at PATH (searched for sql/sql.exe)). Install SQLcl (https://www.oracle.com/database/sqldeveloper/technologies/sqlcl/) and either add it to PATH or pass --sqlcl=<path-to-sql-executable>. Validation was explicitly requested and could not run -- this is a hard failure of the whole apx-onboard run, not a skipped step.
 $ echo $?
 1
 ```
 
-`apex validate -input <path>`'s command/flag shape is independently
-confirmed against Oracle's own live SQLcl 26.2 documentation (not taken
-on an earlier pass's secondhand claim) — see `docs/quirks/26.1.json`
-`sqlcl-apex-validate-command-shape` for the exact citation and for what
-remains a documented-convention-based design decision rather than an
-independently-reproduced fact (no real SQLcl binary was available in this
-project's own development/CI environment to confirm the outer,
-non-interactive invocation shell against).
+Oracle's SQLcl 26.1 command reference explicitly documents that omitting
+`-input` validates the current directory. The generated SQLcl script
+therefore contains only `apex validate` and `exit`; the export path is
+provided as the child process working directory and is never interpolated
+into SQLcl source. Validation passes only when SQLcl exits cleanly and its
+combined output contains Oracle's documented `Validation successful`
+marker. A zero exit with compile errors, warnings, or unrecognized output
+fails closed. See `docs/quirks/26.1.json`
+`sqlcl-apex-validate-command-shape` for the 26.1 citations and evidence.
 
 **MCP tool:** `onboard_generated_apex_app` calls the identical
 `runOnboarding()` function — same `exportDir`/`baselineExportDir`/
