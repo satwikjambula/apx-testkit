@@ -752,9 +752,11 @@ export interface ApexValidation {
  * `<process-group-block>` enumerates exactly ten groups (genAI, source,
  * execution, successMessage, error, advanced, serverSideCondition,
  * security, config, comments) -- there is NO `target` group defined
- * anywhere in the `process` production. Real data confirms one anyway,
- * common and reproducible: `autoRowProcessing`/`formAutoRowProcessing`
- * processes (117 + 93 = 210 real instances) carry a
+ * anywhere in the `process` production (re-confirmed fresh against the raw
+ * EBNF, 2026-08-22: zero occurrences of `pkColumn`/`pkItem`/
+ * `returnKeyIntoItem` anywhere in the entire 11,700+ line file). Real data
+ * confirms one anyway, common and reproducible: `autoRowProcessing`/
+ * `formAutoRowProcessing` processes (117 + 93 = 210 real instances) carry a
  * `target { tableName: ..., pkColumn: ..., pkItem: ..., returnKeyIntoItem:
  * ... }` group (confirmed live in Oracle's own `customers` starter app,
  * `p00002-customer-details.apx:1821`: `process
@@ -763,11 +765,18 @@ export interface ApexValidation {
  * returnKeyIntoItem: P2_ID } ... )`) -- the same class of gap already
  * documented for `calendarSettings` (real properties entirely absent from
  * the grammar) and `branch.target` (grammar names a different, incompatible
- * shape). This `target` group is intentionally left untyped here (kept in
- * `raw` only) -- no concrete diff/coverage consumer has asked for
- * `tableName`/`pkColumn` specifically yet, matching this project's
- * restrained-typing bar; the gap itself is the citable finding, not a
- * reason to type the field.
+ * shape).
+ *
+ * NOW TYPED (2026-08-22, GitHub issue #5): the CRUD-generation discovery
+ * pass (`docs/quirks/26.1.json` `crud-generation-discovery-pass-blocked`)
+ * named this exact gap as one of two concrete blockers -- "a typed
+ * `pkColumn`/`pkItem` field... reachable without an ad hoc raw-bag
+ * cross-reference between two different AST node types" -- so the "no
+ * concrete consumer has asked for it yet" reason this field stayed
+ * untyped no longer holds. See `target` below. This does NOT itself
+ * unblock CRUD generation -- the second blocker (a credentialed, reachable
+ * form-over-table page to observe an actual create -> read-back round
+ * trip) is a live-verification gap this typed field cannot close.
  */
 export interface ApexProcess {
   /** Confirmed ALWAYS present (1732/1732 real processes across this
@@ -805,6 +814,15 @@ export interface ApexProcess {
    * Confirmed present on 750/1732 real processes -- reuses the identical
    * shared shape as `branch`/`validation` (see ApexServerSideCondition). */
   condition: ApexServerSideCondition | null;
+  /** `target { tableName, pkColumn, pkItem, returnKeyIntoItem }` -- present
+   * on `autoRowProcessing`/`formAutoRowProcessing` processes (210 real
+   * instances confirmed in this project's corpus), `null` otherwise (e.g.
+   * every `executeCode`/`closeDialog`/`autoRowFetch` process observed).
+   * Not in the EBNF at all -- see this interface's own doc comment for the
+   * confirmed gap and real citation. `pkColumn`/`pkItem` specifically are
+   * what GitHub issue #5's CRUD-generation discovery pass needed and
+   * previously had to read via an ad hoc raw-bag cross-reference. */
+  target: { tableName: string | null; pkColumn: string | null; pkItem: string | null; returnKeyIntoItem: string | null } | null;
   loc: Loc;
   raw: RawBag;
 }

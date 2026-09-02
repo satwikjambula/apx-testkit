@@ -515,6 +515,8 @@ function projectBranch(n: ComponentNode): ApexBranch {
 }
 
 function projectProcess(n: ComponentNode): ApexProcess {
+  const hasTarget = ['target.tableName', 'target.pkColumn', 'target.pkItem', 'target.returnKeyIntoItem']
+    .some((k) => n.props[k] !== undefined);
   return {
     identifier: n.identifier ?? '(anonymous)',
     name: str(n.props['name']),
@@ -522,6 +524,14 @@ function projectProcess(n: ComponentNode): ApexProcess {
     sequence: num(n.props['execution.sequence']),
     point: str(n.props['execution.point']),
     condition: projectServerSideCondition(n.props),
+    target: hasTarget
+      ? {
+          tableName: str(n.props['target.tableName']),
+          pkColumn: str(n.props['target.pkColumn']),
+          pkItem: str(n.props['target.pkItem']),
+          returnKeyIntoItem: str(n.props['target.returnKeyIntoItem']),
+        }
+      : null,
     loc: n.loc,
     raw: n.props,
   };
