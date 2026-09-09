@@ -927,6 +927,13 @@ omitted — their runtime id is genuinely unconstructible from static data.
 
 ### 2.12 Dynamic Actions (metadata only)
 
+Issue #6 documentation review found no public dispatcher accepting a Page
+Designer Dynamic Action name. `apex.actions.invoke` refers to a separate
+registered operation. Tests should describe real interactions and explicit
+expected results. Runtime verification remains pending; the evidence and
+follow-up checks are in `docs/quirks/26.1.json`
+(`dynamic-action-trigger-by-name-discovery`).
+
 **Status: TYPED, parser-only — no runtime component.** `@apx/parser`
 projects `dynamicAction` blocks into `ApexPage.dynamicActions`, evidenced
 by Oracle's own "Sample Dynamic Actions" gallery app (329 real

@@ -1,8 +1,19 @@
 {
   "apexVersion": "26.1",
-  "lastUpdated": "2026-08-27",
+  "lastUpdated": "2026-09-09",
   "note": "Every entry here was found by direct live verification against a real running APEX 26.1 instance, not inferred from documentation. This is a structured index of facts already documented in prose across docs/grammar-assumptions.md and inline source comments -- see the 'source' field on each entry for the full story. This file is documentation, not (yet) wired into any runtime warning mechanism -- see docs/ecosystem-roadmap.md for why that's a deliberate scoping decision, not an oversight.",
   "quirks": [
+    {
+      "id": "dynamic-action-trigger-by-name-discovery",
+      "component": "Page Designer Dynamic Actions (issue #6)",
+      "issue": "No named-Dynamic-Action dispatcher was found in the reviewed Oracle APEX 26.1 public APIs. triggerDynamicAction remains unsupported.",
+      "evidence": "Documentation-only review, repeated 2026-09-09 using direct HTTP downloads read locally: apex.da documents cancel(), handleAjaxErrors(), and resume(), which control existing execution. apex.event.trigger(pSelector, pEvent, pData) addresses an element/event pair. The separate actions interface manages actions.action objects: invoke(pActionName, ...) invokes a registered operation; its documentation does not establish a mapping from Page Designer Dynamic Action Identification Names. INFERENCE: these interfaces do not provide generic dispatch by Dynamic Action name. This is not proof about undocumented internals, and no live behavior is claimed. The earlier 2026-09-01 access attempt returned HTTP 571 DatabaseConnectionError; live verification is deferred by the maintainer on 2026-09-09, not reattempted in this pass.",
+      "reproducedAgainst": "Oracle 26.1 API documentation only; no running application in this pass. This entry is an explicit exception to the ledger's historical top-level description of live evidence.",
+      "workaround": "Author tests around the actual user interaction and explicit expected result. Event replay requires an independently established selector/event contract and may affect multiple handlers. Do not equate apex.actions names with Dynamic Action names. Live follow-up: choose real exported DAs with observable effects, check normal interaction and event replay, shared bindings and conditional behavior. Record application/version, repetitions, effects and limits before exposing any runtime helper.",
+      "status": "documented candidates reviewed; named dispatch unsupported; live verification pending",
+      "rootCauseDiagnosed": false,
+      "source": "https://github.com/satwikjambula/apx-testkit/issues/6; https://docs.oracle.com/en/database/oracle/apex/26.1/aexjs/apex.da.html; https://docs.oracle.com/en/database/oracle/apex/26.1/aexjs/apex.event.html; https://docs.oracle.com/en/database/oracle/apex/26.1/aexjs/actions.html"
+    },
     {
       "id": "cards-getrecords-broken",
       "component": "Cards region (ApexCardsRegion)",
