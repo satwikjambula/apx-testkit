@@ -1527,6 +1527,15 @@ fails closed. See `docs/quirks/26.1.json`
 `testsOutDir`/`docsOutDir`/`touchLogPath` inputs, plus `sqlcl: boolean` /
 `sqlclExecutablePath: string` in place of the CLI's `--sqlcl` flag.
 
+**CI quality gates:** pass `--quality-policy ./apx-quality.json` (MCP:
+`qualityPolicyPath`) to enforce parser-warning limits, explicit unmodeled
+component exceptions, required SQLcl validation and generation-gap budgets.
+The report contains each decision and applied exception. A failed or blocked
+gate exits 1 in the CLI and returns `isError: true` with the full report in
+MCP. Without a policy, `qualityGate` is null. These are diagnostic gates;
+they do not claim that live tests passed. See [Quality gates](quality-gates.md)
+for the policy schema, examples and missing-prerequisite behavior.
+
 Same determinism guarantee as every other artifact in this project: the
 same inputs (export dir, baseline dir, touch log path, and — for SQLcl —
 the same resolved executable/environment) always produce byte-identical

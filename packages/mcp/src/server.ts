@@ -42,7 +42,8 @@ import { computeDiff, formatDiffHuman } from '@apx/testgen/diff';
 import { computeCoverage } from '@apx/testgen/coverage';
 import { renderCoverageHtml } from '@apx/testgen/coverage-html';
 import { generateDocs } from '@apx/testgen/docs';
-import { runOnboarding } from '@apx/testgen/onboard';
+import { onboardingFailed, runOnboarding } from '@apx/testgen/onboard';
+import { loadQualityPolicy } from '@apx/testgen/quality-gates';
 
 /**
  * Shared precondition, mirroring exactly what every CLI in this project
@@ -261,16 +262,18 @@ export function createServer(): McpServer {
         touchLogPath: z.string().optional().describe('Absolute path to a touch log written by @apx/testkit\'s coverage recorder during a PRIOR run of the GENERATED suite (APX_COVERAGE_LOG). Only consulted when baselineExportDir is also given. A missing file produces an explicit note, not an error.'),
         sqlcl: z.boolean().optional().describe('Set true to opt in to SQLcl `apex validate` with exportDir as its working directory. OFF by default -- no SQLcl dependency unless explicitly requested.'),
         sqlclExecutablePath: z.string().optional().describe('Explicit path to the SQLcl executable (implies sqlcl: true even if sqlcl is omitted). When absent and sqlcl is true, PATH is searched.'),
+        qualityPolicyPath: z.string().optional().describe('Path to a version 1 quality policy JSON file. Failed or blocked rules return the full report with isError: true.'),
       },
     },
-    async ({ exportDir, baselineExportDir, testsOutDir, docsOutDir, touchLogPath, sqlcl, sqlclExecutablePath }) => {
+    async ({ exportDir, baselineExportDir, testsOutDir, docsOutDir, touchLogPath, sqlcl, sqlclExecutablePath, qualityPolicyPath }) => {
       const problem = checkExportDir(exportDir);
       if (problem) return { content: [{ type: 'text', text: problem }], isError: true };
       if (baselineExportDir) {
         const baselineProblem = checkExportDir(baselineExportDir);
         if (baselineProblem) return { content: [{ type: 'text', text: `Baseline export: ${baselineProblem}` }], isError: true };
       }
-      return safeText(async () => {
+      let failed = false;
+      const result = await safeText(async () => {
         const report = await runOnboarding({
           exportDir,
           baselineExportDir,
@@ -278,9 +281,12 @@ export function createServer(): McpServer {
           docsOutDir,
           touchLogPath,
           sqlcl: sqlcl || sqlclExecutablePath !== undefined ? { executablePath: sqlclExecutablePath } : undefined,
+          qualityPolicy: qualityPolicyPath === undefined ? undefined : loadQualityPolicy(qualityPolicyPath),
         });
+        failed = onboardingFailed(report);
         return JSON.stringify(report, null, 2);
       });
+      return failed ? { ...result, isError: true } : result;
     },
   );
 

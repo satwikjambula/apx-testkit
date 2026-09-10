@@ -85,6 +85,7 @@ import { computeFlowMap, type FlowMap } from './flow.js';
 import { generateDocs, type DocsGenerateResult } from './docs.js';
 import { computeDiff, type DiffReport } from './diff.js';
 import { computeCoverage, type CoverageReport } from './coverage.js';
+import { evaluateQualityGates, parseQualityPolicy, type QualityPolicy, type QualityGateReport } from './quality-gates.js';
 
 // ---------------------------------------------------------------------------
 // Export directory validation -- same checks/messages every other CLI/MCP
@@ -467,6 +468,13 @@ export interface OnboardingReport {
   coverage: CoverageSection;
   sqlcl: SqlclValidationSection;
   liveVerificationRequirements: string[];
+  /** Null means no policy was requested, never an implicit pass. */
+  qualityGate: QualityGateReport | null;
+}
+
+/** Shared failure semantics for CLI, MCP and library consumers. */
+export function onboardingFailed(report: Pick<OnboardingReport, 'sqlcl' | 'qualityGate'>): boolean {
+  return (report.sqlcl.requested && report.sqlcl.passed !== true) || report.qualityGate?.passed === false;
 }
 
 export interface OnboardOptions {
@@ -479,6 +487,7 @@ export interface OnboardOptions {
   touchLogPath?: string;
   /** When set, opt in to SQLcl `apex validate` with `exportDir` as its working directory. Absent = SQLcl is never invoked, never required. */
   sqlcl?: SqlclOption;
+  qualityPolicy?: QualityPolicy;
 }
 
 /**
@@ -491,6 +500,8 @@ export async function runOnboarding(
   options: OnboardOptions,
   deps: OnboardRuntimeDeps = {},
 ): Promise<OnboardingReport> {
+  // Invalid policy fails before subprocesses or generated output.
+  const qualityPolicy = options.qualityPolicy === undefined ? null : parseQualityPolicy(options.qualityPolicy);
   const exportDir = resolve(options.exportDir);
   const exportProblem = checkExportDir(exportDir, 'Export');
   if (exportProblem) throw new Error(exportProblem);
@@ -508,12 +519,13 @@ export async function runOnboarding(
   const parsed = parseApp(loadApexlangExport(exportDir));
   const parserWarnings = parsed.warnings;
   const unmodeledComponents = [...parsed.ast.unmodeled].sort();
+  let baselineWarningCount: number | null = null;
   if (baselineExportDir) {
     // Fail before SQLcl or generated output when the baseline itself is
     // missing its manifest, targets an unsupported APEX version, or cannot
     // be parsed. computeDiff() loads it again later; this early read is the
     // side-effect-free acceptance gate that keeps failures atomic.
-    parseApp(loadApexlangExport(baselineExportDir));
+    baselineWarningCount = parseApp(loadApexlangExport(baselineExportDir)).warnings.length;
   }
 
   // CORRECTED (review feedback, 2026-08-27): SQLcl validation runs after
@@ -584,5 +596,12 @@ export async function runOnboarding(
     coverage,
     sqlcl,
     liveVerificationRequirements,
+    qualityGate: qualityPolicy === null ? null : evaluateQualityGates(qualityPolicy, {
+      parserWarningCount: parserWarnings.length,
+      baselineWarningCount,
+      unmodeledComponents,
+      pages: generateResult.pages,
+      sqlcl,
+    }),
   };
 }

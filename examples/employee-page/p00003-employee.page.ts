@@ -29,7 +29,7 @@ export class EmployeePage {
     return gotoApexPageAuto(
       this.page,
       this.url(),
-      assessNavigationSafety({ pageAccessProtection: null, isPublic: true }),
+      assessNavigationSafety({ pageAccessProtection: 'unrestricted', isPublic: true }),
     );
   }
 

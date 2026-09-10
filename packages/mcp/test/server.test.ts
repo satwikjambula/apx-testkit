@@ -508,6 +508,43 @@ describe('generation failure paths', () => {
 // ---------------------------------------------------------------------------
 
 describe('onboard_generated_apex_app', () => {
+  it('returns the failed quality report with isError for a missing policy prerequisite', async () => {
+    const policyPath = join(tmpDir, 'policy.json');
+    writeFileSync(policyPath, JSON.stringify({ version: 1, requireSqlcl: true }));
+    const result = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE, testsOutDir: join(tmpDir, 'tests'), docsOutDir: join(tmpDir, 'docs'),
+      qualityPolicyPath: policyPath,
+    });
+    expect(result.isError).toBe(true);
+    const report = JSON.parse(firstText(result));
+    expect(report.qualityGate.passed).toBe(false);
+    expect(report.qualityGate.checks[0].status).toBe('blocked');
+    expect(report.sqlcl.requested).toBe(false);
+  });
+
+  it('rejects a malformed quality policy before writing output', async () => {
+    const policyPath = join(tmpDir, 'policy.json');
+    writeFileSync(policyPath, JSON.stringify({ version: 1, maxParserWarning: 0 }));
+    const result = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE, testsOutDir: join(tmpDir, 'tests'), docsOutDir: join(tmpDir, 'docs'),
+      qualityPolicyPath: policyPath,
+    });
+    expect(result.isError).toBe(true);
+    expect(firstText(result)).toContain('Unknown quality policy field');
+    expect(existsSync(join(tmpDir, 'tests'))).toBe(false);
+  });
+
+  it('returns a passing quality report without isError', async () => {
+    const policyPath = join(tmpDir, 'policy.json');
+    writeFileSync(policyPath, JSON.stringify({ version: 1, maxParserWarnings: 0 }));
+    const result = await callTool('onboard_generated_apex_app', {
+      exportDir: REFERENCE_FIXTURE, testsOutDir: join(tmpDir, 'tests'), docsOutDir: join(tmpDir, 'docs'),
+      qualityPolicyPath: policyPath,
+    });
+    expect(result.isError).toBeFalsy();
+    expect(JSON.parse(firstText(result)).qualityGate.passed).toBe(true);
+  });
+
   it('missing exportDir is rejected by the zod schema', async () => {
     const r = await callTool('onboard_generated_apex_app', {
       testsOutDir: join(tmpDir, 'tests'),

@@ -1,5 +1,10 @@
 # Ecosystem roadmap (post-M4 vision)
 
+The maintainer's September 2026 implementation sequence is tracked in
+[Acceptance improvements](acceptance-improvements.md). The first tooling
+feature adds optional [onboarding CI quality gates](quality-gates.md),
+with live APEX verification deferred to the later pass.
+
 Captures the long-term direction the maintainer wants: a comprehensive
 Oracle APEX testing ecosystem, not just a smoke-test generator. Six areas
 were named; this ledger groups them by what's actually verifiable today

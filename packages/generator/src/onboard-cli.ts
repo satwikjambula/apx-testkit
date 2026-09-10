@@ -10,9 +10,30 @@
  */
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { dirname } from 'node:path';
-import { runOnboarding, type SqlclOption } from './onboard.js';
+import { onboardingFailed, runOnboarding, type SqlclOption } from './onboard.js';
+import { loadQualityPolicy } from './quality-gates.js';
 
 const args = process.argv.slice(2);
+
+// Reject misspelled flags: silently ignoring --quality-polciy would bypass CI policy.
+const valuedFlags = new Set(['--export', '--baseline', '--tests', '--docs', '--report', '--touch-log', '--quality-policy']);
+const seenFlags = new Set<string>();
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  const name = arg.startsWith('--sqlcl=') ? '--sqlcl' : arg;
+  if ((!valuedFlags.has(name) && name !== '--sqlcl') || seenFlags.has(name)) {
+    console.error(`Unknown or repeated option: ${name}`);
+    process.exit(2);
+  }
+  seenFlags.add(name);
+  if (valuedFlags.has(name)) {
+    if (!args[i + 1] || args[i + 1].startsWith('--')) {
+      console.error(`${name} requires a value.`);
+      process.exit(2);
+    }
+    i++;
+  }
+}
 
 function flagValue(name: string): string | undefined {
   const idx = args.indexOf(name);
@@ -22,7 +43,7 @@ function flagValue(name: string): string | undefined {
 function usage(): void {
   console.error(
     'Usage: apx-onboard --export <dir> [--baseline <dir>] --tests <outDir> --docs <outDir> --report <path> ' +
-      '[--touch-log <path>] [--sqlcl[=<path-to-sqlcl-executable>]]',
+      '[--touch-log <path>] [--sqlcl[=<path-to-sqlcl-executable>]] [--quality-policy <json>]',
   );
   console.error('');
   console.error('  --export <dir>     Required. The APEXlang export root to onboard (must contain pages/).');
@@ -32,6 +53,7 @@ function usage(): void {
   console.error('  --tests <outDir>   Required. Directory to write generated Playwright .page.ts/.spec.ts files into.');
   console.error('  --docs <outDir>    Required. Directory to write generated Markdown documentation into.');
   console.error('  --report <path>    Required. Path to write the onboarding report JSON to.');
+  console.error('  --quality-policy <json> Optional. Enforce versioned CI rules; failures retain the report and exit 1.');
   console.error("  --touch-log <path> Optional. A touch log written by @apx/testkit's coverage recorder during a");
   console.error('                     PRIOR run of the GENERATED suite (APX_COVERAGE_LOG). Only consulted when');
   console.error('                     --baseline is also given -- apx-onboard never runs Playwright itself.');
@@ -77,6 +99,7 @@ try {
     docsOutDir,
     touchLogPath,
     sqlcl,
+    qualityPolicy: flagValue('--quality-policy') === undefined ? undefined : loadQualityPolicy(flagValue('--quality-policy')!),
   });
 
   mkdirSync(dirname(reportPath), { recursive: true });
@@ -114,7 +137,14 @@ try {
   }
   console.log(`  live-verification requirements: ${report.liveVerificationRequirements.length}`);
 
-  if (report.sqlcl.requested && !report.sqlcl.passed) {
+  if (report.qualityGate) {
+    console.log(`  quality gates: ${report.qualityGate.passed ? 'PASSED' : 'FAILED'}`);
+    for (const check of report.qualityGate.checks) {
+      console.log(`    ${check.status}: ${check.message}`);
+    }
+  }
+
+  if (onboardingFailed(report)) {
     // A completed-but-failed SQLcl validation is a real, actionable
     // finding -- surface it via the exit code too, not just the report
     // JSON, so this is CI-usable without a second parsing step.
