@@ -1,5 +1,9 @@
 # apx-testkit
 
+Optional [onboarding quality gates](docs/quality-gates.md) enforce CI rules
+from a versioned policy. The [acceptance improvement sequence](docs/acceptance-improvements.md)
+tracks implementation and pending live verification.
+
 [![CI](https://github.com/satwikjambula/apx-testkit/actions/workflows/ci.yml/badge.svg)](https://github.com/satwikjambula/apx-testkit/actions/workflows/ci.yml)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Node](https://img.shields.io/badge/node-22-brightgreen.svg)](package.json)
@@ -405,7 +409,7 @@ and accessibility results don't exist anywhere in this project yet, so
 there's nothing to compose them from; see docs/tutorial.md §2.17. Also
 done: `apx-onboard --export <export-dir> [--baseline <dir>] --tests
 <outDir> --docs <outDir> --report <path> [--touch-log <path>]
-[--sqlcl[=<path>]]` — one shared onboarding orchestration function
+[--sqlcl[=<path>]] [--quality-policy <json>]` — one shared onboarding orchestration function
 (`runOnboarding()`, `@apx/testgen/onboard`) also exposed as the
 `onboard_generated_apex_app` MCP tool, for the "I just got a new
 (often AI-generated) APEXlang export — what do I do with it?" workflow:

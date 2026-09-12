@@ -1,5 +1,10 @@
 # Ecosystem roadmap (post-M4 vision)
 
+The maintainer's September 2026 implementation sequence is tracked in
+[Acceptance improvements](acceptance-improvements.md). The first tooling
+feature adds optional [onboarding CI quality gates](quality-gates.md),
+with live APEX verification deferred to the later pass.
+
 Captures the long-term direction the maintainer wants: a comprehensive
 Oracle APEX testing ecosystem, not just a smoke-test generator. Six areas
 were named; this ledger groups them by what's actually verifiable today
@@ -607,6 +612,12 @@ hold uniformly across this whole proposal.
   by name as far as this project has found. This needs research into
   whether such a capability exists at all before any design, let alone
   code — flag as "may not be feasible via any public API."
+  **2026-09-09 update (issue #6):** documentation review found execution
+  controls in `apex.da`, selector/event dispatch in `apex.event.trigger`,
+  and a separate registered-operation API in `apex.actions.invoke`. No
+  Page Designer Dynamic Action name dispatcher was found. This is a
+  documentation-based inference; live verification remains pending. See
+  `docs/quirks/26.1.json` `dynamic-action-trigger-by-name-discovery`.
 - **`asUser()`/`switchWorkspace()` (6).** Workspace switching is an App
   Builder / development-time concept, not something a typical deployed
   end-user app exposes at runtime — likely a scope mismatch rather than a

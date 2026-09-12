@@ -220,6 +220,11 @@ no known way to fire a named Dynamic Action from `@apx/testkit` yet, and
 typed metadata doesn't change that (see docs/ecosystem-roadmap.md
 "Dynamic Action triggering").
 
+Documentation review (2026-09-09, issue #6) found no named DA dispatcher
+in `apex.da`, `apex.event`, or the separate `actions` interface. Live
+verification is still pending; see `docs/quirks/26.1.json`
+`dynamic-action-trigger-by-name-discovery`.
+
 ## Branches
 
 `branch (...)` — page-processing redirect rules. Typed as of the Seventh

@@ -48,6 +48,7 @@
     "./docs": "./dist/docs.js",
     "./flow": "./dist/flow.js",
     "./report": "./dist/report.js",
-    "./onboard": "./dist/onboard.js"
+    "./onboard": "./dist/onboard.js",
+    "./quality-gates": "./dist/quality-gates.js"
   }
 }

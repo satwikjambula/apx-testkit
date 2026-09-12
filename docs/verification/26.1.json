@@ -1328,10 +1328,10 @@
       "runtimeStrategy": "n/a",
       "evidenceSource": "none",
       "ebnfProduction": null,
-      "citation": "packages/testkit/src/components/unsupported.ts#L136-L148",
+      "citation": "docs/quirks/26.1.json#dynamic-action-trigger-by-name-discovery",
       "lastVerified": "2026-07-24",
       "correctedFrom": null,
-      "notes": "No known generic, documented JS API to trigger a named Dynamic Action programmatically -- DAs are bound to specific DOM events on specific components, not individually addressable by name as far as this project has found. Needs research into whether such a capability exists at all before any design.",
+      "notes": "Documentation review repeated 2026-09-09: apex.da provides execution controls; apex.event.trigger addresses selector/event pairs; apex.actions.invoke addresses a separate actions.action registry. None of these documents a Page Designer Dynamic Action name dispatcher. Live verification remains pending. evidenceSource stays none and lastVerified is unchanged because this pass adds no live-browser, real-export or EBNF evidence. See the cited quirk for documentation URLs and follow-up checks.",
       "supportMatrixRow": null
     }
   ]
