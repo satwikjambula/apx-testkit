@@ -1330,8 +1330,8 @@ describe('typed process support (process <id> (...))', () => {
   // (github.com/oracle/apex, 26.1 branch, p00002-customer-details.apx:1801+):
   // an autoRowFetch process with no condition, and an autoRowProcessing
   // process (whose EBNF-undocumented `target { }` group is confirmed real
-  // but deliberately left in `raw`, not typed) gated on an authorization
-  // scheme rather than a serverSideCondition.
+  // and now typed on ApexProcess.target -- see GitHub issue #5) gated on an
+  // authorization scheme rather than a serverSideCondition.
   const apxWithProcesses = `page 2 (
   page: 2
   name: Customer Details
@@ -1396,13 +1396,23 @@ describe('typed process support (process <id> (...))', () => {
     expect(first.condition).toBeNull();
   });
 
-  it('keeps the EBNF-undocumented target {} group in raw only, not typed', () => {
+  it('types the EBNF-undocumented target {} group on autoRowProcessing (GitHub issue #5)', () => {
     const result = parseApp({ 'p00002-customer-details.apx': apxWithProcesses });
-    const [, second] = result.ast.pages[0].processes;
+    const [first, second] = result.ast.pages[0].processes;
     expect(second.type).toBe('autoRowProcessing');
     expect(second.condition).toBeNull();
+    expect(second.target).toEqual({
+      tableName: 'EBA_CUST_CUSTOMERS',
+      pkColumn: 'ID',
+      pkItem: 'P2_ID',
+      returnKeyIntoItem: 'P2_ID',
+    });
+    // still preserved in raw too -- typing is additive, never destructive (ADR-001)
     expect(second.raw['target.tableName']).toBe('EBA_CUST_CUSTOMERS');
-    expect(second.raw['target.pkColumn']).toBe('ID');
+    // autoRowFetch's group is named `source {}`, not `target {}` -- a
+    // DIFFERENT real group (own pkColumn/pkItem, no returnKeyIntoItem) that
+    // this field must not conflate with target.
+    expect(first.target).toBeNull();
   });
 
   it('projects a whenButtonPressed-gated process condition', () => {

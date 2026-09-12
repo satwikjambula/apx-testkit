@@ -354,6 +354,9 @@ export function diffProcessFields(a: ApexProcess, b: ApexProcess): string[] {
   const condA = JSON.stringify(a.condition);
   const condB = JSON.stringify(b.condition);
   if (condA !== condB) changes.push(`condition: ${condA} -> ${condB}`);
+  const targetA = JSON.stringify(a.target);
+  const targetB = JSON.stringify(b.target);
+  if (targetA !== targetB) changes.push(`target: ${targetA} -> ${targetB}`);
   if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
   return changes;
 }
