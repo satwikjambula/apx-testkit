@@ -7,7 +7,7 @@ verification accompanies each change; live APEX verification follows later.
 |---|---|---|
 | Issue #6 documentation discovery | Committed | Live observations pending; see `dynamic-action-trigger-by-name-discovery` in `docs/quirks/26.1.json`. |
 | CI quality gates | Implemented; local checks passed | Warning limits, unmodeled exceptions, required SQLcl and generation-gap budgets. Changed-page test evidence remains separate. |
-| Change-based test selection | Next | Explain selected tests; fall back to the full suite for uncertain dependencies. |
+| Change-based test selection | Advisory planner implemented | `apx-select` explains direct candidates and stale specs; full-suite execution remains required until dependency contracts prove a safe reduction. See `test-selection.md`. |
 | Safe regeneration | Planned | Preview changes, detect edits, preserve custom files and track generated ownership. |
 | Dynamic Action test planning | Planned | Describe declared triggers and gaps; mark suggestions as inference and require review. |
 | Business scenario contracts | Planned | Build on `.ai/proposals/functional-scenario-authoring.md`, including approval/provenance requirements. |

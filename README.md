@@ -1,5 +1,9 @@
 # apx-testkit
 
+[Change-based test planning](docs/test-selection.md) (`apx-select`) explains
+directly affected generated specs. It remains advisory and requires the full
+test suite until dependencies can be proven; it does not skip tests.
+
 Optional [onboarding quality gates](docs/quality-gates.md) enforce CI rules
 from a versioned policy. The [acceptance improvement sequence](docs/acceptance-improvements.md)
 tracks implementation and pending live verification.

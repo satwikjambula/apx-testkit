@@ -1,5 +1,10 @@
 # Ecosystem roadmap (post-M4 vision)
 
+Change-based selection now has an [advisory planner](test-selection.md):
+direct AST candidates, export fingerprints, and stale-spec reporting.
+Reduced-suite execution is not implemented: all plans require the full suite
+until reviewed dependency contracts establish a safe subset.
+
 The maintainer's September 2026 implementation sequence is tracked in
 [Acceptance improvements](acceptance-improvements.md). The first tooling
 feature adds optional [onboarding CI quality gates](quality-gates.md),

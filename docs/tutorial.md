@@ -1,5 +1,9 @@
 # Tutorial: apx-testkit component by component
 
+For export-change review, `apx-select <baseline-export-dir> <current-export-dir>`
+prints an advisory JSON impact plan. Follow its full-suite requirement rather
+than running only the candidates. See [test planning](test-selection.md).
+
 A complete walkthrough of every `@apx/testkit` component, the page
 patterns they're built for, authorization, and what isn't covered yet.
 Every code example below is either copied verbatim from the real source or
