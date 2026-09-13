@@ -14,6 +14,10 @@ export interface TestSelectionPlan {
   baselineFingerprint: string;
   currentFingerprint: string;
   changedFiles: string[];
+  /** Changes outside directly changed page sources cannot use page contracts. */
+  unscopedChangedFiles: string[];
+  applicationOrManifestChanged: boolean;
+  knownPageIds: number[];
   candidates: { pageId: number; spec: string; reason: string }[];
   currentGeneratedSpecs: string[];
   staleGeneratedSpecs: string[];
@@ -23,7 +27,7 @@ export interface TestSelectionPlan {
 // Byte-level inventory is a conservative guard, not an alternate semantic
 // parser. Include assets/JSON that the AST does not model. Refuse symlinks
 // rather than silently excluding a potentially relevant export dependency.
-function inventory(root: string): Map<string, string> {
+export function inventory(root: string): Map<string, string> {
   const files = new Map<string, string>();
   function walk(dir: string, prefix: string): void {
     for (const entry of readdirSync(dir, { withFileTypes: true }).sort((a, b) => a.name < b.name ? -1 : a.name > b.name ? 1 : 0)) {
@@ -38,7 +42,7 @@ function inventory(root: string): Map<string, string> {
   return files;
 }
 
-function fingerprint(files: Map<string, string>): string {
+export function fingerprint(files: Map<string, string>): string {
   return createHash('sha256').update(JSON.stringify([...files].sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0))).digest('hex');
 }
 
@@ -69,6 +73,9 @@ export function planTestSelection(baselineDir: string, currentDir: string): Test
     .filter(page => page.id !== 0 && page.alias).map(specFileName).sort();
   const currentGeneratedSpecs = specs(current);
   const currentSet = new Set(currentGeneratedSpecs);
+  const candidateIds = new Set(diff.pages.filter(page => page.kind !== 'removed').map(page => page.id));
+  const candidateSources = new Set([...baseline.ast.pages, ...current.ast.pages]
+    .filter(page => candidateIds.has(page.id)).map(page => page.loc.file));
   const reasons = [
     'The export AST is not a complete dependency graph: cross-page, database, shared-code and hand-written-test dependencies are not proven.',
     'Run the full configured test suite, including hand-written tests. Candidate files are not an execution allowlist.',
@@ -84,6 +91,9 @@ export function planTestSelection(baselineDir: string, currentDir: string): Test
     baselineFingerprint: fingerprint(before),
     currentFingerprint: fingerprint(after),
     changedFiles,
+    unscopedChangedFiles: changedFiles.filter(file => !candidateSources.has(file)),
+    applicationOrManifestChanged: diff.applicationChanges.length > 0 || diff.manifestChanges.length > 0,
+    knownPageIds: [...new Set([...baseline.ast.pages, ...current.ast.pages].map(page => page.id).filter(id => id > 0))].sort((a, b) => a - b),
     candidates: diff.pages.filter(page => page.kind !== 'removed').map(page => ({
       pageId: page.id,
       spec: page.affectedFiles.find(file => file.endsWith('.spec.ts'))!,

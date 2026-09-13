@@ -51,6 +51,7 @@
     "./report": "./dist/report.js",
     "./onboard": "./dist/onboard.js",
     "./quality-gates": "./dist/quality-gates.js",
-    "./selection": "./dist/selection.js"
+    "./selection": "./dist/selection.js",
+    "./selection-contract": "./dist/selection-contract.js"
   }
 }

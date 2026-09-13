@@ -1,8 +1,9 @@
 # apx-testkit
 
 [Change-based test planning](docs/test-selection.md) (`apx-select`) explains
-directly affected generated specs. It remains advisory and requires the full
-test suite until dependencies can be proven; it does not skip tests.
+directly affected generated specs. Full-suite planning is the default; optional
+reviewed, snapshot-bound dependency contracts produce conditional subset plans.
+Neither mode runs or skips tests automatically.
 
 Optional [onboarding quality gates](docs/quality-gates.md) enforce CI rules
 from a versioned policy. The [acceptance improvement sequence](docs/acceptance-improvements.md)
