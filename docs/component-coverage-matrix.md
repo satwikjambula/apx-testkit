@@ -1,5 +1,12 @@
 # Component coverage matrix
 
+[Safe regeneration](safe-regeneration.md) protects generated files only; it does
+not add runtime component support or live-verification evidence.
+
+The [change-based test planner](test-selection.md) identifies review candidates
+only. It adds no runtime component support or passing-test evidence, and does
+not change the verification statuses below.
+
 Number of real apps was never the right metric on its own — app count
 proves the parser handles real-world export variety, but says nothing
 about whether any *specific* component has enough diversity behind it, or
