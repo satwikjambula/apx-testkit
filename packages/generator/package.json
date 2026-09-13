@@ -11,7 +11,8 @@
     "apx-flow": "dist/flow-cli.js",
     "apx-report": "dist/report-cli.js",
     "apx-onboard": "dist/onboard-cli.js",
-    "apx-select": "dist/select-cli.js"
+    "apx-select": "dist/select-cli.js",
+    "apx-regenerate": "dist/regenerate-cli.js"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -52,6 +53,7 @@
     "./onboard": "./dist/onboard.js",
     "./quality-gates": "./dist/quality-gates.js",
     "./selection": "./dist/selection.js",
-    "./selection-contract": "./dist/selection-contract.js"
+    "./selection-contract": "./dist/selection-contract.js",
+    "./regenerate": "./dist/regenerate.js"
   }
 }

@@ -1,5 +1,8 @@
 # Component coverage matrix
 
+[Safe regeneration](safe-regeneration.md) protects generated files only; it does
+not add runtime component support or live-verification evidence.
+
 The [change-based test planner](test-selection.md) identifies review candidates
 only. It adds no runtime component support or passing-test evidence, and does
 not change the verification statuses below.

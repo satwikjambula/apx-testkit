@@ -1,5 +1,8 @@
 # Tutorial: apx-testkit component by component
 
+To protect generated output, use the opt-in [safe regeneration workflow](safe-regeneration.md).
+Preview changes first, then apply the exact plan hash. Keep custom tests separate.
+
 For export-change review, `apx-select <baseline-export-dir> <current-export-dir>`
 prints an advisory JSON impact plan. Follow its full-suite requirement rather
 than running only the candidates. Optional reviewed dependency contracts add a
