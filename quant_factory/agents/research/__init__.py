@@ -1,1 +1,0 @@
-"""Research specialist agent."""
