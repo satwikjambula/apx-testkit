@@ -1,5 +1,15 @@
 # Ecosystem roadmap (post-M4 vision)
 
+[Safe regeneration](safe-regeneration.md) is implemented as an opt-in command,
+with ownership hashes, conflict detection and backups. It does not yet replace
+legacy generation/watch/onboarding writers or provide atomic multi-file commits.
+
+Change-based selection now has an [advisory planner](test-selection.md):
+direct AST candidates, export fingerprints, and stale-spec reporting.
+Optional snapshot-bound dependency contracts now produce conditional subset
+plans. Execution is not automated, and reviewer attestations are not independently
+verified; missing approval or uncertain impact cannot silently skip tests.
+
 The maintainer's September 2026 implementation sequence is tracked in
 [Acceptance improvements](acceptance-improvements.md). The first tooling
 feature adds optional [onboarding CI quality gates](quality-gates.md),

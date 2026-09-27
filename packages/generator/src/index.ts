@@ -7,3 +7,6 @@ export * from './flow.js';
 export * from './report.js';
 export * from './onboard.js';
 export * from './quality-gates.js';
+export * from './selection.js';
+export * from './selection-contract.js';
+export * from './regenerate.js';

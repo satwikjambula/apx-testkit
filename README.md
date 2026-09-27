@@ -1,5 +1,14 @@
 # apx-testkit
 
+[Safe regeneration](docs/safe-regeneration.md) (`apx-regenerate`) adds opt-in
+preview/apply, generated-file ownership, conflict checks and recoverable backups.
+Legacy generator and onboarding writers are unchanged.
+
+[Change-based test planning](docs/test-selection.md) (`apx-select`) explains
+directly affected generated specs. Full-suite planning is the default; optional
+reviewed, snapshot-bound dependency contracts produce conditional subset plans.
+Neither mode runs or skips tests automatically.
+
 Optional [onboarding quality gates](docs/quality-gates.md) enforce CI rules
 from a versioned policy. The [acceptance improvement sequence](docs/acceptance-improvements.md)
 tracks implementation and pending live verification.
