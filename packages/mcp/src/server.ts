@@ -95,7 +95,7 @@ export function createServer(): McpServer {
     {
       title: 'Inspect APEXlang export',
       description:
-        'Parse an Oracle APEX 26.1 APEXlang export directory (.apx files) and return a JSON model: pages with aliases/public flag, regions, pageItems, buttons, parser warnings, and component types not yet covered. Use this first to see what exists before generating tests.',
+        'Parse an Oracle APEX 26.1 or 26.2 APEXlang export directory (.apx files) and return a JSON model: pages with aliases/public flag, regions, pageItems, buttons, parser warnings, and component types not yet covered. Use this first to see what exists before generating tests.',
       inputSchema: {
         exportDir: z.string().describe('Absolute path to the unzipped APEXlang export root; all .apx sources plus .apex/apexlang.json and deployment metadata are loaded'),
       },

@@ -2191,6 +2191,136 @@ is verified, what changed vs. the docs-derived guesses, and what remains open.
       to `/parser`) rather than touched directly here, since
       `packages/generator` is outside this role's ownership.
 
+## APEX 26.2 compatibility (2026-10-06) — STATIC evidence only
+
+Scope: what changed in the APEXlang export format between 26.1 and 26.2, and
+what this parser/generator does about it. **Nothing here was run against a
+live 26.2 instance** — every `@apx/testkit` runtime component stays
+live-verified on 26.1 only (see `docs/support-matrix.md`).
+
+Sources, none authoritative alone (ADR-004): Oracle's raw EBNF for
+`buildID 26.1.0+3102` and `26.2.0+3479` (both fetched with `curl`, not a
+summarizing tool); `github.com/oracle/apex` branches `26.1` (commit
+`ad0c855`, 2026-10-05) and `26.2` (commit `fbe095e`, 2026-10-06), the same
+33 sample/starter/utility apps on each (UPL-1.0, kept local-only like the
+rest of the corpus; every 26.2 `.apex/apexlang.json` reads
+`mmdVersion 26.2.0+3479`); Oracle's SQLcl and `oracle/skills` repository text.
+
+- [x] **The parser's version gate was the blocker.** It accepted only
+      `26.1.*`, so every 26.2 export was refused. It now accepts 26.1 and
+      26.2 (`SUPPORTED_APEX_RELEASES`); any other release is still rejected
+      explicitly. Same-app check: all 33 real 26.2 apps parse with zero
+      throws, and the typed unmodeled-construct set is identical to 26.1
+      for 31 of the 33 (the two exceptions are app-content changes:
+      `strategic-planner` gains `aiAgent`; `cloud-apps-rest-explorer` loses
+      `filter`/`jsonSource`/`lov` and goes from 5 pages to 4).
+- [x] **EBNF diff, 26.1 → 26.2** (productions parsed from both files):
+      5,821 → 5,715 productions; 12 added, 118 removed, 224 changed of which
+      159 are pure reorderings of alternatives inside an enumeration and 65
+      are real. Removed: 38 `app_process_*` groups (the *application-level*
+      `appProcess` component, which this parser does not project; its 51
+      real 26.2 occurrences live in shared components) plus
+      `column_c`/`column_d` `ui_defaults_reference`. Added: `region_sort`,
+      OCI GenAI `gen_aiservice`/`vector_provider` groups, and
+      `data_load_definition`/`json_duality_view`/`json_source` child
+      components. Real value changes include new properties
+      (`app_security.allowBotAccess`, `app_authentication.appScope`,
+      `ai_agent.reasoningEffort`, `region_performance.lazyLoading`,
+      `region_settings.activateNodeLinkWith`, `outcomeItem` on human-task
+      actions), new `@/8842.262/...` theme-subscription references, theme
+      `ut-26.2`, `dataType` enumeration values lower-cased (`NUMBER` →
+      `number`), and `computation_b_source` `string` → `varchar2`/`boolean`.
+      Checked directly: none of these maps to a field this parser types
+      (`dataType` is not read by any typed code; page-level `process`
+      productions are unchanged apart from metadata and `outcomeItem`).
+- [x] **Same-app typed-AST comparison, 26.1 vs 26.2.** 33 apps, 1,490 pages
+      paired by app + page number, then entities paired by identifier
+      (e.g. 10,064 report columns, 6,053 regions, 3,566 items, 3,034 buttons,
+      1,419 Dynamic Actions) and every typed scalar field compared for
+      one-directional null↔value flips. Exactly TWO systematic
+      format-driven changes exist: `pageAccessProtection` (next bullet) and
+      `required` on switch items (two bullets down). Everything else differs
+      by 1–15 individual content edits Oracle made to the sample apps, plus
+      line-number shifts in `loc`.
+- [x] **An omitted `security.pageAccessProtection` means different things in
+      26.1 and 26.2.** Paired pages, 26.1 → 26.2: 1,431 `argumentsMustHaveChecksum`
+      → omitted (1,240 keep a `security {}` group, 191 lose it entirely);
+      13 omitted → `unrestricted`; 17 `noArgumentsSupported` unchanged; 6
+      `argumentsMustHaveChecksum` → `unrestricted` (content edits); 23 omitted
+      in both — every one of them page 0, the Global Page, where the
+      property does not apply. Across all pages, 26.2 writes
+      `argumentsMustHaveChecksum` explicitly on **zero** pages (26.1: 1,439)
+      and `unrestricted` on 19 (26.1: 0). The EBNF is silent on defaults
+      (the `pageAccessProtection` production is identical in both), so the
+      reading "26.2 omits the new default, `argumentsMustHaveChecksum`" is an
+      INFERENCE from export data, not an Oracle statement and not
+      live-confirmed. Handling: `parseApp()` resolves an omitted value to
+      `argumentsMustHaveChecksum` only for a 26.2 manifest and never for page
+      0, flags it `pageAccessProtectionDefaulted: true`, and keeps the
+      as-written bag in `raw`. 26.1 behaviour is unchanged (omitted stays
+      `null`, generator skips as "unrecognized"). That choice is also the
+      fail-safe one: assuming `unrestricted` instead would generate tests
+      that redirect to `/login`. `apx-diff` across an upgrade no longer
+      reports the spelling difference as a changed page. **Upgrade this to
+      verified** by a live 26.2 run showing a bare `goto` to such a page
+      redirects to `/login` (the 26.1 finding in `docs/quirks/26.1.json`
+      `page-access-protection-blocks-bare-navigation`), or by Oracle
+      documenting the default.
+- [x] **A raw TAB inside a quoted string is real Oracle output (both
+      releases).** 3 occurrences in 2 apps (`universal-theme-reference`
+      `pages/p00300-grid-layout.apx`, `"u-textCenter<TAB>"`; `brookstrut`
+      `pages/p00101-login.apx`), present on the `26.1` AND `26.2` branches;
+      0 other raw control characters across 2,350 (26.1) / 2,961 (26.2)
+      `.apx` files. The EBNF references `<string_character>` but never
+      defines it, so real data decides (ADR-004): only TAB is tolerated;
+      other control characters still raise the same explicit error. This was
+      NOT a 26.2 regression: on the pre-change code, `generate()` refused
+      both apps on the current 26.1 branch ("structurally invalid APEXlang
+      input") while a control app generated normally.
+      Cross-check (parser-change checklist): `Sawalhah/apexlang-view`'s
+      `src/parser.js` scans quoted text permissively (any character up to
+      the closing quote, skipping escapes) and reads property values to end
+      of line, so it accepts a raw TAB too — convergent, non-authoritative.
+- [x] **26.2 stops exporting `validation { valueRequired: true }` for
+      `type: switch` items** (26.1 wrote it; e.g. `poll` `P19_ANONYMOUS_YN`).
+      `ApexItem.required` therefore reads `true` → `false` on 60 items across
+      8 apps. Informational only: `required` feeds `apx-diff`, `apx-docs`
+      and a comment in generated page objects, never an assertion. The AST
+      stays faithful to the export; an upgrade diff will list these.
+- [x] **SQLcl nests the export; the loader now says where.** SQLcl 26.2's
+      User's Guide (7.4.1) documents the SQLcl Projects layout as
+      `f<appId>/<app-alias>/` with `f<appId>.sql` beside the alias directory,
+      so `.apex/apexlang.json` sits one level below the `f<appId>` directory
+      (`apex_apps/f100/brookstrut/`). A third-party report of SQLcl 26.2.2
+      (Alex on APEX, 2026-09-11; one observer, not Oracle) found its actual
+      output matches neither this nor a flat layout in every mode. The loader
+      needs `.apex/apexlang.json` at the directory it is given, so a nested
+      export now fails with an error naming the subdirectory to pass instead
+      (looked up to two levels down); it never descends on its own. The
+      guide's tree spells `shared_components/`/`page_groups.apx` with
+      underscores while real exports use hyphens; the loader walks every
+      `.apx` recursively, so neither spelling matters.
+- [x] **SQLcl `apex validate` on 26.2 behaves as `apx-onboard` assumes.**
+      SQLcl 26.2's User's Guide (12.1.3) still documents `-input` as
+      optional ("If omitted, the current directory is used") and gives
+      `apex validate` with no arguments as an example — the form
+      `apx-onboard` runs (`sql /nolog @<script>`, working directory = the
+      export). Oracle's own 26.2 `apexlang-compile` script (`oracle/skills`)
+      uses the explicit `-input "<dir>"` form, requires the literal
+      `Validation successful` marker, and notes that SQLcl can report
+      errors while exiting 0 — the same fail-closed rule `apx-onboard`
+      applies. No code change was needed. `oracle/skills` PR #133 also
+      reports that SQLcl needs the FULL `mmdVersion` build (a bare
+      `26.1`/`26.1.0` fails with `INVALID_VERSION`) and that SQLcl 26.1.2
+      rejects the 26.2 example apps; that is the PR author's test result,
+      not Oracle documentation. Practical rule: use a SQLcl at least as new
+      as the export. Not executed in this pass (no SQLcl 26.2, no database).
+- [ ] **Still open for 26.2:** every runtime claim (`apex.region()`,
+      `apex.item()`, `apex.message`, region widgets) — no 26.2 instance has
+      been exercised; the omitted-default inference above; the 33-app corpus
+      is Oracle's own samples, so customer apps may use constructs those do
+      not.
+
 ## Still open
 
 (the quoted, substitution-embedding property KEY item that lived here has

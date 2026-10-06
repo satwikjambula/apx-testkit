@@ -9,10 +9,12 @@ this — see `CLAUDE.md` and `.ai/AGENT.md`.
 
 ## What this is
 
-apx-testkit turns Oracle APEX 26.1 APEXlang (`.apx`) exports into a typed
-AST, then into deterministic Playwright tests and live-verified runtime
-wrappers. ("26.1", not "26.1+" — no later release has been verified; see
-`.ai/knowledge/constitution-reconciliation.md`.) Four npm workspaces:
+apx-testkit turns Oracle APEX 26.1 and 26.2 APEXlang (`.apx`) exports into a
+typed AST, then into deterministic Playwright tests and runtime wrappers.
+(Name the releases, never "26.1+": runtime wrappers are live-verified on 26.1
+only; 26.2 is static export parsing with no live run yet, see
+`docs/support-matrix.md`; no other release has been verified — see
+`.ai/knowledge/constitution-reconciliation.md` §F.) Four npm workspaces:
 
 | Package | Does |
 |---|---|

@@ -15,19 +15,26 @@
  *                                                          exits non-zero on drift
  *                                                          (part of the regression sweep)
  */
-import { readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
-const REGISTRY_PATH = path.join(REPO_ROOT, 'docs/verification/26.1.json');
+const REGISTRY_DIR = path.join(REPO_ROOT, 'docs/verification');
 const SUPPORT_MATRIX_PATH = path.join(REPO_ROOT, 'docs/support-matrix.md');
 
-const BEGIN_MARKER = '<!-- GENERATED:BEGIN verification-registry support-matrix-table -->';
-const END_MARKER = '<!-- GENERATED:END verification-registry support-matrix-table -->';
+// 26.1 keeps its original marker text so its table stays byte-identical;
+// every other release gets `support-matrix-table-<release>` markers.
+function markersFor(release) {
+  const name = release === '26.1' ? 'support-matrix-table' : `support-matrix-table-${release}`;
+  return {
+    begin: `<!-- GENERATED:BEGIN verification-registry ${name} -->`,
+    end: `<!-- GENERATED:END verification-registry ${name} -->`,
+  };
+}
 
-function renderTable(entries) {
+function renderTable(entries, markers) {
   const rows = entries
     .filter((e) => e.supportMatrixRow)
     .sort((a, b) => a.supportMatrixRow.order - b.supportMatrixRow.order);
@@ -38,42 +45,45 @@ function renderTable(entries) {
     const howText = how.endsWith('.') ? how : `${how}.`;
     return `| ${component} | ${verifiedAgainst} | ${howText} |`;
   });
-  return [BEGIN_MARKER, ...header, ...body, END_MARKER].join('\n');
+  return [markers.begin, ...header, ...body, markers.end].join('\n');
 }
 
 function main() {
   const isCheck = process.argv.includes('--check');
 
-  if (!existsSync(REGISTRY_PATH)) {
-    console.error(`Registry not found at ${REGISTRY_PATH}`);
-    process.exit(1);
-  }
   if (!existsSync(SUPPORT_MATRIX_PATH)) {
     console.error(`docs/support-matrix.md not found at ${SUPPORT_MATRIX_PATH}`);
     process.exit(1);
   }
-
-  const registry = JSON.parse(readFileSync(REGISTRY_PATH, 'utf8'));
-  const current = readFileSync(SUPPORT_MATRIX_PATH, 'utf8');
-
-  const beginIdx = current.indexOf(BEGIN_MARKER);
-  const endIdx = current.indexOf(END_MARKER);
-  if (beginIdx === -1 || endIdx === -1 || endIdx < beginIdx) {
-    console.error(
-      `docs/support-matrix.md is missing the GENERATED:BEGIN/END markers for the support-matrix-table region -- cannot regenerate.`,
-    );
+  const releases = readdirSync(REGISTRY_DIR)
+    .filter((f) => /^\d+\.\d+\.json$/.test(f))
+    .map((f) => f.replace(/\.json$/, ''))
+    .sort();
+  if (releases.length === 0) {
+    console.error(`No <release>.json registry files found in ${REGISTRY_DIR}`);
     process.exit(1);
   }
 
-  const generatedBlock = renderTable(registry.entries);
-  const before = current.slice(0, beginIdx);
-  const after = current.slice(endIdx + END_MARKER.length);
-  const next = `${before}${generatedBlock}${after}`;
+  const current = readFileSync(SUPPORT_MATRIX_PATH, 'utf8');
+  let next = current;
+  for (const release of releases) {
+    const registry = JSON.parse(readFileSync(path.join(REGISTRY_DIR, `${release}.json`), 'utf8'));
+    const markers = markersFor(release);
+    const beginIdx = next.indexOf(markers.begin);
+    const endIdx = next.indexOf(markers.end);
+    if (beginIdx === -1 || endIdx === -1 || endIdx < beginIdx) {
+      console.error(
+        `docs/support-matrix.md is missing the GENERATED:BEGIN/END markers (${markers.begin}) for release ${release} -- cannot regenerate.`,
+      );
+      process.exit(1);
+    }
+    next = `${next.slice(0, beginIdx)}${renderTable(registry.entries, markers)}${next.slice(endIdx + markers.end.length)}`;
+  }
 
   if (isCheck) {
     if (next !== current) {
       console.error(
-        'docs/support-matrix.md has drifted from what docs/verification/26.1.json would generate.\n' +
+        'docs/support-matrix.md has drifted from what docs/verification/<release>.json would generate.\n' +
           'Run `node scripts/generate-support-matrix.mjs` (no --check) to regenerate it, then commit the result.',
       );
       process.exit(1);
@@ -87,7 +97,7 @@ function main() {
     return;
   }
   writeFileSync(SUPPORT_MATRIX_PATH, next, 'utf8');
-  console.log('docs/support-matrix.md regenerated from docs/verification/26.1.json.');
+  console.log(`docs/support-matrix.md regenerated from docs/verification/{${releases.join(', ')}}.json.`);
 }
 
 main();

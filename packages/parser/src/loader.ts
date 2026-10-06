@@ -1,6 +1,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join, relative, resolve, sep } from 'node:path';
 import type { ApexlangManifest } from './ast.js';
+import { SUPPORTED_APEX_RELEASES, supportedApexRelease } from './versions.js';
 
 export interface LoadedApexlangExport {
   manifest: ApexlangManifest | null;
@@ -73,16 +74,32 @@ export function loadApexlangExport(
     }
   }
 
-  if (manifest && !/^26\.1(?:\.|$)/.test(manifest.mmdVersion)) {
+  if (manifest && !supportedApexRelease(manifest.mmdVersion)) {
     const message =
-      `.apex/apexlang.json declares mmdVersion '${manifest.mmdVersion}', but this parser is verified only for APEX 26.1 exports.`;
+      `.apex/apexlang.json declares mmdVersion '${manifest.mmdVersion}', but this parser supports only APEX ` +
+      `${SUPPORTED_APEX_RELEASES.join(' and ')} exports.`;
     if ((options.unsupportedVersion ?? 'error') === 'error') throw new Error(message);
     warnings.push(message);
   }
   if (!manifest && !options.allowMissingManifest) {
+    // SQLcl Projects nests an export as f<appId>/<app-alias>/.apex/... (SQLcl
+    // 26.2 User's Guide 7.4.1), so look up to two levels down. Name such
+    // directories so the fix is obvious; never descend automatically.
+    const nested = [
+      ...new Set(
+        paths.flatMap((p) => {
+          const dir = /^((?:[^/]+\/){1,2})\.apex\/apexlang\.json$/.exec(p)?.[1];
+          return dir ? [dir.slice(0, -1)] : [];
+        }),
+      ),
+    ];
+    const hint = nested.length
+      ? ` Found an APEXlang export in subdirectory ${nested.map((d) => `'${d}'`).join(', ')}; pass that directory instead.`
+      : '';
     throw new Error(
-      ".apex/apexlang.json is missing; cannot verify that this is an APEX 26.1 export. " +
-        'Pass { allowMissingManifest: true } only for an intentionally partial or synthetic input.',
+      `.apex/apexlang.json is missing; cannot verify that this is an APEX ${SUPPORTED_APEX_RELEASES.join('/')} export.` +
+        hint +
+        ' Pass { allowMissingManifest: true } only for an intentionally partial or synthetic input.',
     );
   }
 

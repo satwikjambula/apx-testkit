@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Validates docs/verification/26.1.json (the verification registry):
+ * Validates every docs/verification/<release>.json (the verification registry):
  *   1. Every entry has all required fields, with the right shape/enum.
  *   2. Every `id` is unique.
  *   3. Every `citation` path resolves to a real file in this repo -- and
@@ -17,13 +17,13 @@
  * Exit code is non-zero on any failure -- this is meant to be part of the
  * regression sweep (.ai/checklists/release.md), not just run by hand.
  */
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '..');
-const REGISTRY_PATH = path.join(REPO_ROOT, 'docs/verification/26.1.json');
+const REGISTRY_DIR = path.join(REPO_ROOT, 'docs/verification');
 
 const REQUIRED_FIELDS = [
   'id',
@@ -196,24 +196,38 @@ function validateEntry(entry, errors) {
   }
 }
 
-function main() {
-  if (!existsSync(REGISTRY_PATH)) {
-    console.error(`Registry not found at ${REGISTRY_PATH}`);
-    process.exit(1);
-  }
-  const data = JSON.parse(readFileSync(REGISTRY_PATH, 'utf8'));
+function registryFiles() {
+  return readdirSync(REGISTRY_DIR)
+    .filter((f) => /^\d+\.\d+\.json$/.test(f))
+    .sort();
+}
+
+/** Validates one docs/verification/<release>.json; returns true when valid. */
+function validateRegistry(fileName) {
+  const registryPath = path.join(REGISTRY_DIR, fileName);
+  const release = fileName.replace(/\.json$/, '');
+  const label = `docs/verification/${fileName}`;
+  const data = JSON.parse(readFileSync(registryPath, 'utf8'));
   if (!Array.isArray(data.entries)) {
-    console.error('Registry has no top-level `entries` array');
-    process.exit(1);
+    console.error(`${label}: no top-level \`entries\` array`);
+    return false;
   }
 
   const errors = [];
+  if (data.apexVersion !== release) {
+    fail(errors, `file-level apexVersion '${data.apexVersion}' does not match the filename release '${release}'`);
+  }
   const seenIds = new Set();
   for (const entry of data.entries) {
     if (seenIds.has(entry.id)) {
       fail(errors, `duplicate id '${entry.id}'`);
     }
     seenIds.add(entry.id);
+    // An entry may record the full build ('26.1.0+3102'); it must still belong to this file's release.
+    const entryRelease = /^(\d+\.\d+)(?:\.|$)/.exec(String(entry.apexVersion))?.[1];
+    if (entryRelease !== release) {
+      fail(errors, `${entry.id}: apexVersion '${entry.apexVersion}' does not belong to release '${release}' -- a new release needs its own registry file, never an in-place bump`);
+    }
     validateEntry(entry, errors);
   }
 
@@ -226,17 +240,29 @@ function main() {
   }
 
   if (errors.length > 0) {
-    console.error(`docs/verification/26.1.json: ${errors.length} validation error(s):\n`);
+    console.error(`${label}: ${errors.length} validation error(s):\n`);
     for (const e of errors) console.error(`  - ${e}`);
-    process.exit(1);
+    return false;
   }
 
-  console.log(`docs/verification/26.1.json: ${data.entries.length} entries, all valid.`);
+  console.log(`${label}: ${data.entries.length} entries, all valid.`);
   console.log(`  verified: ${data.entries.filter((e) => e.status === 'verified').length}`);
   console.log(`  documented: ${data.entries.filter((e) => e.status === 'documented').length}`);
   console.log(`  observed: ${data.entries.filter((e) => e.status === 'observed').length}`);
   console.log(`  unverified: ${data.entries.filter((e) => e.status === 'unverified').length}`);
   console.log(`  unsupported: ${data.entries.filter((e) => e.status === 'unsupported').length}`);
+  return true;
+}
+
+function main() {
+  const files = registryFiles();
+  if (files.length === 0) {
+    console.error(`No <release>.json registry files found in ${REGISTRY_DIR}`);
+    process.exit(1);
+  }
+  let ok = true;
+  for (const file of files) if (!validateRegistry(file)) ok = false;
+  if (!ok) process.exit(1);
 }
 
 main();

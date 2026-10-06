@@ -2,11 +2,13 @@
 
 @AGENTS.md
 
-Deterministic Playwright test generation for Oracle APEX 26.1 from APEXlang
-(.apx) exports. Monorepo, npm workspaces, TypeScript/ESM, Node 22. ("26.1",
-not "26.1+" — see constitution §3/`.ai/knowledge/constitution-reconciliation.md`:
-this project has not verified parser/runtime behavior against any later
-release, so it doesn't claim compatibility with one.)
+Deterministic Playwright test generation for Oracle APEX 26.1 and 26.2 from
+APEXlang (.apx) exports. Monorepo, npm workspaces, TypeScript/ESM, Node 22.
+(Name the releases — "26.1 and 26.2", never "26.1+" or an open-ended range;
+see constitution §3/`.ai/knowledge/constitution-reconciliation.md` §F.
+Runtime behavior is live-verified on 26.1 ONLY; 26.2 is supported for static
+export parsing, with no live 26.2 run yet — `docs/support-matrix.md`. No other
+release has been verified, so none is claimed.)
 
 ## AI agent governance — read before making any change
 

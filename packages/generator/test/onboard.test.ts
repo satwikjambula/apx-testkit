@@ -258,7 +258,7 @@ describe('runOnboarding -- invalid directories', () => {
         },
         { execFn, existsFn: () => true },
       ),
-    ).rejects.toThrow(/verified only for APEX 26\.1/);
+    ).rejects.toThrow(/supports only APEX 26\.1 and 26\.2 exports/);
     expect(sqlclCalled).toBe(false);
   });
 
@@ -286,7 +286,7 @@ describe('runOnboarding -- invalid directories', () => {
         },
         { execFn, existsFn: () => true },
       ),
-    ).rejects.toThrow(/verified only for APEX 26\.1/);
+    ).rejects.toThrow(/supports only APEX 26\.1 and 26\.2 exports/);
     expect(sqlclCalled).toBe(false);
     expect(existsSync(outputDirs.testsOutDir)).toBe(false);
     expect(existsSync(outputDirs.docsOutDir)).toBe(false);

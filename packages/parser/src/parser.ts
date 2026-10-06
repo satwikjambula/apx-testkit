@@ -29,6 +29,7 @@ import type {
   ApexValidation, ApexValidationError, ComponentNode, Loc, RawBag, RawValue, RefValue,
 } from './ast.js';
 import type { LoadedApexlangExport } from './loader.js';
+import { OMITTED_PAGE_ACCESS_PROTECTION, supportedApexRelease } from './versions.js';
 
 export interface ParseIssue {
   message: string;
@@ -91,8 +92,16 @@ export function parseApxFile(file: string, text: string, warnings: ParseIssue[])
     try {
       return JSON.parse(tok) as string;
     } catch {
-      warnings.push({ message: `Invalid quoted string: ${tok.slice(0, 70)}`, loc: loc(), severity: 'error' });
-      return tok;
+      // Real Oracle exports contain a raw TAB inside a quoted string (3 lines
+      // across oracle/apex's 26.1 and 26.2 branches, e.g. `"u-textCenter<TAB>"`);
+      // the EBNF references <string_character> but never defines it. No other
+      // raw control character occurs, so only TAB is tolerated.
+      try {
+        return JSON.parse(tok.replace(/\t/g, '\\t')) as string;
+      } catch {
+        warnings.push({ message: `Invalid quoted string: ${tok.slice(0, 70)}`, loc: loc(), severity: 'error' });
+        return tok;
+      }
     }
   }
 
@@ -891,6 +900,7 @@ export function projectPages(roots: ComponentNode[]): {
       title: str(n.props['title']),
       pageMode: str(n.props['appearance.pageMode']) as ApexPage['pageMode'],
       pageAccessProtection: str(n.props['security.pageAccessProtection']) as ApexPage['pageAccessProtection'],
+      pageAccessProtectionDefaulted: false,
       authentication: str(n.props['security.authentication']) as ApexPage['authentication'],
       isPublic: n.props['security.authentication'] === 'public',
       regions, items, buttons, dynamicActions, branches, validations, processes, computations,
@@ -921,6 +931,16 @@ export function parseApp(input: Record<string, string> | LoadedApexlangExport): 
     tree.push(...parseApxFile(file, text, warnings));
   }
   const { application, pages, unmodeled } = projectPages(tree);
+  const release = loaded?.manifest ? supportedApexRelease(loaded.manifest.mmdVersion) : null;
+  const omittedDefault = release ? OMITTED_PAGE_ACCESS_PROTECTION[release] : null;
+  if (omittedDefault) {
+    for (const page of pages) {
+      if (page.id !== 0 && page.pageAccessProtection === null) {
+        page.pageAccessProtection = omittedDefault;
+        page.pageAccessProtectionDefaulted = true;
+      }
+    }
+  }
   return {
     ast: { astVersion: '0.1.0-provisional', application, manifest: loaded?.manifest ?? null, pages, sourceFiles, unmodeled },
     tree,

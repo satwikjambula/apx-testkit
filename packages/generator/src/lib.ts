@@ -146,7 +146,11 @@ export function isNavigationUnsafe(pageAccessProtection: string | null, isPublic
   return true;
 }
 
-export function navigationUnsafeSkipReason(pageAccessProtection: string | null, isPublic: boolean): string {
+export function navigationUnsafeSkipReason(
+  pageAccessProtection: string | null,
+  isPublic: boolean,
+  defaulted = false,
+): string {
   if (pageAccessProtection === 'noUrlAccess') {
     return 'apx-testkit: navigation unsafe (security.pageAccessProtection: noUrlAccess) -- Oracle forbids requesting this page through a URL; use an in-app branch/navigation mechanism.';
   }
@@ -155,7 +159,10 @@ export function navigationUnsafeSkipReason(pageAccessProtection: string | null, 
       'apx-testkit: navigation unsafe (security.pageAccessProtection: argumentsMustHaveChecksum on a non-public page) -- ' +
       "a bare page.goto() is confirmed to redirect an authenticated session to /login. See @apx/testkit's " +
       'navigateViaUiPath() for the confirmed-working alternative, and docs/quirks/26.1.json ' +
-      'page-access-protection-blocks-bare-navigation.'
+      'page-access-protection-blocks-bare-navigation.' +
+      (defaulted
+        ? ' The export omits pageAccessProtection; this value is the APEX 26.2 omitted-value default (observed, see docs/grammar-assumptions.md), not text written in the export.'
+        : '')
     );
   }
   return `apx-testkit: navigation unsafe (unrecognized security.pageAccessProtection: ${String(pageAccessProtection)}) -- refusing to assume direct URL access is safe.`;
@@ -288,7 +295,7 @@ function specFor(page: ApexPage, application: ApexApplication | null): SpecForRe
   const modalDialogUnroutable = isModalDialogUnroutable(pageMode);
   const notAutoRoutableReasons: string[] = [];
   if (modalDialogUnroutable) notAutoRoutableReasons.push(MODAL_DIALOG_SKIP_REASON);
-  if (navigationUnsafe) notAutoRoutableReasons.push(navigationUnsafeSkipReason(pageAccessProtection, isPublic));
+  if (navigationUnsafe) notAutoRoutableReasons.push(navigationUnsafeSkipReason(pageAccessProtection, isPublic, page.pageAccessProtectionDefaulted));
   const notAutoRoutable = notAutoRoutableReasons.length > 0;
   const alias = page.alias ?? '';
   const path = pageObjectBaseName(page).replace(/^p\d+-/, '').replace(/\.page$/, '');
@@ -364,7 +371,7 @@ ${[
      ? ` * NOT AUTO-ROUTABLE (modalDialog): this page declares appearance.pageMode: modalDialog -- confirmed live that a plain GET returns HTTP 400 instead of loading (docs/quirks/26.1.json 'drawer-modal-pages-400'). Every test below is unconditionally skipped rather than generated to guaranteed-fail.`
      : null,
    navigationUnsafe
-     ? ` * NOT AUTO-ROUTABLE (navigation unsafe): ${navigationUnsafeSkipReason(pageAccessProtection, isPublic)}`
+     ? ` * NOT AUTO-ROUTABLE (navigation unsafe): ${navigationUnsafeSkipReason(pageAccessProtection, isPublic, page.pageAccessProtectionDefaulted)}`
      : null,
  ]
    .filter((line): line is string => line !== null)

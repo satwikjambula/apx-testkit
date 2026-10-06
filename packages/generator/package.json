@@ -1,7 +1,7 @@
 {
   "name": "@apx/testgen",
   "version": "0.1.0",
-  "description": "Deterministic Playwright PageObject/spec generation, AST diffing (apx-diff), coverage mapping (apx-coverage), doc generation (apx-docs), Flow Map navigation graph generation (apx-flow), CI dashboard bundling (apx-report), and onboarding orchestration (apx-onboard) from Oracle APEX 26.1 .apx exports.",
+  "description": "Deterministic Playwright PageObject/spec generation, AST diffing (apx-diff), coverage mapping (apx-coverage), doc generation (apx-docs), Flow Map navigation graph generation (apx-flow), CI dashboard bundling (apx-report), and onboarding orchestration (apx-onboard) from Oracle APEX 26.1 and 26.2 .apx exports.",
   "type": "module",
   "bin": {
     "apx-testgen": "dist/cli.js",

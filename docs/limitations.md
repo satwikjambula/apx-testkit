@@ -219,6 +219,17 @@ workaround isn't obvious; that's exactly the signal M4 needs.
 
 ## Grammar / parser
 
+- **APEX 26.2 is supported for static export parsing only.** No live 26.2
+  instance has been exercised, so every runtime component and every
+  generated spec is verified on 26.1 only. Two 26.2 export differences are
+  handled, one of them as an inference: an omitted
+  `security.pageAccessProtection` is resolved to `argumentsMustHaveChecksum`
+  on 26.2 (observed across 1,490 paired pages, not stated by Oracle — flagged
+  `ApexPage.pageAccessProtectionDefaulted`), and switch items no longer
+  carry `valueRequired`, so `apx-diff` across an upgrade lists
+  `required: true -> false` for them. See docs/grammar-assumptions.md
+  "APEX 26.2 compatibility".
+
 - Comment syntax, string quoting/escaping edge cases, and property-order
   significance are all unverified assumptions (assumed "none" until proven
   otherwise) — see docs/grammar-assumptions.md "Still open".
