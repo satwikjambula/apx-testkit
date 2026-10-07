@@ -1522,6 +1522,15 @@ marker. A zero exit with compile errors, warnings, or unrecognized output
 fails closed. See `docs/quirks/26.1.json`
 `sqlcl-apex-validate-command-shape` for the 26.1 citations and evidence.
 
+**APEX 26.1 and 26.2.** `apx-onboard` (like every CLI here) accepts exports
+whose `.apex/apexlang.json` declares a 26.1 or 26.2 `mmdVersion`; anything
+else is rejected. Use a SQLcl at least as new as the export — Oracle's own
+tooling repo reports SQLcl 26.1.2 rejecting 26.2 apps (`INVALID_VERSION`).
+Point `--export` at the directory that directly contains `.apex/`: SQLcl
+Projects nests it one level down (`apex_apps/f100/<app-alias>/`), and the
+error for a nested path names the directory to use. 26.2 support is static
+parsing only; see `docs/support-matrix.md`.
+
 **MCP tool:** `onboard_generated_apex_app` calls the identical
 `runOnboarding()` function — same `exportDir`/`baselineExportDir`/
 `testsOutDir`/`docsOutDir`/`touchLogPath` inputs, plus `sqlcl: boolean` /

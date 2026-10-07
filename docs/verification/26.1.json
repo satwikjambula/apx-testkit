@@ -21,7 +21,7 @@
       "citation": "docs/grammar-assumptions.md#L1-L6",
       "lastVerified": "2026-07-24",
       "correctedFrom": null,
-      "notes": "Ground truth: UX Pattern Catalog app export, manifest mmdVersion 26.1.0+3102. Parses the full 19-page export with ZERO warnings. Re-confirmed zero-warnings across the full 46-app local corpus in later passes -- see .ai/knowledge/verification.md.",
+      "notes": "Ground truth: UX Pattern Catalog app export, manifest mmdVersion 26.1.0+3102. Parses the full 19-page export with ZERO warnings. Re-confirmed zero-warnings across the full 46-app local corpus in later passes -- see .ai/knowledge/verification.md. UPDATE (2026-10-06): that claim is scoped to the corpus snapshot checked at the time. The current oracle/apex 26.1 branch head contains a raw TAB inside a quoted string in two apps (universal-theme-reference, brookstrut-sample-app) that raised 'Invalid quoted string' and made generate() refuse them; the parser now tolerates a raw TAB -- see docs/grammar-assumptions.md \"APEX 26.2 compatibility\".",
       "supportMatrixRow": {
         "order": 1,
         "component": "`@apx/parser` grammar",

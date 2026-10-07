@@ -3939,3 +3939,30 @@ instead approved Phase One directly. The corrected sequencing above
 technical description of how `apx-onboard` needs to behave — it just
 stopped being a revisit *trigger* and became the implementation's actual
 functional spec.
+
+## Eighteenth round (2026-10-06): APEX 26.2 compatibility — maintainer-directed
+
+**Decision (maintainer):** support both 26.1 and 26.2. **Outcome:** shipped as
+*static export parsing* for 26.2; runtime stays verified on 26.1 only.
+
+- The blocker was the loader's hard-coded `26.1.*` gate, which refused every
+  26.2 export. It now accepts exactly 26.1 and 26.2 (`SUPPORTED_APEX_RELEASES`)
+  and still rejects any other release.
+- Evidence: all 33 real apps on `oracle/apex`'s `26.2` branch parse; the 26.1
+  and 26.2 EBNFs were diffed production by production (12 added, 118 removed,
+  224 changed — 159 of them pure reorderings); the same 33 apps were compared
+  entity by entity across the two branches. Only two systematic export
+  differences exist: `pageAccessProtection` (26.2 omits
+  `argumentsMustHaveChecksum`; handled as a flagged, fail-safe, inferred
+  default) and `required` on switch items (informational).
+- A real pre-existing bug surfaced by the sweep, unrelated to 26.2: a raw TAB
+  inside a quoted string (in 2 of Oracle's own current 26.1 sample apps) made
+  `generate()` refuse them. Fixed; verified against pre-change code.
+- Real-app check after the change: the generator runs on all 33 apps of each
+  release with 0 failures (26.1: 1,469 pages, 1,253 not auto-routable; 26.2:
+  1,482 pages, 1,247).
+- Registry and tooling: a per-release `docs/verification/26.2.json`, with the
+  validator and support-matrix generator generalized to every release file.
+- **Open:** a live 26.2 run (every runtime wrapper, the omitted-default
+  inference, a real SQLcl 26.2 `apex validate`), and customer apps that use
+  constructs Oracle's samples do not.

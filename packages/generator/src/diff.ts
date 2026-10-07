@@ -452,8 +452,26 @@ export function diffPageFields(a: ApexPage, b: ApexPage): string[] {
     changes.push(`authentication: ${JSON.stringify(a.authentication)} -> ${JSON.stringify(b.authentication)}`);
   }
   if (a.isPublic !== b.isPublic) changes.push(`isPublic: ${a.isPublic} -> ${b.isPublic}`);
-  if (!rawEqual(a.raw, b.raw)) changes.push(RAW_CHANGED_NOTE);
+  if (!rawEqual(pageRawForDiff(a, b), pageRawForDiff(b, a))) changes.push(RAW_CHANGED_NOTE);
   return changes;
+}
+
+/**
+ * 26.1 writes `security.pageAccessProtection: argumentsMustHaveChecksum`
+ * where 26.2 omits it. When the effective typed values are equal and exactly
+ * one side's value came from the release default, the raw difference is only
+ * that spelling of the same value, so it is not reported as a change (an
+ * APEX upgrade would otherwise flag every page). Any other raw difference,
+ * and any real value change, is still reported.
+ */
+function pageRawForDiff(page: ApexPage, other: ApexPage): RawBag {
+  const sameEffectiveValueOneDerived =
+    page.pageAccessProtection === other.pageAccessProtection &&
+    page.pageAccessProtectionDefaulted !== other.pageAccessProtectionDefaulted;
+  if (!sameEffectiveValueOneDerived) return page.raw;
+  return Object.fromEntries(
+    Object.entries(page.raw as Record<string, unknown>).filter(([key]) => key !== 'security.pageAccessProtection'),
+  ) as RawBag;
 }
 
 export interface PageContentsDiff {

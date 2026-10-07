@@ -1,11 +1,14 @@
 # Support matrix
 
-**Verified against Oracle APEX 26.1 only.** Nothing in this repo has been
-run against any other APEX version. Do not assume backward or forward
-compatibility.
+**Runtime behaviour is verified against Oracle APEX 26.1 only.** Export
+parsing is supported for **26.1 and 26.2**, as *static* parsing: nothing in
+this repo has been run against a live 26.2 instance, so treat generated
+specs on 26.2 as unverified until run. No other APEX version is supported or
+checked. Do not assume backward or forward compatibility.
 
-This table is generated FROM `docs/verification/26.1.json` (the
-`supportMatrixRow` field on each registry entry) by
+The tables below are generated FROM `docs/verification/<release>.json` (the
+`supportMatrixRow` field on each registry entry; the first table is 26.1, the
+second 26.2) by
 `scripts/generate-support-matrix.mjs` — do not hand-edit the rows between
 the markers below; edit the registry entry instead and regenerate
 (`node scripts/generate-support-matrix.mjs`). `node
@@ -32,6 +35,17 @@ drifted from what the registry would produce — see
 | `@apx/testkit` messages.ts (`expectAlert`/`dismissAlert`/`alertDialog`, new 2026-08-01) | Live, against Sample Interactive Grids page 31 | Confirmed live: Interactive Grid's column-level `valueRequired` check calls `apex.message.alert()` (a `role="alertdialog"` modal, "OK" button), NOT `showErrors`/`#APEX_ERROR_MESSAGE` -- a genuinely different mechanism from page-level SQL validations; see docs/quirks/26.1.json `interactive-grid-validation-mechanism-split`. |
 <!-- GENERATED:END verification-registry support-matrix-table -->
 
+## APEX 26.2 (static export parsing only)
+
+<!-- GENERATED:BEGIN verification-registry support-matrix-table-26.2 -->
+| Component | Verified against | How |
+|---|---|---|
+| `@apx/parser` 26.2 export parsing | oracle/apex `26.2` branch, 33 real apps, mmdVersion 26.2.0+3479 (static) | All 33 parse with zero throws; EBNF 26.1 vs 26.2 diffed production by production and the same 33 apps compared across releases -- see docs/grammar-assumptions.md "APEX 26.2 compatibility". Static parsing only; no runtime behaviour was verified on 26.2. |
+| Omitted `pageAccessProtection` on 26.2 | Inferred from 1,490 paired pages across oracle/apex 26.1 vs 26.2 (static) | 26.2 omits `argumentsMustHaveChecksum` where 26.1 wrote it; the parser resolves an omitted value to it for 26.2 only (flagged `pageAccessProtectionDefaulted`, never page 0). An inference from export data -- not stated by Oracle and not live-confirmed. |
+| `apx-onboard --sqlcl` on 26.2 | SQLcl 26.2 User's Guide + Oracle's 26.2 validate script (documentation), not run here | The invocation apx-onboard uses (`apex validate` with the export as working directory) is documented for SQLcl 26.2, and the `Validation successful` fail-closed rule matches Oracle's own script. Use a SQLcl at least as new as the export; SQLcl 26.1.2 is reported to reject 26.2 apps (INVALID_VERSION). Not executed in this pass. |
+| `@apx/testkit` runtime components | Not verified on 26.2 | No live 26.2 instance has been exercised. Every runtime claim remains live-verified on 26.1 only; treat generated specs on 26.2 as unverified until run. |
+<!-- GENERATED:END verification-registry support-matrix-table-26.2 -->
+
 ## What "verified against one app" means
 
 UPDATE (corrected in place — no longer accurate as originally written): this
@@ -57,7 +71,9 @@ the 46-app static corpus — not as blanket, project-wide facts.
 
 ## Not supported, by design
 
-- Pre-26.1 APEX applications.
+- APEX applications from releases other than 26.1 and 26.2 (pre-26.1 exports
+  predate APEXlang; later releases are rejected until they are added and
+  checked).
 - Interactive Grid cell editing / data mutation as a general `@apx/testkit`
   capability — read-only inspection methods (getActions/getViews/
   getCurrentView/getSelectedRecords) are verified; a reusable, typed

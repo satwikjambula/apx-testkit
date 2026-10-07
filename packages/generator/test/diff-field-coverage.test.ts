@@ -357,6 +357,7 @@ const pageFixture: ApexPage = {
   title: 'My Page Title',
   pageMode: 'normal',
   pageAccessProtection: 'unrestricted',
+  pageAccessProtectionDefaulted: false,
   authentication: 'required',
   isPublic: false,
   regions: [regionFixture],
@@ -421,6 +422,11 @@ describeNestedFieldCoverage(
 describeFieldCoverage('ApexPage', pageFixture, diffPageFields, [
   'id',
   'loc',
+  // Provenance of `pageAccessProtection` (explicit vs. 26.2 omitted-value
+  // default), not content. The compared value is `pageAccessProtection`
+  // itself; `pageRawForDiff()` handles the raw-bag spelling difference. See
+  // test/release-compat.test.ts for the upgrade-diff behavior.
+  'pageAccessProtectionDefaulted',
   // Each of these gets its own dedicated top-level diff call inside
   // diffPageContents, not diffPageFields -- see the subject below.
   'regions',
@@ -461,7 +467,7 @@ describe("ApexPage's child-construct arrays are wired into diffPageContents", ()
 
   it("every one of ApexPage's own keys is covered by either the scalar-field subject above or this child-array list", () => {
     const accountedFor = new Set<string>([
-      'identifier', 'id', 'loc', 'alias', 'name', 'title', 'pageMode', 'pageAccessProtection', 'authentication', 'isPublic', 'raw',
+      'identifier', 'id', 'loc', 'alias', 'name', 'title', 'pageMode', 'pageAccessProtection', 'pageAccessProtectionDefaulted', 'authentication', 'isPublic', 'raw',
       ...childArrayKeys.map((c) => c.key as string),
     ]);
     const unaccounted = Object.keys(pageFixture).filter((k) => !accountedFor.has(k));

@@ -113,7 +113,17 @@ export interface ApexPage {
   name: string | null;
   title: string | null;
   pageMode: 'normal' | 'modalDialog' | 'nonModalDialog' | null;
+  /**
+   * `security.pageAccessProtection`. When the export omits it, this is the
+   * omitted-value default for the export's APEX release if one is
+   * established (26.2: `argumentsMustHaveChecksum`), otherwise `null`; see
+   * `pageAccessProtectionDefaulted` and `OMITTED_PAGE_ACCESS_PROTECTION`.
+   * The value as written is always still in `raw`. Never defaulted for
+   * page 0 (the Global Page), where the property does not apply.
+   */
   pageAccessProtection: 'unrestricted' | 'argumentsMustHaveChecksum' | 'noArgumentsSupported' | 'noUrlAccess' | null;
+  /** True when `pageAccessProtection` came from the release default, not from the export text. */
+  pageAccessProtectionDefaulted: boolean;
   authentication: 'required' | 'public' | null;
   isPublic: boolean;
   regions: ApexRegion[];

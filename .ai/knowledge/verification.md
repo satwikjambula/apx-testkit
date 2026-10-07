@@ -499,3 +499,22 @@ either is unset, and **never hardcodes a credential**.
   citation resolves to a real file/quirk).
 - `node scripts/generate-support-matrix.mjs --check` — `docs/support-matrix.md`
   has not drifted from what the registry would generate.
+
+## `github.com/oracle/apex` (26.2 branch) — 33 apps, UPL-1.0 (added 2026-10-06)
+
+The same 33 apps as the `26.1` branch (`sample-apps/`, `starter-apps/`,
+`utility-apps/`), every `.apex/apexlang.json` reading `mmdVersion
+26.2.0+3479` (checked individually). Local-only like the rest of the corpus.
+Static ground truth only — no live 26.2 access. Reproduce:
+
+```
+git clone --depth 1 --branch 26.2 --filter=blob:none --sparse https://github.com/oracle/apex.git oracle-apex-262
+cd oracle-apex-262 && git sparse-checkout set sample-apps starter-apps utility-apps
+```
+
+Do the same with `--branch 26.1` for the same-app comparison. Findings and
+counts: `docs/grammar-assumptions.md` "APEX 26.2 compatibility". Note the
+current `26.1` branch head contains a raw TAB inside a quoted string in two
+apps (`universal-theme-reference`, `brookstrut-sample-app`), which the
+earlier "zero warnings across 46 apps" snapshot did not; the parser now
+tolerates it.

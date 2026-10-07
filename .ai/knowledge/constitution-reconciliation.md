@@ -305,3 +305,22 @@ login success-detection hardening (PR #17), this reconciliation itself
 (#14/#15/#16) — all six merged to `main` same-day as this pass. None of
 this needed rediscovery — it's recorded here so this reconciliation pass
 doesn't itself become another source of a stale "still pending" claim.
+
+## F. APEX 26.2 support (2026-10-06, maintainer-directed)
+
+The maintainer asked for compatibility with both 26.1 and 26.2 once 26.2 was
+released. This changes the §3 wording from "26.1, not 26.1+" to **named
+releases with scoped evidence**, not to an open-ended range: runtime
+behavior stays live-verified on 26.1 only; 26.2 is supported for *static*
+export parsing, backed by the real 33-app `oracle/apex` `26.2` branch, a
+production-by-production EBNF diff, and a same-app comparison against the
+`26.1` branch (`docs/grammar-assumptions.md` "APEX 26.2 compatibility";
+`docs/verification/26.2.json`). The rule against "26.1+", "26.x" or any
+unverified release stands: other releases are still rejected explicitly by
+`loadApexlangExport()`.
+
+One finding is an inference, recorded as such: 26.2 omits
+`pageAccessProtection: argumentsMustHaveChecksum` where 26.1 wrote it; the
+parser resolves the omission to that value on 26.2 only and flags it
+(`pageAccessProtectionDefaulted`). It becomes verified with a live 26.2 run
+or an Oracle statement of the default.

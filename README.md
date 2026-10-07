@@ -220,7 +220,7 @@ public reference app (UX Pattern Catalog); `examples/` is real generator
 output, committed, so you can read the current output shape without
 running anything.
 
-Scope commitments: verified against APEX 26.1 only. No linter (APEX Advisor/SQLcl own that
+Scope commitments: runtime behaviour verified against APEX 26.1 only; export parsing is supported for 26.1 and 26.2 (static — no live 26.2 run yet, see [docs/support-matrix.md](docs/support-matrix.md)). No linter (APEX Advisor/SQLcl own that
 role). No `.apx` writer (SQLcl owns import — a writer invites round-trip
 corruption bugs). Interactive Grid has a real, live-verified component
 (`ApexInteractiveGridRegion`) but the generator cannot auto-wire it up —

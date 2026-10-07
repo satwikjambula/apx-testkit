@@ -27,17 +27,79 @@ describe('loadApexlangExport', () => {
     }
   });
 
-  it('rejects an export format outside the verified 26.1 line by default', () => {
+  it('rejects an export format outside the supported releases by default', () => {
     const root = mkdtempSync(join(tmpdir(), 'apx-loader-version-'));
     try {
       mkdirSync(join(root, '.apex'));
       writeFileSync(join(root, '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '27.1.0' }));
-      expect(() => loadApexlangExport(root)).toThrow(/verified only for APEX 26\.1/);
+      expect(() => loadApexlangExport(root)).toThrow(/supports only APEX 26\.1 and 26\.2 exports/);
       const warned = loadApexlangExport(root, { unsupportedVersion: 'warn' });
       expect(warned.warnings).toHaveLength(1);
       expect(parseApp(warned).warnings).toEqual([
-        expect.objectContaining({ message: expect.stringMatching(/verified only for APEX 26\.1/), loc: { file: '.apex/apexlang.json', line: 1 } }),
+        expect.objectContaining({ message: expect.stringMatching(/supports only APEX 26\.1 and 26\.2/), loc: { file: '.apex/apexlang.json', line: 1 } }),
       ]);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it.each([
+    ['26.1.0+3102', true],
+    ['26.2.0+3479', true],
+    ['26.2', true],
+    ['26.0.0', false],
+    ['26.3.0', false],
+    ['26.10.0', false],
+    ['25.2.0', false],
+    ['26', false],
+    ['v26.2.0', false],
+  ])('mmdVersion %s is %s as a supported release', (mmdVersion, supported) => {
+    const root = mkdtempSync(join(tmpdir(), 'apx-loader-matrix-'));
+    try {
+      mkdirSync(join(root, '.apex'));
+      writeFileSync(join(root, '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion }));
+      if (supported) expect(loadApexlangExport(root).manifest).toEqual({ mmdVersion });
+      else expect(() => loadApexlangExport(root)).toThrow(/supports only APEX/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('names a nested export directory when the manifest is not at the given root (SQLcl 26.2 layout)', () => {
+    const root = mkdtempSync(join(tmpdir(), 'apx-loader-nested-'));
+    try {
+      mkdirSync(join(root, 'demo1', '.apex'), { recursive: true });
+      writeFileSync(join(root, 'f106.sql'), '-- sqlcl script');
+      writeFileSync(join(root, 'demo1', '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '26.2.0+3479' }));
+      writeFileSync(join(root, 'demo1', 'application.apx'), 'application demo1 (\n)\n');
+      expect(() => loadApexlangExport(root)).toThrow(/Found an APEXlang export in subdirectory 'demo1'; pass that directory instead/);
+      expect(loadApexlangExport(join(root, 'demo1')).manifest).toEqual({ mmdVersion: '26.2.0+3479' });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('looks two levels down for the documented SQLcl Projects layout f<appId>/<alias>/ and lists every candidate', () => {
+    const root = mkdtempSync(join(tmpdir(), 'apx-loader-nested2-'));
+    try {
+      for (const app of ['f100/brookstrut', 'f200/shop']) {
+        mkdirSync(join(root, app, '.apex'), { recursive: true });
+        writeFileSync(join(root, app, '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '26.2.0+3479' }));
+      }
+      writeFileSync(join(root, 'f100', 'f100.sql'), '-- sqlcl script');
+      expect(() => loadApexlangExport(root)).toThrow(/subdirectory 'f100\/brookstrut', 'f200\/shop'; pass that directory instead/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('does not invent a hint when the export is nested deeper than the documented layout', () => {
+    const root = mkdtempSync(join(tmpdir(), 'apx-loader-nohint-'));
+    try {
+      mkdirSync(join(root, 'a', 'b', 'c', '.apex'), { recursive: true });
+      writeFileSync(join(root, 'a', 'b', 'c', '.apex', 'apexlang.json'), JSON.stringify({ mmdVersion: '26.2.0+3479' }));
+      expect(() => loadApexlangExport(root)).toThrow(/is missing; cannot verify/);
+      expect(() => loadApexlangExport(root)).not.toThrow(/Found an APEXlang export/);
     } finally {
       rmSync(root, { recursive: true, force: true });
     }
@@ -47,7 +109,7 @@ describe('loadApexlangExport', () => {
     const root = mkdtempSync(join(tmpdir(), 'apx-loader-no-manifest-'));
     try {
       writeFileSync(join(root, 'page.apx'), '// synthetic partial source');
-      expect(() => loadApexlangExport(root)).toThrow(/cannot verify that this is an APEX 26\.1 export/);
+      expect(() => loadApexlangExport(root)).toThrow(/cannot verify that this is an APEX 26\.1\/26\.2 export/);
       const partial = loadApexlangExport(root, { allowMissingManifest: true });
       expect(partial.manifest).toBeNull();
       expect(Object.keys(partial.sources)).toEqual(['page.apx']);
